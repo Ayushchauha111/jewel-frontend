@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <!-- Static pages sitemap -->
+  <sitemap>
+    <loc>https://typogram.in/sitemap.xml</loc>
+    <lastmod>2026-01-01T00:00:00+00:00</lastmod>
+  </sitemap>
+  
+  <!-- Dynamic sitemap with all blogs and courses -->
+  <!-- Note: This references the API subdomain which includes all published content -->
+  <sitemap>
+    <loc>https://api.typogram.in/api/sitemap/xml</loc>
+    <lastmod>2026-01-01T00:00:00+00:00</lastmod>
+  </sitemap>
+</sitemapindex>
+

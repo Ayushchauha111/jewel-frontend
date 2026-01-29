@@ -1,0 +1,57 @@
+# Typogram.in Robots.txt
+# Updated: January 1, 2026
+
+User-agent: *
+
+# Allow all public pages
+Allow: /
+Allow: /blog
+Allow: /blog/*
+Allow: /courses
+Allow: /about
+Allow: /contact-us
+Allow: /typing-display
+Allow: /start-test
+Allow: /games
+Allow: /games/*
+Allow: /daily-challenge
+Allow: /race
+Allow: /tournaments
+Allow: /friends
+Allow: /community
+Allow: /community/*
+Allow: /leaderboard
+
+# Disallow admin and private pages
+Disallow: /blog-admin
+Disallow: /admin
+Disallow: /profile
+Disallow: /user-result
+Disallow: /test-details
+Disallow: /checkout
+Disallow: /payment
+Disallow: /referral
+Disallow: /mod
+Disallow: /add
+Disallow: /active-courses
+Disallow: /typing-display-test
+Disallow: /social
+
+# Disallow blog category pages (duplicate content)
+Disallow: /blog/category/
+
+# Disallow course name-based routes (use ID-based routes instead)
+Disallow: /courses/*/typing-courses
+
+# Disallow authentication pages
+Disallow: /login
+Disallow: /register
+Disallow: /forgot-password
+Disallow: /reset-password
+Disallow: /verify-otp
+
+# Disallow query parameters that create duplicates (but allow category for courses)
+Disallow: /*?ref=*
+# Note: /courses?category=* is allowed as it's a valid filter page
+
+Sitemap: https://typogram.in/sitemap-index.xml

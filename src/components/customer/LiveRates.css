@@ -1,0 +1,538 @@
+.live-rates-page {
+  min-height: 100vh;
+  background: #1a1a1a;
+  color: #fff;
+  font-family: 'Arial', sans-serif;
+}
+
+/* Header */
+.live-rates-header {
+  background: linear-gradient(135deg, #d4af37 0%, #c9a227 50%, #b8941f 100%);
+  padding: 1.5rem 2rem;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+.logo-section {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  padding: 0.5rem;
+  border-radius: 50%;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  width: 100px;
+  height: 100px;
+}
+
+.gj-logo {
+  width: 100%;
+  height: 100%;
+}
+
+.gj-logo circle,
+.gj-logo path,
+.gj-logo line {
+  transition: all 0.3s ease;
+}
+
+.gj-logo text {
+  font-family: 'Georgia', 'Times New Roman', serif;
+  font-weight: bold;
+}
+
+.company-name h1 {
+  margin: 0;
+  color: #2c3e50;
+  font-size: 2.2rem;
+  font-weight: bold;
+  text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.3);
+  letter-spacing: 1px;
+}
+
+.contact-section {
+  text-align: right;
+  color: #2c3e50;
+}
+
+.contact-label {
+  font-weight: bold;
+  font-size: 0.95rem;
+  margin-bottom: 0.5rem;
+  text-transform: uppercase;
+}
+
+.contact-numbers {
+  font-size: 1.15rem;
+  font-weight: 700;
+  line-height: 1.6;
+}
+
+/* Navigation */
+.live-rates-nav {
+  background: linear-gradient(135deg, #d4af37 0%, #c9a227 50%, #b8941f 100%);
+  padding: 1rem 2rem;
+  display: flex;
+  gap: 2.5rem;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.live-rates-nav a,
+.live-rates-nav span {
+  color: #2c3e50;
+  text-decoration: none;
+  font-weight: 700;
+  padding: 0.6rem 1.5rem;
+  border-radius: 6px;
+  transition: all 0.3s;
+  font-size: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.live-rates-nav a:hover {
+  background: rgba(44, 62, 80, 0.15);
+  transform: translateY(-2px);
+}
+
+.live-rates-nav .active {
+  background: rgba(44, 62, 80, 0.25);
+  font-weight: bold;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* GST Banner */
+.gst-banner {
+  background: linear-gradient(135deg, #d4af37 0%, #c9a227 50%, #b8941f 100%);
+  padding: 0.9rem 2rem;
+  text-align: center;
+  font-weight: bold;
+  color: #2c3e50;
+  font-size: 0.95rem;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+/* Special Message Banner */
+.special-message-banner {
+  background: linear-gradient(135deg, #d4af37 0%, #c9a227 50%, #b8941f 100%);
+  padding: 1.5rem 2rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.message-content {
+  max-width: 1600px;
+  margin: 0 auto;
+  color: #2c3e50;
+}
+
+.hindi-message {
+  font-size: 1rem;
+  line-height: 1.8;
+  margin-bottom: 1rem;
+  text-align: justify;
+}
+
+.english-message {
+  font-size: 0.95rem;
+  font-weight: 600;
+  border-top: 2px solid rgba(44, 62, 80, 0.2);
+  padding-top: 1rem;
+}
+
+/* Main Content */
+.live-rates-content {
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.loading-state,
+.error-state {
+  text-align: center;
+  padding: 4rem 2rem;
+  color: #fff;
+  font-size: 1.2rem;
+}
+
+.spinner {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+  animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Rates Layout */
+.rates-layout {
+  display: grid;
+  grid-template-columns: 350px 1fr;
+  gap: 2rem;
+  margin-bottom: 2rem;
+}
+
+/* Product Rates Table (Left) */
+.product-rates-table {
+  background: #2c3e50;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+  border: 2px solid #d4af37;
+}
+
+.product-rates-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.product-rates-table th {
+  background: linear-gradient(135deg, #d4af37 0%, #c9a227 100%);
+  color: #2c3e50;
+  font-weight: bold;
+  padding: 1.2rem;
+  text-align: center;
+  font-size: 1.1rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.product-rates-table td {
+  padding: 1.5rem 1.2rem;
+  text-align: center;
+  color: #ecf0f1;
+  font-size: 1.1rem;
+  border-bottom: 1px solid #34495e;
+  background: #34495e;
+}
+
+.product-rates-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.sell-price {
+  font-size: 1.5rem !important;
+  font-weight: bold !important;
+  color: #f4d03f !important;
+}
+
+/* Market Rates Tables (Right) */
+.right-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.market-table {
+  background: #2c3e50;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+  border: 2px solid #d4af37;
+}
+
+.table-header {
+  background: linear-gradient(135deg, #d4af37 0%, #c9a227 100%);
+  color: #2c3e50;
+  font-weight: bold;
+  padding: 1rem;
+  text-align: center;
+  font-size: 1.3rem;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  border-bottom: 2px solid #b8941f;
+}
+
+.market-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.market-table th {
+  background: linear-gradient(135deg, #d4af37 0%, #c9a227 100%);
+  color: #2c3e50;
+  font-weight: bold;
+  padding: 1rem 0.75rem;
+  text-align: center;
+  font-size: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  border-right: 1px solid rgba(44, 62, 80, 0.3);
+}
+
+.market-table th:last-child {
+  border-right: none;
+}
+
+.market-table td {
+  padding: 1.2rem 0.75rem;
+  text-align: center;
+  color: #ecf0f1;
+  font-size: 1rem;
+  border-bottom: 1px solid #34495e;
+  background: #34495e;
+  border-right: 1px solid #2c3e50;
+}
+
+.market-table td:last-child {
+  border-right: none;
+}
+
+.market-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.market-table tbody tr:hover {
+  background: #3d5266;
+}
+
+.price-cell {
+  font-weight: bold;
+  font-size: 1.2rem !important;
+  font-family: 'Courier New', monospace;
+}
+
+.high-low {
+  font-size: 0.95rem;
+  color: #bdc3c7;
+}
+
+.highlight-green {
+  color: #27ae60 !important;
+  background: rgba(39, 174, 96, 0.1) !important;
+  font-weight: bold !important;
+}
+
+.highlight-red {
+  color: #e74c3c !important;
+  background: rgba(231, 76, 60, 0.1) !important;
+  font-weight: bold !important;
+}
+
+.last-updated {
+  text-align: center;
+  color: #95a5a6;
+  font-size: 0.9rem;
+  margin-top: 2rem;
+  padding: 1rem;
+  background: #2c3e50;
+  border-radius: 8px;
+  border: 1px solid #d4af37;
+}
+
+/* Footer */
+.live-rates-footer {
+  background: #fff;
+  padding: 3rem 2rem 1rem;
+  margin-top: 4rem;
+  color: #2c3e50;
+}
+
+.footer-content {
+  max-width: 1600px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1.5fr 1fr 1.5fr;
+  gap: 3rem;
+  margin-bottom: 2rem;
+}
+
+.footer-section h4 {
+  color: #d4af37;
+  font-size: 1.2rem;
+  font-weight: bold;
+  margin-bottom: 1.5rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.footer-logo {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.gj-logo-footer {
+  width: 80px;
+  height: 80px;
+  flex-shrink: 0;
+}
+
+.footer-logo-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.footer-company-name {
+  font-size: 1.8rem;
+  font-weight: bold;
+  color: #d4af37;
+  letter-spacing: 2px;
+}
+
+.footer-company-subtitle {
+  font-size: 1rem;
+  color: #2c3e50;
+  font-weight: 600;
+}
+
+.footer-about h4 {
+  margin-top: 1rem;
+}
+
+.footer-section ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.footer-section ul li {
+  margin-bottom: 0.75rem;
+}
+
+.footer-section ul li a {
+  color: #2c3e50;
+  text-decoration: none;
+  font-size: 1rem;
+  transition: color 0.3s;
+}
+
+.footer-section ul li a:hover {
+  color: #d4af37;
+}
+
+.footer-contact {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.contact-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.contact-icon {
+  font-size: 1.3rem;
+  color: #d4af37;
+  flex-shrink: 0;
+}
+
+.contact-item a {
+  color: #2c3e50;
+  text-decoration: none;
+  transition: color 0.3s;
+}
+
+.contact-item a:hover {
+  color: #d4af37;
+}
+
+.footer-copyright {
+  background: linear-gradient(135deg, #d4af37 0%, #c9a227 50%, #b8941f 100%);
+  padding: 1.5rem;
+  text-align: center;
+  color: #2c3e50;
+  font-weight: bold;
+  font-size: 1rem;
+  letter-spacing: 1px;
+}
+
+/* Responsive Design */
+@media (max-width: 1200px) {
+  .rates-layout {
+    grid-template-columns: 300px 1fr;
+  }
+  
+  .footer-content {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 1024px) {
+  .rates-layout {
+    grid-template-columns: 1fr;
+  }
+  
+  .header-content {
+    flex-direction: column;
+    gap: 1.5rem;
+    text-align: center;
+  }
+  
+  .contact-section {
+    text-align: center;
+  }
+  
+  .footer-content {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .live-rates-nav {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+  }
+  
+  .live-rates-nav a,
+  .live-rates-nav span {
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+  }
+  
+  .company-name h1 {
+    font-size: 1.5rem;
+  }
+  
+  .logo {
+    padding: 0.5rem 1rem;
+  }
+  
+  .logo-diamond {
+    font-size: 2rem;
+  }
+  
+  .logo-text {
+    font-size: 1.2rem;
+  }
+  
+  .price-cell {
+    font-size: 1rem !important;
+  }
+  
+  .sell-price {
+    font-size: 1.2rem !important;
+  }
+  
+  .hindi-message {
+    font-size: 0.9rem;
+  }
+  
+  .english-message {
+    font-size: 0.85rem;
+  }
+}

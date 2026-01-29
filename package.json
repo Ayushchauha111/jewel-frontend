@@ -1,0 +1,92 @@
+{
+  "name": "typogram",
+  "version": "0.3.4",
+  "private": true,
+  "dependencies": {
+    "@emotion/react": "^11.9.0",
+    "@emotion/styled": "^11.8.1",
+    "@headlessui/react": "^2.2.0",
+    "@heroicons/react": "^2.2.0",
+    "@mui/icons-material": "^5.6.1",
+    "@mui/material": "^5.6.1",
+    "@paypal/react-paypal-js": "^8.8.2",
+    "@radix-ui/react-slot": "^1.1.2",
+    "@testing-library/jest-dom": "^5.16.4",
+    "@testing-library/react": "^13.0.1",
+    "@testing-library/user-event": "^13.5.0",
+    "axios": "^1.7.9",
+    "bootstrap": "^5.3.3",
+    "class-variance-authority": "^0.7.1",
+    "cors": "^2.8.5",
+    "crypto-browserify": "^3.12.1",
+    "dompurify": "^3.2.5",
+    "framer-motion": "^12.10.4",
+    "lightbox.js-react": "^1.5.3",
+    "lodash": "^4.17.21",
+    "lucide-react": "^0.477.0",
+    "motion": "^12.5.0",
+    "random-words": "^1.1.2",
+    "razorpay": "^2.9.6",
+    "react": "^18.0.0",
+    "react-app-rewired": "^2.2.1",
+    "react-bootstrap": "^2.10.9",
+    "react-dom": "^18.0.0",
+    "react-feather": "^2.0.10",
+    "react-helmet": "^6.1.0",
+    "react-helmet-async": "^2.0.5",
+    "react-icons": "^5.5.0",
+    "react-intersection-observer": "^9.16.0",
+    "react-markdown": "^10.1.0",
+    "react-router-dom": "^7.2.0",
+    "react-scripts": "5.0.1",
+    "react-select": "^5.3.0",
+    "react-spinners": "^0.15.0",
+    "react-toastify": "^10.0.6",
+    "react-validation": "^3.0.7",
+    "recharts": "^2.12.7",
+    "rehype-highlight": "^7.0.2",
+    "remark-gfm": "^4.0.1",
+    "styled-components": "^5.3.5",
+    "tailwind-merge": "^3.0.2",
+    "use-sound": "^4.0.1",
+    "uvcanvas": "^0.2.1",
+    "validator": "^13.12.0",
+    "web-vitals": "^2.1.4",
+    "sockjs-client": "^1.6.1",
+    "@stomp/stompjs": "^7.0.0"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build:local": "env-cmd -f .env.local react-scripts build",
+    "build:prod": "env-cmd -f .env.prod react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject",
+    "predeploy": "npm run build",
+    "deploy": "npm run build"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.20",
+    "env-cmd": "^10.1.0",
+    "http-proxy-middleware": "^2.0.7",
+    "postcss": "^8.5.3",
+    "tailwindcss": "^4.0.9"
+  }
+}

@@ -1,0 +1,403 @@
+.customer-gold-mine {
+  min-height: 100vh;
+  background: #f8f9fa;
+}
+
+.gold-mine-hero {
+  background: linear-gradient(135deg, #fce4ec 0%, #f8bbd9 100%);
+  padding: 3rem 2rem;
+  text-align: center;
+}
+
+.gold-mine-hero-content h1 {
+  margin: 0 0 0.5rem 0;
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #1a1a2e;
+  letter-spacing: 1px;
+}
+
+.gold-mine-tagline {
+  margin: 0 0 0.5rem 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #5a5a6e;
+  letter-spacing: 2px;
+}
+
+.gold-mine-benefit {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.25rem;
+  color: #2d2d44;
+  font-weight: 500;
+}
+
+.gold-mine-note {
+  margin: 0 0 1.5rem 0;
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.gold-mine-cta {
+  display: inline-block;
+  padding: 0.75rem 2rem;
+  background: #e94560;
+  color: #fff;
+  text-decoration: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 1rem;
+  transition: background 0.2s, transform 0.2s;
+}
+
+.gold-mine-cta:hover {
+  background: #d63a54;
+  transform: translateY(-2px);
+}
+
+.gold-mine-how {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 3rem 2rem;
+  text-align: center;
+}
+
+.gold-mine-how h2 {
+  margin: 0 0 0.5rem 0;
+  font-size: 2rem;
+  color: #1a1a2e;
+}
+
+.gold-mine-subtitle {
+  margin: 0 0 2rem 0;
+  font-size: 1.1rem;
+  color: #5a5a6e;
+}
+
+.gold-mine-steps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 2rem;
+  margin-bottom: 1.5rem;
+}
+
+.gold-mine-step {
+  background: #fff;
+  padding: 1.5rem;
+  border-radius: 16px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.gold-mine-step:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+}
+
+.gold-mine-step-icon {
+  font-size: 2.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.gold-mine-step h3 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.1rem;
+  color: #1a1a2e;
+}
+
+.gold-mine-step p {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #5a5a6e;
+  line-height: 1.5;
+}
+
+.gold-mine-refer {
+  font-size: 0.95rem;
+  color: #666;
+}
+
+.gold-mine-calculator {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem;
+  background: #fff;
+  border-radius: 20px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.08);
+  margin-bottom: 2rem;
+}
+
+.gold-mine-calculator h2 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.75rem;
+  color: #1a1a2e;
+  text-align: center;
+}
+
+.gold-mine-calc-subtitle {
+  margin: 0 0 1.5rem 0;
+  text-align: center;
+  color: #5a5a6e;
+  font-size: 0.95rem;
+}
+
+.gold-mine-calc-input-row {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.gold-mine-calc-input-wrap {
+  display: flex;
+  align-items: center;
+  border: 2px solid #e0e0e0;
+  border-radius: 10px;
+  padding: 0 1rem;
+  background: #fff;
+}
+
+.gold-mine-currency {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.gold-mine-input {
+  width: 120px;
+  padding: 0.75rem 0.5rem;
+  border: none;
+  font-size: 1.25rem;
+  font-weight: 600;
+  outline: none;
+}
+
+.gold-mine-check-btn {
+  padding: 0.75rem 2rem;
+  background: #e94560;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.gold-mine-check-btn:hover {
+  background: #d63a54;
+}
+
+.gold-mine-slider {
+  width: 100%;
+  max-width: 400px;
+  margin: 0 auto 2rem;
+  display: block;
+  height: 8px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: #e0e0e0;
+  border-radius: 4px;
+}
+
+.gold-mine-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 24px;
+  height: 24px;
+  background: #0d2137;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+.gold-mine-calc-results {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 2rem;
+  align-items: start;
+  margin-bottom: 2rem;
+}
+
+@media (max-width: 700px) {
+  .gold-mine-calc-results {
+    grid-template-columns: 1fr;
+  }
+}
+
+.gold-mine-calc-left {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.gold-mine-pie-legend {
+  display: flex;
+  height: 120px;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.gold-mine-pie-pay {
+  background: linear-gradient(135deg, #f8bbd9 0%, #f48fb1 100%);
+}
+
+.gold-mine-pie-discount {
+  background: linear-gradient(135deg, #a5d6a7 0%, #81c784 100%);
+}
+
+.gold-mine-pie-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  color: #5a5a6e;
+}
+
+.gold-mine-calc-right {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.gold-mine-result-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+}
+
+.gold-mine-result-row span {
+  font-size: 0.9rem;
+  color: #5a5a6e;
+}
+
+.gold-mine-result-row strong {
+  font-size: 1.25rem;
+  color: #1a1a2e;
+}
+
+.gold-mine-result-row small {
+  display: block;
+  width: 100%;
+  font-size: 0.8rem;
+  color: #888;
+}
+
+.gold-mine-result-pay {
+  background: #fce4ec;
+}
+
+.gold-mine-result-discount {
+  background: #e8f5e9;
+}
+
+.gold-mine-result-value strong {
+  color: #e94560;
+  font-size: 1.35rem;
+}
+
+.gold-mine-result-effective {
+  background: #e3f2fd;
+}
+
+.gold-mine-effective-badge {
+  color: #2e7d32 !important;
+  font-weight: 600;
+  font-size: 1rem !important;
+}
+
+.gold-mine-early h3 {
+  margin: 0 0 1rem 0;
+  font-size: 1.1rem;
+  color: #1a1a2e;
+}
+
+.gold-mine-early-options {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.gold-mine-early-option {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  background: #f5f5f5;
+  border-radius: 10px;
+}
+
+.gold-mine-early-option span:first-child {
+  font-size: 0.9rem;
+  color: #5a5a6e;
+}
+
+.gold-mine-early-option strong {
+  font-size: 1.1rem;
+  color: #1a1a2e;
+}
+
+.gold-mine-info {
+  font-size: 0.9rem;
+  color: #888;
+  cursor: help;
+}
+
+.gold-mine-disclaimer,
+.gold-mine-note-block {
+  margin: 1rem 0 0 0;
+  font-size: 0.9rem;
+  color: #5a5a6e;
+  line-height: 1.5;
+}
+
+.gold-mine-note-block strong {
+  color: #e94560;
+}
+
+.gold-mine-cta-section {
+  text-align: center;
+  padding: 2rem;
+  background: linear-gradient(135deg, #0d2137 0%, #1a365d 100%);
+  color: #fff;
+}
+
+.gold-mine-cta-section p {
+  margin: 0 0 1rem 0;
+  font-size: 1.1rem;
+}
+
+.gold-mine-enroll-btn {
+  display: inline-block;
+  padding: 0.875rem 2.5rem;
+  background: #e94560;
+  color: #fff;
+  text-decoration: none;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 1rem;
+  transition: background 0.2s, transform 0.2s;
+}
+
+.gold-mine-enroll-btn:hover {
+  background: #d63a54;
+  transform: translateY(-2px);
+}
+
+@media (max-width: 600px) {
+  .gold-mine-hero-content h1 {
+    font-size: 1.75rem;
+  }
+
+  .gold-mine-steps {
+    grid-template-columns: 1fr;
+  }
+
+  .gold-mine-calculator {
+    padding: 1.25rem;
+  }
+}

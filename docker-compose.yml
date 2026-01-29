@@ -1,0 +1,9 @@
+services:
+  typogram:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: typogram
+    ports:
+      - "3000:3000"
+    container_name: typogram
