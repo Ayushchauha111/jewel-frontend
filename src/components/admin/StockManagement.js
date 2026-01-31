@@ -555,7 +555,7 @@ function StockManagement() {
               >
                 All
               </button>
-              {categories.map(cat => (
+              {(Array.isArray(categories) ? categories : []).map(cat => (
                 <button
                   key={cat}
                   type="button"
@@ -688,8 +688,7 @@ function StockManagement() {
                         style={{ flex: 1 }}
                       >
                         <option value="">Select Article Name</option>
-                        {[...new Set([...ARTICLE_NAMES, ...articleNames])].map(name => (
-                          <option key={name} value={name}>{name}</option>
+                        {[...new Set([...ARTICLE_NAMES, ...(Array.isArray(articleNames) ? articleNames : [])])].map(name => (<option key={name} value={name}>{name}</option>
                         ))}
                         <option value="__CUSTOM__">+ Add Custom Article Name</option>
                       </select>
