@@ -252,7 +252,7 @@ function CreditManagement() {
     <div className="admin-dashboard">
       <AdminNav title="💳 Udhari" onLogout={handleLogout} />
 
-      <div className="price-management" style={{ background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' }}>
+      <div className="price-management">
         <div className="price-header">
           <h1>💳 Udhari Management</h1>
           <p style={{ color: '#7f8c8d', marginTop: '0.5rem' }}>Track and manage udhari (customer credit)</p>

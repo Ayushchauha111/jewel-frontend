@@ -147,7 +147,7 @@ function CustomerManagement() {
     <div className="admin-dashboard">
       <AdminNav title="👥 Customers" onLogout={handleLogout} />
 
-      <div className="price-management" style={{ background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' }}>
+      <div className="price-management">
         <div className="price-header">
           <h1>👥 Customer Management</h1>
           <p style={{ color: '#7f8c8d', marginTop: '0.5rem' }}>Manage your customer database</p>

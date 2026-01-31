@@ -121,10 +121,10 @@ function AnalyticsDashboard() {
     <div className="admin-dashboard">
       <AdminNav title="📊 Analytics" onLogout={handleLogout} />
 
-      <div className="price-management" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
+      <div className="price-management">
         <div className="price-header">
           <h1>📊 Analytics & Reports</h1>
-          <p style={{ color: '#ecf0f1', marginTop: '0.5rem' }}>Comprehensive business insights and analytics</p>
+          <p>Comprehensive business insights and analytics</p>
         </div>
 
         {error && (
@@ -245,30 +245,30 @@ function AnalyticsDashboard() {
                     <div className="price-label">Sold Stock Items</div>
                     <p className="price-value">{analytics.soldStockCount || 0}</p>
                   </div>
-                  <div className="price-card" style={{ background: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)' }}>
+                  <div className="price-card price-card--success">
                     <div className="price-card-header">
                       <div className="price-icon">💵</div>
                     </div>
-                    <div className="price-label" style={{ color: '#fff' }}>Total Income</div>
-                    <p className="price-value" style={{ color: '#fff', wordBreak: 'break-word', overflowWrap: 'break-word' }}>
+                    <div className="price-label">Total Income</div>
+                    <p className="price-value" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>
                       {formatCurrency(analytics.totalIncome)}
                     </p>
                   </div>
-                  <div className="price-card" style={{ background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' }}>
+                  <div className="price-card price-card--danger">
                     <div className="price-card-header">
                       <div className="price-icon">📉</div>
                     </div>
-                    <div className="price-label" style={{ color: '#fff' }}>Total Expenses</div>
-                    <p className="price-value" style={{ color: '#fff', wordBreak: 'break-word', overflowWrap: 'break-word' }}>
+                    <div className="price-label">Total Expenses</div>
+                    <p className="price-value" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>
                       {formatCurrency(analytics.totalExpenses)}
                     </p>
                   </div>
-                  <div className="price-card" style={{ background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' }}>
+                  <div className="price-card price-card--info">
                     <div className="price-card-header">
                       <div className="price-icon">📈</div>
                     </div>
-                    <div className="price-label" style={{ color: '#fff' }}>Net Income</div>
-                    <p className="price-value" style={{ color: '#fff', wordBreak: 'break-word', overflowWrap: 'break-word' }}>
+                    <div className="price-label">Net Income</div>
+                    <p className="price-value" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>
                       {formatCurrency(analytics.netIncome)}
                     </p>
                   </div>
@@ -361,30 +361,30 @@ function AnalyticsDashboard() {
                   <div className="price-label">Bills Count</div>
                   <p className="price-value">{analytics.billCount || 0}</p>
                 </div>
-                <div className="price-card" style={{ background: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)' }}>
+                <div className="price-card price-card--success">
                   <div className="price-card-header">
                     <div className="price-icon">💵</div>
                   </div>
-                  <div className="price-label" style={{ color: '#fff' }}>Total Income</div>
-                  <p className="price-value" style={{ color: '#fff', wordBreak: 'break-word', overflowWrap: 'break-word' }}>
+                  <div className="price-label">Total Income</div>
+                  <p className="price-value" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>
                     {formatCurrency(analytics.totalIncome)}
                   </p>
                 </div>
-                <div className="price-card" style={{ background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' }}>
+                <div className="price-card price-card--danger">
                   <div className="price-card-header">
                     <div className="price-icon">📉</div>
                   </div>
-                  <div className="price-label" style={{ color: '#fff' }}>Total Expenses</div>
-                  <p className="price-value" style={{ color: '#fff', wordBreak: 'break-word', overflowWrap: 'break-word' }}>
+                  <div className="price-label">Total Expenses</div>
+                  <p className="price-value" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>
                     {formatCurrency(analytics.totalExpenses)}
                   </p>
                 </div>
-                <div className="price-card" style={{ background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' }}>
+                <div className="price-card price-card--info">
                   <div className="price-card-header">
                     <div className="price-icon">📈</div>
                   </div>
-                  <div className="price-label" style={{ color: '#fff' }}>Net Income</div>
-                  <p className="price-value" style={{ color: '#fff', wordBreak: 'break-word', overflowWrap: 'break-word' }}>
+                  <div className="price-label">Net Income</div>
+                  <p className="price-value" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>
                     {formatCurrency(analytics.netIncome)}
                   </p>
                 </div>

@@ -217,22 +217,18 @@ function IncomeExpenseManagement() {
     <div className="admin-dashboard">
       <AdminNav title="💰 Income/Expense" onLogout={handleLogout} />
 
-      <div className="price-management" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
+      <div className="price-management">
         <div className="price-header">
           <h1>💰 Income & Expense Management</h1>
-          <p style={{ color: '#ecf0f1', marginTop: '0.5rem' }}>Track and manage all financial transactions</p>
+          <p>Track and manage all financial transactions</p>
         </div>
 
         {error && (
-          <div style={{ margin: '0 2rem 1rem 2rem', padding: '1rem', background: '#fee', color: '#c33', borderRadius: '8px', border: '1px solid #fcc' }}>
-            {error}
-          </div>
+          <div className="price-error-banner">{error}</div>
         )}
 
         {success && (
-          <div style={{ margin: '0 2rem 1rem 2rem', padding: '1rem', background: '#efe', color: '#3c3', borderRadius: '8px', border: '1px solid #cfc' }}>
-            {success}
-          </div>
+          <div className="price-success-banner">{success}</div>
         )}
 
         <div style={{ margin: '0 2rem 2rem 2rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
@@ -267,37 +263,19 @@ function IncomeExpenseManagement() {
         </div>
 
         {(viewMode === 'summary' || viewMode === 'transactions') && (
-          <div style={{ margin: '0 2rem 2rem 2rem', display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
-            <div>
-              <label style={{ marginRight: '0.5rem', fontWeight: '600', color: '#fff' }}>Start Date:</label>
+          <div className="price-search-card" style={{ marginBottom: '1.5rem' }}>
+            <div className="price-search-row">
+              <label style={{ marginRight: '0.5rem', fontWeight: 600 }}>Start Date:</label>
               <input
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                style={{
-                  padding: '0.75rem',
-                  borderRadius: '8px',
-                  border: '2px solid rgba(255,255,255,0.3)',
-                  background: 'rgba(255,255,255,0.1)',
-                  color: '#fff',
-                  fontSize: '1rem'
-                }}
               />
-            </div>
-            <div>
-              <label style={{ marginRight: '0.5rem', fontWeight: '600', color: '#fff' }}>End Date:</label>
+              <label style={{ marginRight: '0.5rem', fontWeight: 600 }}>End Date:</label>
               <input
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                style={{
-                  padding: '0.75rem',
-                  borderRadius: '8px',
-                  border: '2px solid rgba(255,255,255,0.3)',
-                  background: 'rgba(255,255,255,0.1)',
-                  color: '#fff',
-                  fontSize: '1rem'
-                }}
               />
             </div>
           </div>
@@ -306,34 +284,34 @@ function IncomeExpenseManagement() {
         {viewMode === 'summary' && (
           <div style={{ margin: '0 2rem' }}>
             {loading ? (
-              <div style={{ textAlign: 'center', padding: '3rem', color: '#fff' }}>⏳ Loading financial summary...</div>
+              <div style={{ textAlign: 'center', padding: '3rem' }}>⏳ Loading financial summary...</div>
             ) : financialSummary ? (
               <div>
                 <div className="price-cards" style={{ marginBottom: '2rem' }}>
-                  <div className="price-card" style={{ background: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)' }}>
+                  <div className="price-card price-card--success">
                     <div className="price-card-header">
                       <div className="price-icon">💵</div>
                     </div>
-                    <div className="price-label" style={{ color: '#fff' }}>Total Income</div>
-                    <p className="price-value" style={{ color: '#fff', wordBreak: 'break-word', overflowWrap: 'break-word' }}>
+                    <div className="price-label">Total Income</div>
+                    <p className="price-value" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>
                       {formatCurrency(financialSummary.totalIncome)}
                     </p>
                   </div>
-                  <div className="price-card" style={{ background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' }}>
+                  <div className="price-card price-card--danger">
                     <div className="price-card-header">
                       <div className="price-icon">💸</div>
                     </div>
-                    <div className="price-label" style={{ color: '#fff' }}>Total Expenses</div>
-                    <p className="price-value" style={{ color: '#fff', wordBreak: 'break-word', overflowWrap: 'break-word' }}>
+                    <div className="price-label">Total Expenses</div>
+                    <p className="price-value" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>
                       {formatCurrency(financialSummary.totalExpenses)}
                     </p>
                   </div>
-                  <div className="price-card" style={{ background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' }}>
+                  <div className="price-card price-card--info">
                     <div className="price-card-header">
                       <div className="price-icon">📈</div>
                     </div>
-                    <div className="price-label" style={{ color: '#fff' }}>Net Income</div>
-                    <p className="price-value" style={{ color: '#fff', wordBreak: 'break-word', overflowWrap: 'break-word' }}>
+                    <div className="price-label">Net Income</div>
+                    <p className="price-value" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>
                       {formatCurrency(financialSummary.netIncome)}
                     </p>
                   </div>
@@ -341,7 +319,7 @@ function IncomeExpenseManagement() {
 
                 {incomeSummary && incomeSummary.incomeByCategory && Object.keys(incomeSummary.incomeByCategory).length > 0 && (
                   <div className="price-table-container" style={{ marginBottom: '2rem' }}>
-                    <h3 style={{ marginBottom: '1.5rem', color: '#fff' }}>💵 Income by Category</h3>
+                    <h3 style={{ marginBottom: '1.5rem' }}>💵 Income by Category</h3>
                     <table className="price-table">
                       <thead>
                         <tr>
@@ -363,7 +341,7 @@ function IncomeExpenseManagement() {
 
                 {expenseSummary && expenseSummary.expensesByCategory && Object.keys(expenseSummary.expensesByCategory).length > 0 && (
                   <div className="price-table-container">
-                    <h3 style={{ marginBottom: '1.5rem', color: '#fff' }}>💸 Expenses by Category</h3>
+                    <h3 style={{ marginBottom: '1.5rem' }}>💸 Expenses by Category</h3>
                     <table className="price-table">
                       <thead>
                         <tr>
@@ -390,10 +368,10 @@ function IncomeExpenseManagement() {
         {viewMode === 'transactions' && (
           <div style={{ margin: '0 2rem' }}>
             {loading ? (
-              <div style={{ textAlign: 'center', padding: '3rem', color: '#fff' }}>⏳ Loading transactions...</div>
+              <div style={{ textAlign: 'center', padding: '3rem' }}>⏳ Loading transactions...</div>
             ) : (
               <div className="price-table-container">
-                <h3 style={{ marginBottom: '1.5rem', color: '#fff' }}>📋 All Transactions ({transactions.length})</h3>
+                <h3 style={{ marginBottom: '1.5rem' }}>📋 All Transactions ({transactions.length})</h3>
                 {transactions.length > 0 ? (
                   <table className="price-table">
                     <thead>

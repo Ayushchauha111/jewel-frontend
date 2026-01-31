@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { getAuthHeaders } from '../../utils/authHelper';
 import AuthService from '../../service/auth.service';
+import AdminNav from './AdminNav';
+import './AdminDashboard.css';
 import './RateLimitManagement.css';
 
 const API_URL = '/api';
@@ -144,32 +146,14 @@ function RateLimitManagement() {
   };
 
   return (
-    <div className="rate-limit-management">
-      <div className="rate-limit-header">
-        <div className="header-content">
-          <div className="header-title">
-            <h1>⚙️ Rate Limit Configuration</h1>
-            <p>Configure API rate limits to protect against abuse and ensure fair usage</p>
-          </div>
-          <button onClick={handleLogout} className="logout-btn">Logout</button>
+    <div className="admin-dashboard">
+      <AdminNav title="⚙️ Rate Limits" onLogout={handleLogout} />
+      <div className="rate-limit-management">
+        <div className="rate-limit-header">
+          <h1>Rate Limit Configuration</h1>
+          <p>Configure API rate limits to protect against abuse and ensure fair usage</p>
         </div>
-      </div>
-
-      <div className="rate-limit-nav">
-        <Link to="/admin">Dashboard</Link>
-        <Link to="/admin/stock">Stock</Link>
-        <Link to="/admin/billing">Billing</Link>
-        <Link to="/admin/customers">Customers</Link>
-        <Link to="/admin/orders">Orders</Link>
-        <Link to="/admin/credits">Udhari</Link>
-        <Link to="/admin/analytics">Analytics</Link>
-        <Link to="/admin/income-expense">Income/Expense</Link>
-        <Link to="/admin/gold-price">Gold Price</Link>
-        <Link to="/admin/silver-price">Silver Price</Link>
-        <Link to="/admin/rate-limit" className="active">Rate Limits</Link>
-      </div>
-
-      <div className="rate-limit-content">
+        <div className="rate-limit-content">
         {loading ? (
           <div className="loading-state">
             <div className="spinner">⏳</div>
@@ -281,6 +265,7 @@ function RateLimitManagement() {
             </div>
           </>
         )}
+        </div>
       </div>
     </div>
   );

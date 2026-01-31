@@ -33,7 +33,15 @@ const ARTICLE_NAMES = [
   'Armlet'
 ];
 
-const MATERIAL_OPTIONS = ['Gold', 'Silver', 'Diamond', 'Gemstone', 'Other'];
+const MATERIAL_OPTIONS = ['Gold', 'Silver', 'Diamond', 'Gold + Diamond', 'Silver + Diamond', 'Platinum + Diamond', 'Gemstone', 'Other'];
+
+const isDiamondOnly = (m) => String(m || '').toLowerCase() === 'diamond';
+const isDiamondWithMetal = (m) => {
+  const s = String(m || '').toLowerCase();
+  return s === 'gold + diamond' || s === 'silver + diamond' || s === 'platinum + diamond';
+};
+const isDiamondRelated = (m) => isDiamondOnly(m) || isDiamondWithMetal(m);
+const isPureGold = (m) => String(m || '').toLowerCase() === 'gold';
 
 // Standard gold carat -> purity % (and hallmark). Purity is fixed per carat.
 const GOLD_CARAT_PURITY = {
@@ -82,6 +90,7 @@ function StockManagement() {
     material: 'Gold',
     weightGrams: '',
     carat: '',
+    diamondCarat: '',
     purityPercentage: '',
     quantity: 1,
     size: '',
@@ -255,7 +264,8 @@ function StockManagement() {
         articleCode: null,
         imageUrl: imageUrl || null,
         weightGrams: safeParseFloat(formData.weightGrams),
-        carat: safeParseFloat(formData.carat),
+        carat: isDiamondOnly(formData.material) ? null : safeParseFloat(formData.carat),
+        diamondCarat: isDiamondOnly(formData.material) ? safeParseFloat(formData.carat) : (isDiamondWithMetal(formData.material) ? safeParseFloat(formData.diamondCarat) : null),
         purityPercentage: safeParseFloat(formData.purityPercentage),
         quantity: formData.quantity ? parseInt(formData.quantity) : 1,
         size: (formData.category && (formData.category.toLowerCase() === 'ring' || formData.category.toLowerCase() === 'rings')) ? (formData.size?.trim() || null) : null,
@@ -296,7 +306,8 @@ function StockManagement() {
       category: item.category || '',
       material: item.material || 'Gold',
       weightGrams: item.weightGrams ? String(item.weightGrams) : '',
-      carat: item.carat ? String(item.carat) : '',
+      carat: (item.carat != null && item.carat !== '') ? String(item.carat) : (isDiamondOnly(item.material) && item.diamondCarat != null ? String(item.diamondCarat) : ''),
+      diamondCarat: item.diamondCarat != null ? String(item.diamondCarat) : '',
       purityPercentage: item.purityPercentage ? String(item.purityPercentage) : '',
       quantity: item.quantity || 1,
       size: item.size || '',
@@ -383,6 +394,7 @@ function StockManagement() {
       material: 'Gold',
       weightGrams: '',
       carat: '',
+      diamondCarat: '',
       purityPercentage: '',
       quantity: 1,
       size: '',
@@ -493,19 +505,19 @@ function StockManagement() {
           </div>
           <div className="stock-stat-card">
             <div className="stock-stat-label">Available</div>
-            <div className="stock-stat-value" style={{ background: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+            <div className="stock-stat-value stock-stat-value--success">
               {stats.available}
             </div>
           </div>
           <div className="stock-stat-card">
             <div className="stock-stat-label">Sold</div>
-            <div className="stock-stat-value" style={{ background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+            <div className="stock-stat-value stock-stat-value--danger">
               {stats.sold}
             </div>
           </div>
           <div className="stock-stat-card">
             <div className="stock-stat-label">Reserved</div>
-            <div className="stock-stat-value" style={{ background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+            <div className="stock-stat-value stock-stat-value--info">
               {stats.reserved}
             </div>
           </div>
@@ -661,7 +673,14 @@ function StockManagement() {
                   <label>Material / Type *</label>
                   <select
                     value={formData.material}
-                    onChange={(e) => setFormData({...formData, material: e.target.value})}
+                    onChange={(e) => {
+                      const material = e.target.value;
+                      setFormData({
+                        ...formData,
+                        material,
+                        ...(isDiamondOnly(material) ? { purityPercentage: '' } : {})
+                      });
+                    }}
                     required
                     style={{ width: '100%', padding: '0.75rem', border: '2px solid #ecf0f1', borderRadius: '8px' }}
                   >
@@ -718,19 +737,23 @@ function StockManagement() {
                   )}
                 </div>
                 <div className="stock-form-group">
-                  <label>Weight (grams) *</label>
+                  <label>
+                    {isDiamondOnly(formData.material) ? 'Weight (g) – setting/metal *' : isDiamondWithMetal(formData.material) ? 'Metal weight (g) *' : 'Weight (grams) *'}
+                  </label>
                   <input
                     type="number"
                     step="0.001"
                     value={formData.weightGrams}
                     onChange={(e) => setFormData({...formData, weightGrams: e.target.value})}
                     required
-                    placeholder="e.g., 5.250"
+                    placeholder={isDiamondOnly(formData.material) ? 'e.g. 2.5 (metal weight)' : isDiamondWithMetal(formData.material) ? 'e.g. 3.5 (gold/silver/pt weight)' : 'e.g., 5.250'}
                   />
                 </div>
                 <div className="stock-form-group">
-                  <label>Carat *</label>
-                  {formData.material === 'Gold' ? (
+                  <label>
+                    {isDiamondOnly(formData.material) ? 'Diamond Carat *' : (formData.material === 'Gold' || formData.material === 'Gold + Diamond') ? 'Gold Carat *' : isDiamondWithMetal(formData.material) ? 'Carat (metal) *' : 'Carat *'}
+                  </label>
+                  {(formData.material === 'Gold' || formData.material === 'Gold + Diamond') ? (
                     <>
                       <select
                         value={GOLD_CARAT_OPTIONS.includes(Number(formData.carat)) ? formData.carat : '__OTHER__'}
@@ -777,18 +800,32 @@ function StockManagement() {
                       value={formData.carat}
                       onChange={(e) => setFormData({...formData, carat: e.target.value})}
                       required
-                      placeholder="e.g., 22.00"
+                      placeholder={isDiamondOnly(formData.material) ? 'e.g. 0.5 (diamond carat)' : 'e.g., 22.00'}
                     />
                   )}
                 </div>
                 <div className="stock-form-group">
                   <label>Purity %</label>
-                  {formData.material === 'Gold' ? (
+                  {(formData.material === 'Gold' || formData.material === 'Gold + Diamond') ? (
                     <input
                       type="text"
                       readOnly
                       value={formData.purityPercentage ? `${formData.purityPercentage}% (fixed for selected carat)` : '— Select carat —'}
                       style={{ width: '100%', padding: '0.75rem', border: '2px solid #ecf0f1', borderRadius: '8px', background: '#f8f9fa', color: '#495057' }}
+                    />
+                  ) : isDiamondOnly(formData.material) ? (
+                    <input
+                      type="text"
+                      readOnly
+                      value="N/A (diamond only)"
+                      style={{ width: '100%', padding: '0.75rem', border: '2px solid #ecf0f1', borderRadius: '8px', background: '#f8f9fa', color: '#6c757d' }}
+                    />
+                  ) : isDiamondWithMetal(formData.material) ? (
+                    <input
+                      type="text"
+                      readOnly
+                      value="N/A (metal + diamond)"
+                      style={{ width: '100%', padding: '0.75rem', border: '2px solid #ecf0f1', borderRadius: '8px', background: '#f8f9fa', color: '#6c757d' }}
                     />
                   ) : (
                     <input
@@ -802,6 +839,21 @@ function StockManagement() {
                     />
                   )}
                 </div>
+                {isDiamondWithMetal(formData.material) && (
+                  <div className="stock-form-group">
+                    <label>Diamond carat *</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={formData.diamondCarat}
+                      onChange={(e) => setFormData({...formData, diamondCarat: e.target.value})}
+                      required
+                      placeholder="e.g. 0.5 (total diamond carat)"
+                      style={{ width: '100%', padding: '0.75rem', border: '2px solid #ecf0f1', borderRadius: '8px' }}
+                    />
+                  </div>
+                )}
                 <div className="stock-form-group">
                   <label>Quantity</label>
                   <input
@@ -823,7 +875,7 @@ function StockManagement() {
                   </div>
                 )}
                 <div className="stock-form-group">
-                  <label>Selling Price (₹)</label>
+                  <label>Selling Price (₹) {isDiamondRelated(formData.material) && <span style={{ fontWeight: 400, color: '#6c757d', fontSize: '0.85rem' }}>– Fixed price (no gold rate)</span>}</label>
                   <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
                     <input
                       type="number"
@@ -831,10 +883,10 @@ function StockManagement() {
                       min="0"
                       value={formData.sellingPrice}
                       onChange={(e) => setFormData({...formData, sellingPrice: e.target.value})}
-                      placeholder="e.g., 45000"
+                      placeholder={isDiamondRelated(formData.material) ? 'e.g. 25000 (fixed price)' : 'e.g., 45000'}
                       style={{ flex: '1 1 140px' }}
                     />
-                    {formData.material === 'Gold' && formData.weightGrams?.trim() && formData.carat?.trim() && (
+                    {isPureGold(formData.material) && formData.weightGrams?.trim() && formData.carat?.trim() && (
                       <button
                         type="button"
                         onClick={handleCalculateFromGoldRate}
@@ -938,6 +990,7 @@ function StockManagement() {
                     <th>Code</th>
                     <th>Weight (g)</th>
                     <th>Carat</th>
+                    <th>Diamond Ct</th>
                     <th>Purity %</th>
                     <th>Quantity</th>
                     <th>Status</th>
@@ -970,7 +1023,8 @@ function StockManagement() {
                       <td>{item.size || '–'}</td>
                       <td>{item.articleCode || '-'}</td>
                       <td>{item.weightGrams || '-'}</td>
-                      <td>{item.carat || '-'}</td>
+                      <td>{item.carat ?? '-'}</td>
+                      <td>{item.diamondCarat != null ? String(item.diamondCarat) : '-'}</td>
                       <td>{item.purityPercentage ? `${item.purityPercentage}%` : '-'}</td>
                       <td>{item.quantity || 1}</td>
                       <td>

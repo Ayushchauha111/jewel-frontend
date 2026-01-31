@@ -1,24 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import axios from 'axios';
-import AuthService from '../../service/auth.service';
 import CustomerNav from './CustomerNav';
 import './CustomerHome.css';
 
 const API_URL = '/api';
 
 const CATEGORIES = [
-  { label: 'Rings', to: '/products?category=Rings', icon: '💍' },
-  { label: 'Earrings', to: '/products?category=Earrings', icon: '👂' },
-  { label: 'Necklaces', to: '/products?category=Necklace', icon: '📿' },
-  { label: 'Bangles', to: '/products?category=Bangle', icon: '⭕' },
-  { label: 'Bracelets', to: '/products?category=Bracelet', icon: '⌚' },
-  { label: 'Pendants', to: '/products?category=Pendant', icon: '🔮' },
-  { label: 'Chains', to: '/products?category=Chain', icon: '⛓️' },
-  { label: 'Mangalsutras', to: '/products?category=Mangalsutra', icon: '💫' },
-  { label: 'Gold Coins', to: '/products?category=Gold', icon: '🪙' },
-  { label: 'All Jewellery', to: '/products', icon: '💎' },
+  { label: 'Rings', to: '/products?category=Rings', img: 'https://images.unsplash.com/photo-1605100804763-247f67b3557e?auto=format&fit=crop&w=300' },
+  { label: 'Earrings', to: '/products?category=Earrings', img: 'https://images.unsplash.com/photo-1535633302704-5043df1774af?auto=format&fit=crop&w=300' },
+  { label: 'Necklaces', to: '/products?category=Necklace', img: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&w=300' },
+  { label: 'Bangles', to: '/products?category=Bangle', img: 'https://images.unsplash.com/photo-1611591437281-460bfbe1520e?auto=format&fit=crop&w=300' },
 ];
+
+const stagger = { animate: { transition: { staggerChildren: 0.08 } } };
+const itemFade = { initial: { opacity: 0, y: 20 }, animate: { opacity: 1, y: 0 } };
 
 function CustomerHome() {
   const navigate = useNavigate();
@@ -27,112 +24,218 @@ function CustomerHome() {
 
   useEffect(() => {
     fetchFeaturedProducts();
-    try {
-      const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-      setCartCount(cart.reduce((sum, i) => sum + (i.quantity || 1), 0));
-    } catch (_) {}
+    const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+    setCartCount(cart.reduce((sum, i) => sum + (i.quantity || 1), 0));
   }, []);
 
   const fetchFeaturedProducts = async () => {
     try {
       const response = await axios.get(`${API_URL}/stock?page=0&size=20`);
       const data = response.data?.content ?? (Array.isArray(response.data) ? response.data : []);
-      const available = data.filter(s => s.status === 'AVAILABLE' || s.status === null);
-      setFeaturedProducts(available.slice(0, 6));
+      setFeaturedProducts(data.filter(s => s.status === 'AVAILABLE' || !s.status).slice(0, 4));
     } catch (error) {
       console.error('Error fetching products:', error);
-      setFeaturedProducts([]);
     }
-  };
-
-  const getImageUrl = (url) => {
-    if (!url) return null;
-    return url.startsWith('http') ? url : `${window.location.protocol}//${window.location.hostname}:8000${url}`;
   };
 
   return (
     <div className="customer-home">
       <CustomerNav cartCount={cartCount} />
 
-      <section className="hero-section">
-        <div className="hero-content">
-          <h2>Premium Gold & Silver Jewelry</h2>
-          <p>Discover our exquisite collection of handcrafted jewellery</p>
-          <div className="hero-buttons">
-            <Link to="/live-rates" className="cta-button-secondary">View Live Rates</Link>
-            <Link to="/products" className="cta-button">Shop Now</Link>
+      {/* Hero Section */}
+      <section className="hero-section" aria-label="Welcome to GangaJewellers">
+        <div className="hero-overlay">
+          <motion.div
+            className="hero-content"
+            initial={{ opacity: 0, y: 40 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <motion.span
+              className="hero-subtitle"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.2, duration: 0.5 }}
+            >
+              NEW ARRIVALS 2026
+            </motion.span>
+            <h1 className="hero-title">
+              The Art of <span>Timeless</span> Elegance
+            </h1>
+            <motion.p
+              className="hero-description"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.4, duration: 0.5 }}
+            >
+              Exquisite handcrafted jewelry that tells your unique story.
+            </motion.p>
+            <motion.div
+              className="hero-actions"
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5, duration: 0.5 }}
+            >
+              <Link to="/products" className="btn-primary">Explore Collection</Link>
+              <Link to="/live-rates" className="btn-outline">Live Gold Rates</Link>
+            </motion.div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Trust Bar */}
+      <motion.div
+        className="trust-bar"
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true, margin: '-50px' }}
+        transition={{ duration: 0.5 }}
+      >
+        <span>✓ 100% Certified Jewelry</span>
+        <span>✓ Lifetime Exchange</span>
+        <span>✓ Free Insured Shipping</span>
+        <span>✓ 30-Day Money Back</span>
+      </motion.div>
+
+      {/* Showroom Photo Movie Scroller */}
+      <section className="showroom-scroller-wrap" aria-label="Showroom">
+        <h2 className="showroom-scroller-title">Our Showroom</h2>
+        <div className="showroom-scroller">
+          <div className="showroom-scroller-inner">
+            <div className="showroom-scroller-track">
+              {['/showroom-promo.png', '/showroom-interior.png'].map((src, i) => (
+                <div key={i} className="showroom-scroller-slide">
+                  <img src={src} alt={i === 0 ? 'Ganga Jewellers – Hallmark Jewellery Showroom' : 'Ganga Jewellers showroom interior'} loading="lazy" />
+                </div>
+              ))}
+            </div>
+            <div className="showroom-scroller-track" aria-hidden="true">
+              {['/showroom-promo.png', '/showroom-interior.png'].map((src, i) => (
+                <div key={i} className="showroom-scroller-slide">
+                  <img src={src} alt="" loading="lazy" />
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </section>
 
-      <section className="home-categories">
-        <h2>Shop by Category</h2>
-        <div className="home-categories-grid">
-          {CATEGORIES.map(({ label, to, icon }) => (
-            <Link key={label} to={to} className="home-category-card">
-              <span className="home-category-icon">{icon}</span>
-              <span className="home-category-label">{label}</span>
-            </Link>
+      {/* Shop by Category */}
+      <section className="section-container section-categories">
+        <motion.div
+          className="section-header"
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: '-40px' }}
+          transition={{ duration: 0.4 }}
+        >
+          <h2>Shop by Category</h2>
+          <Link to="/products" className="view-all">View All →</Link>
+        </motion.div>
+        <motion.div
+          className="category-grid-modern"
+          variants={stagger}
+          initial="initial"
+          whileInView="animate"
+          viewport={{ once: true, margin: '-30px' }}
+        >
+          {CATEGORIES.map((cat, i) => (
+            <motion.div key={cat.label} variants={itemFade} transition={{ duration: 0.4 }}>
+              <Link to={cat.to} className="cat-card">
+                <div className="cat-img-wrapper">
+                  <img src={cat.img} alt={cat.label} loading="lazy" />
+                </div>
+                <div className="cat-info">
+                  <span>{cat.label}</span>
+                </div>
+              </Link>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       </section>
 
-      <section className="home-plan-banners">
-        <Link to="/gold-mine" className="home-plan-banner home-plan-gold-mine">
-          <div className="home-plan-content">
-            <h3>Gold Mine 10+1 Monthly Plan</h3>
-            <p>Pay 10 installments & enjoy 100% savings on the 11th month!</p>
-            <span className="home-plan-cta">Enroll Now</span>
+      {/* Banner Section - Monthly Plans */}
+      <section className="promo-banners">
+        <motion.div
+          className="promo-card gold-mine"
+          initial={{ opacity: 0, x: -30 }}
+          whileInView={{ opacity: 1, x: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5 }}
+        >
+          <div className="promo-text">
+            <h4>GOLD MINE PLAN</h4>
+            <h2>10 + 1 Monthly Savings</h2>
+            <p>Pay 10 installments and we pay the last one for you.</p>
+            <Link to="/gold-mine" className="promo-btn">Invest Now</Link>
           </div>
-        </Link>
-        <Link to="/gold-reserve" className="home-plan-banner home-plan-gold-reserve">
-          <div className="home-plan-content">
-            <h3>Gold Reserve Plan</h3>
-            <p>Pay monthly, receive gold units at live value. Complete 10 installments & get your special benefit voucher.</p>
-            <span className="home-plan-cta">Get Started</span>
+        </motion.div>
+        <motion.div
+          className="promo-card gold-reserve"
+          initial={{ opacity: 0, x: 30 }}
+          whileInView={{ opacity: 1, x: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5 }}
+        >
+          <div className="promo-text">
+            <h4>GOLD RESERVE</h4>
+            <h2>Hedge Against Price Hikes</h2>
+            <p>Lock in gold rates monthly and redeem for jewelry.</p>
+            <Link to="/gold-reserve" className="promo-btn">Learn More</Link>
           </div>
-        </Link>
+        </motion.div>
       </section>
 
-      <section className="featured-section">
-        <h2>Featured Products</h2>
-        <div className="products-grid">
-          {featuredProducts.length > 0 ? (
-            featuredProducts.map((product) => (
-              <div key={product.id} className="product-card" onClick={() => navigate('/products')}>
-                {product.imageUrl ? (
-                  <img
-                    src={getImageUrl(product.imageUrl)}
-                    alt={product.articleName}
-                    className="product-image"
-                    onError={(e) => {
-                      e.target.style.display = 'none';
-                      const ph = e.target.parentElement.querySelector('.product-image-placeholder');
-                      if (ph) ph.style.display = 'flex';
-                    }}
-                  />
-                ) : null}
-                <div
-                  className="product-image-placeholder"
-                  style={{ display: product.imageUrl ? 'none' : 'flex' }}
-                >
-                  No Image
-                </div>
-                <div className="product-info">
-                  <h3>{product.articleName}</h3>
-                  <p className="product-specs">Weight: {product.weightGrams}g | Carat: {product.carat}</p>
-                  {product.purityPercentage && <p className="product-specs">Purity: {product.purityPercentage}%</p>}
-                  <p className="price">₹{product.sellingPrice}</p>
-                  <button className="view-button" onClick={(e) => { e.stopPropagation(); navigate('/products'); }}>
-                    View Details
-                  </button>
-                </div>
+      {/* Featured Products */}
+      <section className="section-container section-trending">
+        <motion.div
+          className="section-header section-header-center"
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: '-40px' }}
+          transition={{ duration: 0.4 }}
+        >
+          <div>
+            <h2>Trending Now</h2>
+            <p className="section-subtitle">Handpicked favorites for the season</p>
+          </div>
+        </motion.div>
+        <motion.div
+          className="luxury-products-grid"
+          variants={stagger}
+          initial="initial"
+          whileInView="animate"
+          viewport={{ once: true, margin: '-30px' }}
+        >
+          {featuredProducts.map((p, i) => (
+            <motion.div
+              key={p.id}
+              variants={itemFade}
+              transition={{ duration: 0.4 }}
+              className="luxury-card"
+              onClick={() => navigate('/products')}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => e.key === 'Enter' && navigate('/products')}
+              aria-label={`View ${p.articleName}`}
+            >
+              <div className="luxury-img-container">
+                <img
+                  src={p.imageUrl || 'https://via.placeholder.com/400x500?text=Premium+Jewelry'}
+                  alt={p.articleName}
+                  loading="lazy"
+                />
+                <span className="quick-view">Quick View</span>
               </div>
-            ))
-          ) : (
-            <p className="home-no-products">No products available at the moment.</p>
-          )}
-        </div>
+              <div className="luxury-details">
+                <p className="brand-tag">Exquisite Collection</p>
+                <h3>{p.articleName}</h3>
+                <div className="price-tag">₹{p.sellingPrice?.toLocaleString()}</div>
+                <div className="specs">{p.weightGrams}g | {p.carat}K Gold</div>
+              </div>
+            </motion.div>
+          ))}
+        </motion.div>
       </section>
     </div>
   );

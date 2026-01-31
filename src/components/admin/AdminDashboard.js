@@ -17,6 +17,7 @@ function AdminDashboard() {
     totalCredits: 0,
     todayGoldPrice: null,
     todaySilverPrice: null,
+    todayDiamondPrice: null,
     availableStock: 0,
     soldStock: 0,
     totalRevenue: 0
@@ -61,6 +62,7 @@ function AdminDashboard() {
         totalCredits: data.totalCredits ?? 0,
         todayGoldPrice: data.todayGoldPrice ?? null,
         todaySilverPrice: data.todaySilverPrice ?? null,
+        todayDiamondPrice: data.todayDiamondPrice ?? null,
         availableStock: data.availableStock ?? 0,
         soldStock: data.soldStock ?? 0,
         totalRevenue: data.totalRevenue ?? 0
@@ -181,6 +183,19 @@ function AdminDashboard() {
             </div>
           </div>
 
+          <div className="stat-card stat-card-info">
+            <div className="stat-icon">💎</div>
+            <div className="stat-content">
+              <h3>Diamond Price</h3>
+              <p className="stat-number">
+                {stats.todayDiamondPrice ? formatCurrency(stats.todayDiamondPrice) : 'Not Set'}
+              </p>
+              <div className="stat-details">
+                <span className="stat-badge stat-badge-info">Per Carat</span>
+              </div>
+            </div>
+          </div>
+
           <div className="stat-card stat-card-revenue">
             <div className="stat-icon">💰</div>
             <div className="stat-content">
@@ -215,15 +230,10 @@ function AdminDashboard() {
                 <h3>Add Customer</h3>
                 <p>Register new customer</p>
               </Link>
-              <Link to="/admin/gold-price" className="quick-action-card">
-                <div className="quick-action-icon">🥇</div>
-                <h3>Gold Price</h3>
-                <p>Update gold rates</p>
-              </Link>
-              <Link to="/admin/silver-price" className="quick-action-card">
-                <div className="quick-action-icon">🥈</div>
-                <h3>Silver Price</h3>
-                <p>Update silver rates</p>
+              <Link to="/admin/rates" className="quick-action-card">
+                <div className="quick-action-icon">📊</div>
+                <h3>Rates</h3>
+                <p>Gold, Silver & Diamond rates (all carats)</p>
               </Link>
               <Link to="/admin/analytics" className="quick-action-card">
                 <div className="quick-action-icon">📊</div>

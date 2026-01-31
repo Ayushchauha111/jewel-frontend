@@ -1,538 +1,436 @@
+/* Live Rates – Real Gold & Silver Bullion Theme */
+:root {
+  --lr-bg: #1a1814;
+  --lr-bg-card: #242019;
+  --lr-bg-elevated: #2c281f;
+  --lr-gold-light: #e8c547;
+  --lr-gold: #c9a227;
+  --lr-gold-dark: #a68b5b;
+  --lr-gold-shadow: rgba(201, 162, 39, 0.25);
+  --lr-silver-light: #e8e8e8;
+  --lr-silver: #b8b8b8;
+  --lr-silver-dark: #8a8a8a;
+  --lr-silver-shadow: rgba(184, 184, 184, 0.2);
+  --lr-text: #f5f0e8;
+  --lr-text-muted: #a89f8e;
+  --lr-border-gold: rgba(201, 162, 39, 0.35);
+  --lr-border-silver: rgba(184, 184, 184, 0.25);
+}
+
 .live-rates-page {
   min-height: 100vh;
-  background: #1a1a1a;
-  color: #fff;
-  font-family: 'Arial', sans-serif;
+  background: var(--lr-bg);
+  color: var(--lr-text);
+  font-family: 'Playfair Display', Georgia, serif;
+  -webkit-font-smoothing: antialiased;
+  position: relative;
 }
 
-/* Header */
-.live-rates-header {
-  background: linear-gradient(135deg, #d4af37 0%, #c9a227 50%, #b8941f 100%);
-  padding: 1.5rem 2rem;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+.live-rates-page::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(ellipse 80% 50% at 50% 0%, rgba(201, 162, 39, 0.06) 0%, transparent 50%);
+  pointer-events: none;
+  z-index: 0;
 }
 
-.header-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  max-width: 1600px;
+.live-rates-main {
+  position: relative;
+  z-index: 1;
+  padding: 2rem clamp(1rem, 4vw, 2rem) 3rem;
+  max-width: 720px;
   margin: 0 auto;
 }
 
-.logo-section {
-  display: flex;
-  align-items: center;
-  gap: 1.5rem;
-}
-
-.logo {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #fff;
-  padding: 0.5rem;
-  border-radius: 50%;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  width: 100px;
-  height: 100px;
-}
-
-.gj-logo {
+.live-rates-container {
   width: 100%;
-  height: 100%;
 }
 
-.gj-logo circle,
-.gj-logo path,
-.gj-logo line {
-  transition: all 0.3s ease;
-}
-
-.gj-logo text {
-  font-family: 'Georgia', 'Times New Roman', serif;
-  font-weight: bold;
-}
-
-.company-name h1 {
-  margin: 0;
-  color: #2c3e50;
-  font-size: 2.2rem;
-  font-weight: bold;
-  text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.3);
-  letter-spacing: 1px;
-}
-
-.contact-section {
-  text-align: right;
-  color: #2c3e50;
-}
-
-.contact-label {
-  font-weight: bold;
-  font-size: 0.95rem;
-  margin-bottom: 0.5rem;
-  text-transform: uppercase;
-}
-
-.contact-numbers {
-  font-size: 1.15rem;
-  font-weight: 700;
-  line-height: 1.6;
-}
-
-/* Navigation */
-.live-rates-nav {
-  background: linear-gradient(135deg, #d4af37 0%, #c9a227 50%, #b8941f 100%);
-  padding: 1rem 2rem;
-  display: flex;
-  gap: 2.5rem;
-  justify-content: center;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-}
-
-.live-rates-nav a,
-.live-rates-nav span {
-  color: #2c3e50;
-  text-decoration: none;
-  font-weight: 700;
-  padding: 0.6rem 1.5rem;
-  border-radius: 6px;
-  transition: all 0.3s;
-  font-size: 1rem;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.live-rates-nav a:hover {
-  background: rgba(44, 62, 80, 0.15);
-  transform: translateY(-2px);
-}
-
-.live-rates-nav .active {
-  background: rgba(44, 62, 80, 0.25);
-  font-weight: bold;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-}
-
-/* GST Banner */
-.gst-banner {
-  background: linear-gradient(135deg, #d4af37 0%, #c9a227 50%, #b8941f 100%);
-  padding: 0.9rem 2rem;
+/* Hero */
+.live-rates-hero {
   text-align: center;
-  font-weight: bold;
-  color: #2c3e50;
-  font-size: 0.95rem;
-  letter-spacing: 0.5px;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-}
-
-/* Special Message Banner */
-.special-message-banner {
-  background: linear-gradient(135deg, #d4af37 0%, #c9a227 50%, #b8941f 100%);
-  padding: 1.5rem 2rem;
   margin-bottom: 2rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
-.message-content {
-  max-width: 1600px;
-  margin: 0 auto;
-  color: #2c3e50;
-}
-
-.hindi-message {
-  font-size: 1rem;
-  line-height: 1.8;
-  margin-bottom: 1rem;
-  text-align: justify;
-}
-
-.english-message {
-  font-size: 0.95rem;
+.live-rates-hero-title {
+  font-size: clamp(1.75rem, 4vw, 2.25rem);
   font-weight: 600;
-  border-top: 2px solid rgba(44, 62, 80, 0.2);
-  padding-top: 1rem;
+  background: linear-gradient(180deg, var(--lr-gold-light) 0%, var(--lr-gold) 40%, var(--lr-gold-dark) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin: 0 0 0.35rem;
+  letter-spacing: 0.02em;
 }
 
-/* Main Content */
-.live-rates-content {
-  max-width: 1600px;
-  margin: 0 auto;
-  padding: 2rem;
+.live-rates-hero-subtitle {
+  font-size: 0.9rem;
+  color: var(--lr-text-muted);
+  margin: 0;
 }
 
-.loading-state,
-.error-state {
+/* GST Banner – stamped metal look */
+.live-rates-gst-banner {
+  background: var(--lr-bg-elevated);
+  border: 1px solid var(--lr-border-gold);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
   text-align: center;
-  padding: 4rem 2rem;
-  color: #fff;
-  font-size: 1.2rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--lr-gold-dark);
+  margin-bottom: 2rem;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
-.spinner {
-  font-size: 4rem;
-  margin-bottom: 1rem;
-  animation: spin 2s linear infinite;
+/* Loading & Error */
+.live-rates-loading,
+.live-rates-error {
+  text-align: center;
+  padding: 3rem 1rem;
 }
 
-@keyframes spin {
-  from { transform: rotate(0deg); }
+.live-rates-spinner {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 1rem;
+  border: 3px solid var(--lr-border-gold);
+  border-top-color: var(--lr-gold);
+  border-radius: 50%;
+  animation: live-rates-spin 0.8s linear infinite;
+}
+
+@keyframes live-rates-spin {
   to { transform: rotate(360deg); }
 }
 
-/* Rates Layout */
-.rates-layout {
+.live-rates-loading p {
+  color: var(--lr-text-muted);
+  font-size: 1rem;
+  margin: 0;
+}
+
+.live-rates-error p {
+  color: #e07c6e;
+  font-size: 1rem;
+  margin: 0;
+}
+
+/* Bullion bars – gold bar style */
+.live-rates-bullion-bars {
   display: grid;
-  grid-template-columns: 350px 1fr;
-  gap: 2rem;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
   margin-bottom: 2rem;
 }
 
-/* Product Rates Table (Left) */
-.product-rates-table {
-  background: #2c3e50;
+.live-rates-bar {
+  position: relative;
+  padding: 1.25rem 1rem;
   border-radius: 10px;
+  text-align: center;
   overflow: hidden;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
-  border: 2px solid #d4af37;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
 
-.product-rates-table table {
-  width: 100%;
-  border-collapse: collapse;
+.live-rates-bar::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
 }
 
-.product-rates-table th {
-  background: linear-gradient(135deg, #d4af37 0%, #c9a227 100%);
-  color: #2c3e50;
-  font-weight: bold;
-  padding: 1.2rem;
-  text-align: center;
-  font-size: 1.1rem;
+.live-rates-bar--gold {
+  background: linear-gradient(145deg, #3d3528 0%, #2c251c 50%, #1f1b14 100%);
+  border: 1px solid var(--lr-border-gold);
+}
+
+.live-rates-bar--gold::before {
+  background: linear-gradient(165deg, rgba(232, 197, 71, 0.15) 0%, transparent 50%, rgba(166, 139, 91, 0.08) 100%);
+}
+
+.live-rates-bar-label {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--lr-gold);
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 0.1em;
+  margin-bottom: 0.5rem;
 }
 
-.product-rates-table td {
-  padding: 1.5rem 1.2rem;
+.live-rates-bar-value {
+  display: block;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--lr-gold-light);
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 20px var(--lr-gold-shadow);
+}
+
+.live-rates-bar-unit {
+  font-size: 0.7rem;
+  color: var(--lr-text-muted);
+  margin-top: 0.25rem;
+}
+
+/* Silver bar variant (if we add silver highlights later) */
+.live-rates-bar--silver {
+  background: linear-gradient(145deg, #2a2a2a 0%, #1f1f1f 50%, #181818 100%);
+  border: 1px solid var(--lr-border-silver);
+}
+
+.live-rates-bar--silver .live-rates-bar-label,
+.live-rates-bar--silver .live-rates-bar-value {
+  color: var(--lr-silver-light);
+}
+
+@media (max-width: 640px) {
+  .live-rates-bullion-bars {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Main board – vault / display case feel */
+.live-rates-board {
+  background: var(--lr-bg-card);
+  border: 1px solid var(--lr-border-gold);
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+.live-rates-board-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--lr-gold);
+  margin: 0;
+  padding: 1rem 1.25rem;
+  background: linear-gradient(180deg, rgba(201, 162, 39, 0.12) 0%, transparent 100%);
+  border-bottom: 1px solid var(--lr-border-gold);
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
   text-align: center;
-  color: #ecf0f1;
-  font-size: 1.1rem;
-  border-bottom: 1px solid #34495e;
-  background: #34495e;
 }
 
-.product-rates-table tbody tr:last-child td {
-  border-bottom: none;
+.live-rates-board-body {
+  padding: 0.25rem 0;
 }
 
-.sell-price {
-  font-size: 1.5rem !important;
-  font-weight: bold !important;
-  color: #f4d03f !important;
-}
-
-/* Market Rates Tables (Right) */
-.right-section {
+.live-rates-board-row {
   display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.9rem 1.25rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  gap: 1rem;
+  transition: background 0.2s;
 }
 
-.market-table {
-  background: #2c3e50;
-  border-radius: 10px;
-  overflow: hidden;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
-  border: 2px solid #d4af37;
-}
-
-.table-header {
-  background: linear-gradient(135deg, #d4af37 0%, #c9a227 100%);
-  color: #2c3e50;
-  font-weight: bold;
-  padding: 1rem;
-  text-align: center;
-  font-size: 1.3rem;
-  text-transform: uppercase;
-  letter-spacing: 2px;
-  border-bottom: 2px solid #b8941f;
-}
-
-.market-table table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.market-table th {
-  background: linear-gradient(135deg, #d4af37 0%, #c9a227 100%);
-  color: #2c3e50;
-  font-weight: bold;
-  padding: 1rem 0.75rem;
-  text-align: center;
-  font-size: 1rem;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  border-right: 1px solid rgba(44, 62, 80, 0.3);
-}
-
-.market-table th:last-child {
-  border-right: none;
-}
-
-.market-table td {
-  padding: 1.2rem 0.75rem;
-  text-align: center;
-  color: #ecf0f1;
-  font-size: 1rem;
-  border-bottom: 1px solid #34495e;
-  background: #34495e;
-  border-right: 1px solid #2c3e50;
-}
-
-.market-table td:last-child {
-  border-right: none;
-}
-
-.market-table tbody tr:last-child td {
+.live-rates-board-row:last-child {
   border-bottom: none;
 }
 
-.market-table tbody tr:hover {
-  background: #3d5266;
+.live-rates-board-row:hover {
+  background: rgba(255, 255, 255, 0.02);
 }
 
-.price-cell {
-  font-weight: bold;
-  font-size: 1.2rem !important;
-  font-family: 'Courier New', monospace;
+.live-rates-board-row--gold {
+  border-left: 3px solid var(--lr-gold);
+  background: linear-gradient(90deg, rgba(201, 162, 39, 0.06) 0%, transparent 100%);
 }
 
-.high-low {
+.live-rates-board-row--gold:hover {
+  background: linear-gradient(90deg, rgba(201, 162, 39, 0.1) 0%, rgba(255, 255, 255, 0.02) 100%);
+}
+
+.live-rates-board-row--silver {
+  border-left: 3px solid var(--lr-silver);
+  background: linear-gradient(90deg, rgba(184, 184, 184, 0.05) 0%, transparent 100%);
+}
+
+.live-rates-board-row--silver:hover {
+  background: linear-gradient(90deg, rgba(184, 184, 184, 0.08) 0%, rgba(255, 255, 255, 0.02) 100%);
+}
+
+.live-rates-board-label {
+  font-weight: 500;
+  color: var(--lr-text);
   font-size: 0.95rem;
-  color: #bdc3c7;
 }
 
-.highlight-green {
-  color: #27ae60 !important;
-  background: rgba(39, 174, 96, 0.1) !important;
-  font-weight: bold !important;
+.live-rates-board-value {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  font-size: 1.1rem;
 }
 
-.highlight-red {
-  color: #e74c3c !important;
-  background: rgba(231, 76, 60, 0.1) !important;
-  font-weight: bold !important;
+.live-rates-board-row--gold .live-rates-board-value {
+  color: var(--lr-gold-light);
+  text-shadow: 0 0 12px var(--lr-gold-shadow);
 }
 
-.last-updated {
-  text-align: center;
-  color: #95a5a6;
+.live-rates-board-row--silver .live-rates-board-value {
+  color: var(--lr-silver-light);
+}
+
+.live-rates-board-row:not(.live-rates-board-row--gold):not(.live-rates-board-row--silver) .live-rates-board-value {
+  color: var(--lr-text);
+}
+
+/* Live ticker */
+.live-rates-ticker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--lr-text-muted);
+  margin-top: 1.5rem;
+  padding: 0.75rem;
+}
+
+.live-rates-ticker-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--lr-gold);
+  box-shadow: 0 0 8px var(--lr-gold-shadow);
+  animation: live-rates-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes live-rates-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(0.9); }
+}
+
+/* Message banner */
+.live-rates-message-banner {
+  background: var(--lr-bg-elevated);
+  border: 1px solid var(--lr-border-gold);
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1.5rem;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+.live-rates-message-hindi {
+  font-size: 0.95rem;
+  line-height: 1.7;
+  color: var(--lr-text);
+  margin: 0 0 0.75rem;
+}
+
+.live-rates-message-english {
   font-size: 0.9rem;
-  margin-top: 2rem;
-  padding: 1rem;
-  background: #2c3e50;
-  border-radius: 8px;
-  border: 1px solid #d4af37;
+  font-weight: 600;
+  color: var(--lr-text-muted);
+  margin: 0 0 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.live-rates-contact {
+  font-size: 0.95rem;
+  color: var(--lr-gold);
+  margin: 0;
+  font-weight: 600;
 }
 
 /* Footer */
 .live-rates-footer {
-  background: #fff;
-  padding: 3rem 2rem 1rem;
-  margin-top: 4rem;
-  color: #2c3e50;
+  margin-top: 3rem;
+  padding: 2rem clamp(1rem, 4vw, 2rem) 1.5rem;
+  background: var(--lr-bg-card);
+  border-top: 1px solid var(--lr-border-gold);
 }
 
-.footer-content {
-  max-width: 1600px;
+.live-rates-footer-inner {
+  max-width: 720px;
   margin: 0 auto;
-  display: grid;
-  grid-template-columns: 1.5fr 1fr 1.5fr;
-  gap: 3rem;
-  margin-bottom: 2rem;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1.5rem;
 }
 
-.footer-section h4 {
-  color: #d4af37;
-  font-size: 1.2rem;
-  font-weight: bold;
-  margin-bottom: 1.5rem;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-}
-
-.footer-logo {
+.live-rates-footer-brand {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
+  gap: 0.5rem;
 }
 
-.gj-logo-footer {
-  width: 80px;
-  height: 80px;
-  flex-shrink: 0;
+.live-rates-footer-logo {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  border-radius: 8px;
 }
 
-.footer-logo-text {
-  display: flex;
-  flex-direction: column;
-}
-
-.footer-company-name {
-  font-size: 1.8rem;
-  font-weight: bold;
-  color: #d4af37;
-  letter-spacing: 2px;
-}
-
-.footer-company-subtitle {
-  font-size: 1rem;
-  color: #2c3e50;
+.live-rates-footer-name {
   font-weight: 600;
+  font-size: 1.1rem;
+  color: var(--lr-text);
 }
 
-.footer-about h4 {
-  margin-top: 1rem;
-}
-
-.footer-section ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.footer-section ul li {
-  margin-bottom: 0.75rem;
-}
-
-.footer-section ul li a {
-  color: #2c3e50;
-  text-decoration: none;
-  font-size: 1rem;
-  transition: color 0.3s;
-}
-
-.footer-section ul li a:hover {
-  color: #d4af37;
-}
-
-.footer-contact {
+.live-rates-footer-links {
   display: flex;
-  flex-direction: column;
   gap: 1rem;
 }
 
-.contact-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.75rem;
-  font-size: 1rem;
-  line-height: 1.6;
-}
-
-.contact-icon {
-  font-size: 1.3rem;
-  color: #d4af37;
-  flex-shrink: 0;
-}
-
-.contact-item a {
-  color: #2c3e50;
+.live-rates-footer-links a {
+  color: var(--lr-gold);
   text-decoration: none;
-  transition: color 0.3s;
+  font-weight: 500;
+  font-size: 0.95rem;
+  transition: color 0.2s;
 }
 
-.contact-item a:hover {
-  color: #d4af37;
+.live-rates-footer-links a:hover {
+  color: var(--lr-gold-light);
 }
 
-.footer-copyright {
-  background: linear-gradient(135deg, #d4af37 0%, #c9a227 50%, #b8941f 100%);
-  padding: 1.5rem;
+.live-rates-footer-address {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.9rem;
+  color: var(--lr-text-muted);
+}
+
+.live-rates-footer-address a {
+  color: var(--lr-gold);
+  text-decoration: none;
+}
+
+.live-rates-footer-address a:hover {
+  text-decoration: underline;
+}
+
+.live-rates-footer-copy {
+  max-width: 720px;
+  margin: 1.5rem auto 0;
+  padding-top: 1rem;
+  border-top: 1px solid var(--lr-border-gold);
   text-align: center;
-  color: #2c3e50;
-  font-weight: bold;
-  font-size: 1rem;
-  letter-spacing: 1px;
-}
-
-/* Responsive Design */
-@media (max-width: 1200px) {
-  .rates-layout {
-    grid-template-columns: 300px 1fr;
-  }
-  
-  .footer-content {
-    grid-template-columns: 1fr 1fr;
-  }
-}
-
-@media (max-width: 1024px) {
-  .rates-layout {
-    grid-template-columns: 1fr;
-  }
-  
-  .header-content {
-    flex-direction: column;
-    gap: 1.5rem;
-    text-align: center;
-  }
-  
-  .contact-section {
-    text-align: center;
-  }
-  
-  .footer-content {
-    grid-template-columns: 1fr;
-    gap: 2rem;
-  }
+  font-size: 0.85rem;
+  color: var(--lr-text-muted);
 }
 
 @media (max-width: 768px) {
-  .live-rates-nav {
+  .live-rates-footer-inner {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .live-rates-footer-links {
     flex-wrap: wrap;
-    gap: 0.5rem;
-    padding: 0.75rem 1rem;
-  }
-  
-  .live-rates-nav a,
-  .live-rates-nav span {
-    padding: 0.5rem 1rem;
-    font-size: 0.9rem;
-  }
-  
-  .company-name h1 {
-    font-size: 1.5rem;
-  }
-  
-  .logo {
-    padding: 0.5rem 1rem;
-  }
-  
-  .logo-diamond {
-    font-size: 2rem;
-  }
-  
-  .logo-text {
-    font-size: 1.2rem;
-  }
-  
-  .price-cell {
-    font-size: 1rem !important;
-  }
-  
-  .sell-price {
-    font-size: 1.2rem !important;
-  }
-  
-  .hindi-message {
-    font-size: 0.9rem;
-  }
-  
-  .english-message {
-    font-size: 0.85rem;
+    justify-content: center;
   }
 }

@@ -118,7 +118,7 @@ function OrderManagement() {
     <div className="admin-dashboard">
       <AdminNav title="🛒 Orders" onLogout={handleLogout} />
 
-      <div className="price-management" style={{ background: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)' }}>
+      <div className="price-management">
         <div className="price-header">
           <h1>🛒 Order Management</h1>
           <p style={{ color: '#7f8c8d', marginTop: '0.5rem' }}>Manage customer orders</p>

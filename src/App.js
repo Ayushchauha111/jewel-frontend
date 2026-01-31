@@ -11,8 +11,7 @@ import BillingManagement from "./components/admin/BillingManagement";
 import CustomerManagement from "./components/admin/CustomerManagement";
 import OrderManagement from "./components/admin/OrderManagement";
 import CreditManagement from "./components/admin/CreditManagement";
-import GoldPriceManagement from "./components/admin/GoldPriceManagement";
-import SilverPriceManagement from "./components/admin/SilverPriceManagement";
+import RatesManagement from "./components/admin/RatesManagement";
 import AnalyticsDashboard from "./components/admin/AnalyticsDashboard";
 import IncomeExpenseManagement from "./components/admin/IncomeExpenseManagement";
 import RateLimitManagement from "./components/admin/RateLimitManagement";
@@ -29,6 +28,7 @@ import GoldReserve from "./components/customer/GoldReserve";
 
 // Auth Components
 import Login from "./components/user/login.component";
+import Register from "./components/user/register.component";
 
 function App() {
   return (
@@ -46,6 +46,7 @@ function App() {
           
           {/* Auth Routes */}
           <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
           
           {/* Admin Routes */}
           <Route path="/admin" element={<AdminDashboard />} />
@@ -57,8 +58,7 @@ function App() {
           <Route path="/admin/credits" element={<CreditManagement />} />
           <Route path="/admin/analytics" element={<AnalyticsDashboard />} />
           <Route path="/admin/income-expense" element={<IncomeExpenseManagement />} />
-          <Route path="/admin/gold-price" element={<GoldPriceManagement />} />
-          <Route path="/admin/silver-price" element={<SilverPriceManagement />} />
+          <Route path="/admin/rates" element={<RatesManagement />} />
           <Route path="/admin/rate-limit" element={<RateLimitManagement />} />
           </Routes>
       </BrowserRouter>

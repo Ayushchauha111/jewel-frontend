@@ -3,39 +3,32 @@ import styled from "styled-components";
 import { motion } from "framer-motion";
 import AuthService from "../../service/auth.service";
 import ReferralService from "../../service/referral.service";
-import image1 from '../../assets/login/image-1.png';
-import image2 from '../../assets/login/image-2.png';
 import { Navigate } from 'react-router-dom';
 import { FcGoogle } from "react-icons/fc";
+import CustomerNav from "../customer/CustomerNav";
 
-// Styled Components
+// Gold & white jewellery theme (matches CustomerHome / GangaJewellers)
+const GOLD = '#a68b5b';
+const GOLD_DARK = '#8e7340';
+const CREAM = '#faf9f6';
+const CREAM_SOFT = '#f9f7f2';
+const TEXT = '#2c2c2c';
+const TEXT_MUTED = '#5c5c5c';
+
 const Wrapper = styled.div`
   min-height: 100vh;
   width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #050507 0%, #0d0d1a 50%, #1a1a3e 100%);
-  padding: 100px 20px 40px;
+  background: ${CREAM};
+  padding: 2rem 20px 40px;
   margin: 0;
   box-sizing: border-box;
-  
-  &::before {
-    content: '';
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: 
-      radial-gradient(circle at 20% 30%, rgba(139, 92, 246, 0.15) 0%, transparent 40%),
-      radial-gradient(circle at 80% 70%, rgba(59, 130, 246, 0.1) 0%, transparent 40%);
-    pointer-events: none;
-    z-index: -1;
-  }
+  font-family: 'Playfair Display', Georgia, serif;
 
   @media (max-width: 768px) {
-    padding: 80px 15px 30px;
+    padding: 1.5rem 15px 30px;
     align-items: flex-start;
   }
 `;
@@ -55,76 +48,40 @@ const Inner = styled.div`
   }
 `;
 
-const Image1 = styled(motion.img)`
-  position: absolute;
-  top: -50px;
-  left: -150px;
-  z-index: 1;
-  max-width: 180px;
-  opacity: 0.8;
-  filter: drop-shadow(0 0 20px rgba(139, 92, 246, 0.3));
-  
-  @media (max-width: 767px) {
-    max-width: 100px;
-    left: -40px;
-    top: -30px;
-  }
-`;
-
-const Image2 = styled(motion.img)`
-  position: absolute;
-  bottom: -20px;
-  right: -140px;
-  z-index: 1;
-  max-width: 180px;
-  opacity: 0.8;
-  filter: drop-shadow(0 0 20px rgba(139, 92, 246, 0.3));
-  
-  @media (max-width: 767px) {
-    max-width: 100px;
-    right: -30px;
-    bottom: -10px;
-  }
-`;
-
 const FormCard = styled(motion.div)`
   position: relative;
   z-index: 9;
-  padding: 50px 50px 40px;
-  background: linear-gradient(135deg, rgba(20, 20, 35, 0.95) 0%, rgba(15, 15, 30, 0.95) 100%);
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(139, 92, 246, 0.2);
-  border-radius: 24px;
-  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.5), 0 0 40px rgba(139, 92, 246, 0.1);
+  padding: 48px 44px 40px;
+  background: #fff;
+  border: 1px solid rgba(166, 139, 91, 0.3);
+  border-radius: 16px;
+  box-shadow: 0 4px 24px rgba(166, 139, 91, 0.12), 0 1px 0 rgba(166, 139, 91, 0.08);
   width: 100%;
   max-width: 450px;
   
   @media (max-width: 767px) {
-    padding: 40px 25px;
-    border-radius: 16px;
+    padding: 36px 24px 32px;
+    border-radius: 12px;
   }
 
   @media (max-width: 480px) {
-    padding: 30px 20px;
-    border-radius: 12px;
+    padding: 28px 20px 24px;
   }
 `;
 
 const Title = styled.h2`
-  font-size: 28px;
-  font-weight: 700;
-  background: linear-gradient(135deg, #fff 0%, #a855f7 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 26px;
+  font-weight: 600;
+  color: ${GOLD_DARK};
   text-align: center;
-  margin-bottom: 40px;
+  margin-bottom: 2rem;
   letter-spacing: 2px;
   text-transform: uppercase;
   
   @media (max-width: 767px) {
     font-size: 22px;
-    margin-bottom: 30px;
+    margin-bottom: 1.5rem;
   }
 `;
 
@@ -136,22 +93,21 @@ const FormGroup = styled.div`
 const InputField = styled.input`
   width: 100%;
   padding: 14px 18px;
-  border: 1px solid rgba(139, 92, 246, 0.2);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.03);
-  color: #fff;
+  border: 1px solid rgba(166, 139, 91, 0.35);
+  border-radius: 10px;
+  background: ${CREAM_SOFT};
+  color: ${TEXT};
   font-size: 16px;
-  transition: all 0.3s ease;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
   
   &:focus {
-    border-color: rgba(139, 92, 246, 0.6);
-    background: rgba(139, 92, 246, 0.05);
+    border-color: ${GOLD};
     outline: none;
-    box-shadow: 0 0 20px rgba(139, 92, 246, 0.15);
+    box-shadow: 0 0 0 3px rgba(166, 139, 91, 0.15);
   }
   
   &::placeholder {
-    color: rgba(255, 255, 255, 0.4);
+    color: ${TEXT_MUTED};
   }
   
   @media (max-width: 767px) {
@@ -163,22 +119,23 @@ const InputField = styled.input`
 const Button = styled(motion.button)`
   width: 100%;
   padding: 14px;
-  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+  background: ${GOLD};
   color: white;
   border: none;
-  border-radius: 12px;
-  font-size: 16px;
+  border-radius: 10px;
+  font-size: 15px;
   font-weight: 600;
   cursor: pointer;
   margin-top: 24px;
   letter-spacing: 1px;
   text-transform: uppercase;
-  box-shadow: 0 4px 20px rgba(139, 92, 246, 0.3);
-  transition: all 0.3s ease;
+  box-shadow: 0 2px 12px rgba(166, 139, 91, 0.3);
+  transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
   
   &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 30px rgba(139, 92, 246, 0.4);
+    background: ${GOLD_DARK};
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(166, 139, 91, 0.35);
   }
   
   &:disabled {
@@ -199,9 +156,9 @@ const Message = styled(motion.div)`
   border-radius: 10px;
   text-align: center;
   font-size: 14px;
-  background: ${props => props.success ? 'rgba(16, 185, 129, 0.1)' : 'rgba(248, 113, 113, 0.1)'};
-  color: ${props => props.success ? '#10b981' : '#f87171'};
-  border: 1px solid ${props => props.success ? 'rgba(16, 185, 129, 0.2)' : 'rgba(248, 113, 113, 0.2)'};
+  background: ${props => props.success ? 'rgba(22, 163, 74, 0.1)' : 'rgba(185, 28, 28, 0.08)'};
+  color: ${props => props.success ? '#166534' : '#b91c1c'};
+  border: 1px solid ${props => props.success ? 'rgba(22, 163, 74, 0.2)' : 'rgba(185, 28, 28, 0.2)'};
   
   @media (max-width: 767px) {
     font-size: 13px;
@@ -214,9 +171,9 @@ const DisposableWarning = styled(motion.div)`
   padding: 10px 12px;
   border-radius: 8px;
   font-size: 12px;
-  background: rgba(255, 193, 7, 0.15);
-  color: #ffc107;
-  border: 1px solid rgba(255, 193, 7, 0.3);
+  background: rgba(166, 139, 91, 0.15);
+  color: ${GOLD_DARK};
+  border: 1px solid rgba(166, 139, 91, 0.35);
   display: flex;
   align-items: center;
   gap: 8px;
@@ -230,27 +187,27 @@ const DisposableWarning = styled(motion.div)`
 const Divider = styled.div`
   display: flex;
   align-items: center;
-  margin: 28px 0;
+  margin: 24px 0;
   
   &::before,
   &::after {
     content: '';
     flex: 1;
     height: 1px;
-    background: rgba(139, 92, 246, 0.2);
+    background: rgba(166, 139, 91, 0.25);
   }
   
   span {
-    padding: 0 15px;
-    color: rgba(255, 255, 255, 0.4);
-    font-size: 13px;
+    padding: 0 14px;
+    color: ${TEXT_MUTED};
+    font-size: 12px;
     text-transform: uppercase;
     letter-spacing: 1px;
   }
 `;
 
 const GoogleButton = styled(motion.button)`
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(166, 139, 91, 0.4);
   width: 100%;
   padding: 14px;
   cursor: pointer;
@@ -258,16 +215,16 @@ const GoogleButton = styled(motion.button)`
   align-items: center;
   justify-content: center;
   gap: 12px;
-  background: rgba(255, 255, 255, 0.03);
-  color: rgba(255, 255, 255, 0.9);
+  background: #fff;
+  color: ${TEXT};
   font-weight: 500;
   font-size: 15px;
-  border-radius: 12px;
-  transition: all 0.3s;
+  border-radius: 10px;
+  transition: background 0.2s, border-color 0.2s;
   
   &:hover {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(255, 255, 255, 0.2);
+    background: ${CREAM_SOFT};
+    border-color: ${GOLD};
   }
   
   &:disabled {
@@ -525,16 +482,10 @@ class Register extends Component {
     }
 
     return (
-      <Wrapper>
+      <>
+        <CustomerNav cartCount={0} />
+<Wrapper>
         <Inner>
-          <Image1 
-            src={image1} 
-            alt="decoration" 
-            initial={{ opacity: 0, x: -50 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.2 }}
-          />
-          
           <FormCard
             variants={cardVariants}
             initial="hidden"
@@ -641,16 +592,9 @@ class Register extends Component {
               )}
             </form>
           </FormCard>
-
-          <Image2 
-            src={image2} 
-            alt="decoration" 
-            initial={{ opacity: 0, x: 50 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.2 }}
-          />
-        </Inner>
-      </Wrapper>
+          </Inner>
+        </Wrapper>
+      </>
     );
   }
 }

@@ -4,6 +4,8 @@ import axios from 'axios';
 import { getAuthHeaders } from '../../utils/authHelper';
 import AuthService from '../../service/auth.service';
 import AdminNav from './AdminNav';
+import GSTReceipt from './GSTReceipt';
+import NormalReceipt from './NormalReceipt';
 import './AdminDashboard.css';
 import './PriceManagement.css';
 
@@ -50,10 +52,18 @@ function BillingManagement() {
   const [pricesLoading, setPricesLoading] = useState(false);
   // Cache of calculated buy-back value (index -> price) when customer sells gold
   const [buyBackPrices, setBuyBackPrices] = useState({});
+  // Diamond rate per carat (from Rates) for Gold + Diamond item calculation
+  const [diamondRatePerCarat, setDiamondRatePerCarat] = useState(null);
   const [selectedBill, setSelectedBill] = useState(null);
   const [loadingBill, setLoadingBill] = useState(false);
+  const [showGstReceipt, setShowGstReceipt] = useState(false);
+  const [showNormalReceipt, setShowNormalReceipt] = useState(false);
 
   const isGoldItem = (s) => s && String(s.material || '').toLowerCase() === 'gold' && s.weightGrams && s.carat;
+  // Gold + Diamond / Silver + Diamond etc.: has metal weight + carat, can use rate for metal part when sellingPrice not set
+  const hasMetalWeightAndCarat = (s) => s && (s.weightGrams != null && s.weightGrams > 0) && (s.carat != null && s.carat > 0);
+  const isGoldMetalItem = (s) => s && String(s.material || '').toLowerCase().includes('gold') && hasMetalWeightAndCarat(s);
+  const isDiamondItem = (s) => s && String(s.material || '').toLowerCase().includes('diamond');
 
   const openBillDetail = async (billId) => {
     setLoadingBill(true);
@@ -75,15 +85,27 @@ function BillingManagement() {
     fetchStock();
   }, [currentPage, pageSize, searchQuery]);
 
-  // Pre-fetch calculated prices for all Gold items when Create Bill form is opened
+  // Fetch diamond rate for Gold + Diamond item calculation
+  useEffect(() => {
+    if (!showForm) return;
+    let cancelled = false;
+    axios.get(`${API_URL}/rates/rate?metal=DIAMOND`, { headers: getAuthHeaders() })
+      .then((res) => {
+        if (!cancelled && res.data?.ratePerCarat != null) setDiamondRatePerCarat(parseFloat(res.data.ratePerCarat));
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [showForm]);
+
+  // Pre-fetch calculated prices for Gold and Gold + Diamond (metal part) when Create Bill form is opened
   useEffect(() => {
     if (!showForm || !stock.length) return;
-    const goldItems = stock.filter(isGoldItem);
-    if (goldItems.length === 0) return;
+    const goldMetalItems = stock.filter(isGoldMetalItem);
+    if (goldMetalItems.length === 0) return;
     let cancelled = false;
     setPricesLoading(true);
     Promise.allSettled(
-      goldItems.map(async (s) => {
+      goldMetalItems.map(async (s) => {
         const params = new URLSearchParams({ weightGrams: String(s.weightGrams), carat: String(s.carat) });
         const res = await axios.get(`${API_URL}/stock/calculate-price?${params.toString()}`, { headers: getAuthHeaders() });
         return { id: s.id, price: res.data?.calculatedPrice };
@@ -247,12 +269,17 @@ function BillingManagement() {
         const selectedStock = stock.find(s => s.id === parseInt(item.stockId, 10));
         const unitPrice = getUnitPrice(selectedStock);
         const qty = parseInt(item.quantity, 10);
+        const w = selectedStock?.weightGrams;
+        const c = selectedStock?.carat;
+        const diamondAmt = getDiamondValue(selectedStock) * qty;
         return {
           stock: { id: parseInt(item.stockId, 10) },
           itemName: selectedStock?.articleName || '',
           articleCode: selectedStock?.articleCode || null,
-          weightGrams: selectedStock?.weightGrams || 0,
-          carat: selectedStock?.carat || 0,
+          weightGrams: w != null && w !== '' ? Number(w) : null,
+          carat: c != null && c !== '' ? Number(c) : null,
+          diamondCarat: selectedStock?.diamondCarat != null ? Number(selectedStock.diamondCarat) : null,
+          diamondAmount: diamondAmt > 0 ? Math.round(diamondAmt * 100) / 100 : null,
           quantity: qty,
           unitPrice,
           totalPrice: unitPrice * qty
@@ -265,9 +292,17 @@ function BillingManagement() {
         return;
       }
 
+      const totalDiamondAmount = formData.items.reduce((sum, item, index) => {
+        if (item.isBuyBack || !item.stockId) return sum;
+        const selectedStock = stock.find(s => s.id === parseInt(item.stockId, 10));
+        const qty = parseInt(item.quantity, 10) || 1;
+        return sum + (getDiamondValue(selectedStock) * qty);
+      }, 0);
+
       const billingData = {
         customer: { id: parseInt(formData.customerId) },
         items: billingItems,
+        totalDiamondAmount: totalDiamondAmount > 0 ? Math.round(totalDiamondAmount * 100) / 100 : undefined,
         discountAmount: parseFloat(formData.discountAmount) || 0,
         paymentMethod: formData.paymentMethod,
         paidAmount: formData.paidAmount ? parseFloat(formData.paidAmount) : 0,
@@ -292,13 +327,15 @@ function BillingManagement() {
     }
   };
 
-  const sendEmail = async (billId) => {
+  const sendEmail = async (billId, receiptType = 'NORMAL') => {
     try {
-      await axios.post(`${API_URL}/billing/${billId}/send-email`, {}, {
+      const params = new URLSearchParams({ receiptType: receiptType.toUpperCase() });
+      await axios.post(`${API_URL}/billing/${billId}/send-email?${params.toString()}`, {}, {
         headers: getAuthHeaders()
       });
-      setSuccess('Bill sent via email!');
+      setSuccess(`Bill sent via email (${receiptType === 'GST' ? 'GST invoice' : 'Normal receipt'})!`);
       fetchBills();
+      if (selectedBill?.id === billId) openBillDetail(billId);
       setTimeout(() => setSuccess(null), 3000);
     } catch (error) {
       console.error('Error sending email:', error);
@@ -307,13 +344,15 @@ function BillingManagement() {
     }
   };
 
-  const sendWhatsApp = async (billId) => {
+  const sendWhatsApp = async (billId, receiptType = 'NORMAL') => {
     try {
-      await axios.post(`${API_URL}/billing/${billId}/send-whatsapp`, {}, {
+      const params = new URLSearchParams({ receiptType: receiptType.toUpperCase() });
+      await axios.post(`${API_URL}/billing/${billId}/send-whatsapp?${params.toString()}`, {}, {
         headers: getAuthHeaders()
       });
-      setSuccess('Bill sent via WhatsApp!');
+      setSuccess(`Bill sent via WhatsApp (${receiptType === 'GST' ? 'GST invoice' : 'Normal receipt'})!`);
       fetchBills();
+      if (selectedBill?.id === billId) openBillDetail(billId);
       setTimeout(() => setSuccess(null), 3000);
     } catch (error) {
       console.error('Error sending WhatsApp:', error);
@@ -364,17 +403,41 @@ function BillingManagement() {
     });
   };
 
-  // Unit price for a stock item: from today's gold rate (if Gold + weight+carat) else sellingPrice
+  // Diamond value from rate (diamondCarat × rate per carat). Only for metal+diamond items; diamond-only uses sellingPrice.
+  const getDiamondValue = (s) => {
+    if (!s?.diamondCarat || !diamondRatePerCarat) return 0;
+    return parseFloat(s.diamondCarat) * diamondRatePerCarat;
+  };
+
+  const isDiamondOnly = (s) => s && String(s.material || '').toLowerCase() === 'diamond';
+
+  // Unit price: metal part + diamond part (for Gold+Diamond); Diamond-only = sellingPrice only
   const getUnitPrice = (s) => {
     if (!s) return 0;
-    const cached = itemPrices[s.id];
-    if (cached != null) return cached;
-    const sp = s.sellingPrice;
-    return (sp != null && sp > 0) ? parseFloat(sp) : 0;
+    let metalPart = 0;
+    if (isDiamondItem(s)) {
+      if (isDiamondOnly(s)) {
+        const sp = s.sellingPrice;
+        return (sp != null && sp > 0) ? parseFloat(sp) : 0;
+      }
+      // Gold + Diamond etc.: metal part + diamond part
+      const sp = s.sellingPrice;
+      if (sp != null && sp > 0) metalPart = parseFloat(sp);
+      else if (isGoldMetalItem(s) && itemPrices[s.id] != null) metalPart = itemPrices[s.id];
+      const diamondPart = getDiamondValue(s);
+      return Math.round((metalPart + diamondPart) * 100) / 100;
+    }
+    if (itemPrices[s.id] != null) metalPart = itemPrices[s.id];
+    else {
+      const sp = s.sellingPrice;
+      metalPart = (sp != null && sp > 0) ? parseFloat(sp) : 0;
+    }
+    const diamondPart = getDiamondValue(s);
+    return Math.round((metalPart + diamondPart) * 100) / 100;
   };
 
   const fetchCalculatedPriceForStock = async (stockItem) => {
-    if (!isGoldItem(stockItem)) return;
+    if (!isGoldMetalItem(stockItem)) return;
     try {
       const params = new URLSearchParams({
         weightGrams: String(stockItem.weightGrams),
@@ -402,7 +465,7 @@ function BillingManagement() {
     setFormData({ ...formData, items: newItems });
     if (stockId) {
       const s = stock.find(x => x.id === parseInt(stockId, 10));
-      if (isGoldItem(s) && itemPrices[s.id] == null) {
+      if (isGoldMetalItem(s) && itemPrices[s.id] == null) {
         fetchCalculatedPriceForStock(s);
       }
     }
@@ -470,6 +533,15 @@ function BillingManagement() {
     }, 0);
   };
 
+  const calculateTotalDiamondAmount = () => {
+    return formData.items.reduce((sum, item) => {
+      if (item.isBuyBack || !item.stockId) return sum;
+      const selectedStock = stock.find(s => s.id === parseInt(item.stockId, 10));
+      const qty = parseInt(item.quantity, 10) || 1;
+      return sum + (getDiamondValue(selectedStock) * qty);
+    }, 0);
+  };
+
   const calculateTotal = () => {
     return calculateSubtotalSales() - calculateBuyBackTotal();
   };
@@ -485,7 +557,7 @@ function BillingManagement() {
       <div className="price-management">
         <div className="price-header">
           <h1>🧾 Billing Management</h1>
-          <p style={{ color: '#7f8c8d', marginTop: '0.5rem' }}>Create and manage invoices</p>
+          <p>Create and manage invoices</p>
         </div>
 
         {error && (
@@ -500,16 +572,15 @@ function BillingManagement() {
           </div>
         )}
 
-        {/* Search Section */}
-        <div style={{ margin: '0 2rem 2rem 2rem', background: '#fff', padding: '1.5rem', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
-          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
-            <form onSubmit={handleSearch} style={{ flex: 1, minWidth: '250px', display: 'flex', gap: '0.5rem' }}>
+        {/* Search Section – dark card to match stock page */}
+        <div className="price-search-card">
+          <div className="price-search-row">
+            <form onSubmit={handleSearch} style={{ flex: 1, minWidth: '250px', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
               <input
                 type="text"
                 placeholder="Search by bill number, customer name, or phone..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                style={{ flex: 1, padding: '0.75rem', border: '2px solid #ecf0f1', borderRadius: '8px', fontSize: '1rem' }}
               />
               <button type="submit" className="price-action-btn" style={{ padding: '0.75rem 1.5rem' }}>
                 🔍 Search
@@ -609,21 +680,21 @@ function BillingManagement() {
                 {formData.items.map((item, index) => (
                   <div key={index} style={{ marginBottom: '1rem' }}>
                     {item.isBuyBack ? (
-                      <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end', flexWrap: 'wrap', padding: '1rem', background: '#f0f9ff', borderRadius: '8px', border: '1px solid #bae6fd' }}>
-                        <span style={{ fontWeight: 600, color: '#0369a1', width: '100%', marginBottom: '0.25rem' }}>🪙 Customer selling gold (buy-back)</span>
+                      <div className="price-buyback-item">
+                        <span className="price-buyback-item-label">🪙 Customer selling gold (buy-back)</span>
                         <div style={{ flex: '1 1 100px' }}>
-                          <label style={{ fontSize: '0.75rem', color: '#64748b' }}>Weight (g)</label>
+                          <label>Weight (g)</label>
                           <input
                             type="number"
                             step="0.001"
                             value={item.weightGrams || ''}
                             onChange={(e) => handleBuyBackChange(index, 'weightGrams', e.target.value)}
                             placeholder="e.g. 10"
-                            style={{ width: '100%', padding: '0.75rem', border: '2px solid #ecf0f1', borderRadius: '8px' }}
+                            style={{ width: '100%', padding: '0.75rem', borderRadius: '8px' }}
                           />
                         </div>
                         <div style={{ flex: '1 1 120px' }}>
-                          <label style={{ fontSize: '0.75rem', color: '#64748b' }}>Purity (%)</label>
+                          <label>Purity (%)</label>
                           <select
                             value={item.purity === '' || item.purity === undefined ? '' : (item.purity === 'OTHER' || !GOLD_PURITY_OPTIONS.some(o => Number(item.purity) === o.purity) ? '__OTHER__' : String(item.purity))}
                             onChange={(e) => {
@@ -634,7 +705,7 @@ function BillingManagement() {
                               }
                               handleBuyBackChange(index, 'purity', v);
                             }}
-                            style={{ width: '100%', padding: '0.75rem', border: '2px solid #ecf0f1', borderRadius: '8px', marginBottom: (item.purity === 'OTHER' || (item.purity !== '' && item.purity !== undefined && item.purity !== 'OTHER' && !GOLD_PURITY_OPTIONS.some(o => Number(item.purity) === o.purity))) ? '0.5rem' : 0 }}
+                            style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', marginBottom: (item.purity === 'OTHER' || (item.purity !== '' && item.purity !== undefined && item.purity !== 'OTHER' && !GOLD_PURITY_OPTIONS.some(o => Number(item.purity) === o.purity))) ? '0.5rem' : 0 }}
                           >
                             <option value="">Select</option>
                             {GOLD_PURITY_OPTIONS.map(({ purity, label }) => (
@@ -651,23 +722,23 @@ function BillingManagement() {
                               value={item.purity === 'OTHER' ? '' : (item.purity ?? '')}
                               onChange={(e) => handleBuyBackChange(index, 'purity', e.target.value)}
                               placeholder="e.g. 70"
-                              style={{ width: '100%', padding: '0.75rem', border: '2px solid #ecf0f1', borderRadius: '8px', marginTop: '0.25rem', boxSizing: 'border-box' }}
+                              style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', marginTop: '0.25rem', boxSizing: 'border-box' }}
                             />
                           )}
                         </div>
                         <div style={{ flex: '0 0 70px' }}>
-                          <label style={{ fontSize: '0.75rem', color: '#64748b' }}>Qty</label>
+                          <label>Qty</label>
                           <input
                             type="number"
                             min="1"
                             value={item.quantity || 1}
                             onChange={(e) => handleBuyBackChange(index, 'quantity', e.target.value)}
-                            style={{ width: '100%', padding: '0.75rem', border: '2px solid #ecf0f1', borderRadius: '8px' }}
+                            style={{ width: '100%', padding: '0.75rem', borderRadius: '8px' }}
                           />
                         </div>
                         <div style={{ flex: '0 0 100px' }}>
-                          <label style={{ fontSize: '0.75rem', color: '#64748b' }}>Value</label>
-                          <div style={{ padding: '0.75rem', fontWeight: 600, color: '#0d9488' }}>
+                          <label>Value</label>
+                          <div className="price-buyback-value">
                             {buyBackPrices[index] != null ? formatCurrency(buyBackPrices[index] * parseInt(item.quantity || 1, 10)) : '—'}
                           </div>
                         </div>
@@ -683,11 +754,24 @@ function BillingManagement() {
                             style={{ width: '100%', padding: '0.75rem', border: '2px solid #ecf0f1', borderRadius: '8px' }}
                           >
                             <option value="">Select Item</option>
-                            {stock.map(s => (
-                              <option key={s.id} value={s.id}>
-                                {[s.articleCode || `#${s.id}`, s.articleName, `${s.weightGrams}g`, `${s.carat}K`, formatCurrency(getUnitPrice(s))].filter(Boolean).join(' · ')}
-                              </option>
-                            ))}
+                            {stock.map(s => {
+                              const mat = String(s.material || '').toLowerCase();
+                              const diamondOnly = mat === 'diamond';
+                              const diamondWithMetal = isDiamondItem(s) && !diamondOnly;
+                              const parts = [s.articleCode || `#${s.id}`, s.articleName];
+                              if (diamondOnly) {
+                                parts.push('Diamond', s.carat != null ? `${s.carat} ct` : null, formatCurrency(getUnitPrice(s)));
+                              } else if (diamondWithMetal) {
+                                parts.push(s.material, s.weightGrams != null ? `${s.weightGrams}g` : null, s.carat != null ? (mat.includes('gold') ? `${s.carat}K` : `${s.carat}`) : null, s.diamondCarat != null ? `${s.diamondCarat} ct D` : null, formatCurrency(getUnitPrice(s)));
+                              } else {
+                                parts.push(`${s.weightGrams}g`, `${s.carat}K`, formatCurrency(getUnitPrice(s)));
+                              }
+                              return (
+                                <option key={s.id} value={s.id}>
+                                  {parts.filter(Boolean).join(' · ')}
+                                </option>
+                              );
+                            })}
                           </select>
                         </div>
                         <div style={{ flex: '0 1 100px', minWidth: '80px' }}>
@@ -737,39 +821,53 @@ function BillingManagement() {
                 ))}
                 <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
                   <button type="button" onClick={addItem} className="price-action-btn secondary">+ Add Item</button>
-                  <button type="button" onClick={addBuyBackItem} className="price-action-btn secondary" style={{ background: '#e0f2fe', color: '#0369a1' }}>🪙 Customer selling gold (buy-back)</button>
+                  <button type="button" onClick={addBuyBackItem} className="price-action-btn secondary buyback">🪙 Customer selling gold (buy-back)</button>
                 </div>
               </div>
 
-              <div style={{ background: '#f8f9fa', padding: '1rem', borderRadius: '8px', marginBottom: '1rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+              <div className="price-bill-summary">
+                <div>
                   <span>Subtotal (items):</span>
                   <strong>{formatCurrency(calculateSubtotalSales())}</strong>
                 </div>
+                {(() => {
+                  const totalDiamond = calculateTotalDiamondAmount();
+                  if (totalDiamond > 0) {
+                    const subtotalSales = calculateSubtotalSales();
+                    const goldAmount = Math.round((subtotalSales - totalDiamond) * 100) / 100;
+                    return (
+                      <>
+                        <div><span>Gold:</span><strong>{formatCurrency(goldAmount)}</strong></div>
+                        <div><span>Diamond:</span><strong>{formatCurrency(totalDiamond)}</strong></div>
+                      </>
+                    );
+                  }
+                  return null;
+                })()}
                 {calculateBuyBackTotal() > 0 && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', color: '#0d9488' }}>
+                  <div className="price-bill-buyback">
                     <span>Gold buy-back:</span>
                     <strong>-{formatCurrency(calculateBuyBackTotal())}</strong>
                   </div>
                 )}
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                <div>
                   <span>Discount:</span>
                   <strong>-{formatCurrency(formData.discountAmount || 0)}</strong>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '0.5rem', borderTop: '2px solid #ecf0f1', marginBottom: '0.5rem' }}>
+                <div className="price-bill-total-row">
                   <span>Total:</span>
-                  <span style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#667eea' }}>{formatCurrency(finalAmount)}</span>
+                  <span className="price-bill-total-value">{formatCurrency(finalAmount)}</span>
                 </div>
                 {(formData.paymentMethod === 'CASH' || formData.paymentMethod === 'CARD' || formData.paymentMethod === 'UPI' || formData.paymentMethod === 'BANK_TRANSFER') && paidAmount > 0 && (
                   <>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', paddingTop: '0.5rem', borderTop: '1px solid #ddd' }}>
+                    <div className="price-bill-divider">
                       <span>Paid Amount:</span>
-                      <strong style={{ color: '#27ae60' }}>{formatCurrency(paidAmount)}</strong>
+                      <strong className="price-bill-paid">{formatCurrency(paidAmount)}</strong>
                     </div>
                     {remainingAmount > 0 && (
-                      <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '0.5rem', borderTop: '1px solid #ddd' }}>
+                      <div className="price-bill-divider">
                         <span>Remaining (Udhari):</span>
-                        <strong style={{ color: '#e74c3c', fontSize: '1.1rem' }}>{formatCurrency(remainingAmount)}</strong>
+                        <strong className="price-bill-remaining">{formatCurrency(remainingAmount)}</strong>
                       </div>
                     )}
                   </>
@@ -860,79 +958,6 @@ function BillingManagement() {
             </div>
           )}
 
-          {/* Bill detail modal */}
-          {(loadingBill || selectedBill) && (
-            <div
-              className="stock-modal-overlay"
-              style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}
-              onClick={() => !loadingBill && setSelectedBill(null)}
-            >
-              <div
-                className="stock-modal-content"
-                style={{ maxWidth: '560px', width: '90%', maxHeight: '90vh', overflow: 'auto' }}
-                onClick={(e) => e.stopPropagation()}
-              >
-                {loadingBill ? (
-                  <div style={{ padding: '2rem', textAlign: 'center' }}>⏳ Loading bill...</div>
-                ) : selectedBill ? (
-                  <div className="price-form-card" style={{ margin: 0 }}>
-                    <div className="price-form-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <h3>Bill #{selectedBill.billNumber}</h3>
-                      <button type="button" onClick={() => setSelectedBill(null)} className="stock-modal-close" aria-label="Close">✕</button>
-                    </div>
-                    <div style={{ padding: '0 1rem 1rem' }}>
-                      <div style={{ marginBottom: '1rem' }}>
-                        <strong>Customer:</strong> {selectedBill.customer?.name || '-'}<br />
-                        {selectedBill.customer?.phone && <><strong>Phone:</strong> {selectedBill.customer.phone}<br /></>}
-                        <strong>Date:</strong> {formatDate(selectedBill.createdAt)}<br />
-                        <strong>Payment:</strong> {selectedBill.paymentMethod || '-'} · <span className={`status-badge status-${selectedBill.paymentStatus?.toLowerCase()}`}>{selectedBill.paymentStatus}</span>
-                      </div>
-                      <table className="price-table" style={{ marginBottom: '1rem', fontSize: '0.9rem' }}>
-                        <thead>
-                          <tr>
-                            <th>Item</th>
-                            <th>Article Code</th>
-                            <th>Qty</th>
-                            <th>Unit Price</th>
-                            <th>Total</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {(selectedBill.items || []).map((item, i) => (
-                            <tr key={i}>
-                              <td>{item.itemName || '-'}</td>
-                              <td>{item.articleCode || (item.stock?.articleCode) || '–'}</td>
-                              <td>{item.quantity ?? 1}</td>
-                              <td>{formatCurrency(item.unitPrice)}</td>
-                              <td>{formatCurrency(item.totalPrice)}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                      <div style={{ borderTop: '2px solid #ecf0f1', paddingTop: '0.75rem' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}><span>Subtotal</span><strong>{formatCurrency(selectedBill.totalAmount)}</strong></div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}><span>Discount</span><strong>-{formatCurrency(selectedBill.discountAmount || 0)}</strong></div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}><span>Total</span><strong style={{ color: '#667eea', fontSize: '1.1rem' }}>{formatCurrency(selectedBill.finalAmount)}</strong></div>
-                        {selectedBill.paidAmount != null && selectedBill.paidAmount > 0 && (
-                          <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Paid</span><strong style={{ color: '#27ae60' }}>{formatCurrency(selectedBill.paidAmount)}</strong></div>
-                        )}
-                      </div>
-                      {selectedBill.notes && (
-                        <div style={{ marginTop: '1rem', padding: '0.5rem', background: '#f8f9fa', borderRadius: '6px', fontSize: '0.9rem' }}>
-                          <strong>Notes:</strong> {selectedBill.notes}
-                        </div>
-                      )}
-                      <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem', flexWrap: 'wrap' }}>
-                        <button type="button" onClick={async () => { await sendEmail(selectedBill.id); openBillDetail(selectedBill.id); }} disabled={selectedBill.emailSent} className="stock-btn-edit">{selectedBill.emailSent ? '✅ Email sent' : '📧 Send Email'}</button>
-                        <button type="button" onClick={async () => { await sendWhatsApp(selectedBill.id); openBillDetail(selectedBill.id); }} disabled={selectedBill.whatsappSent} className="stock-btn-edit">{selectedBill.whatsappSent ? '✅ WhatsApp sent' : '💬 Send WhatsApp'}</button>
-                      </div>
-                    </div>
-                  </div>
-                ) : null}
-              </div>
-            </div>
-          )}
-
           {/* Pagination bar - Showing X-Y of Z, per page, First/Prev/Page X of Y/Next/Last */}
           {totalElements > 0 && (
             <div className="price-pagination-bar">
@@ -993,6 +1018,160 @@ function BillingManagement() {
           )}
         </div>
       </div>
+
+      {/* Modals rendered outside price-management so they stack above admin nav (z-index 10001) */}
+      {(loadingBill || selectedBill) && (
+            <div
+              className="stock-modal-overlay"
+              style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10001 }}
+              onClick={() => !loadingBill && setSelectedBill(null)}
+            >
+              <div
+                className="stock-modal-content bill-detail-modal-content"
+                style={{ position: 'relative', maxWidth: '90vw', width: '95%', maxHeight: '90vh', overflow: 'hidden' }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <button type="button" className="receipt-modal-close" onClick={() => setSelectedBill(null)} aria-label="Close">✕</button>
+                {loadingBill ? (
+                  <div style={{ padding: '2rem', textAlign: 'center' }}>⏳ Loading bill...</div>
+                ) : selectedBill ? (
+                  <div className="price-form-card" style={{ margin: 0 }}>
+                    <div className="price-form-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <h3>Bill #{selectedBill.billNumber}</h3>
+                    </div>
+                    <div style={{ padding: '0 1rem 1rem' }}>
+                      <div style={{ marginBottom: '1rem' }}>
+                        <strong>Customer:</strong> {selectedBill.customer?.name || '-'}<br />
+                        {selectedBill.customer?.phone && <><strong>Phone:</strong> {selectedBill.customer.phone}<br /></>}
+                        <strong>Date:</strong> {formatDate(selectedBill.createdAt)}<br />
+                        <strong>Payment:</strong> {selectedBill.paymentMethod || '-'} · <span className={`status-badge status-${selectedBill.paymentStatus?.toLowerCase()}`}>{selectedBill.paymentStatus}</span>
+                      </div>
+                      <div className="bill-detail-table-wrap">
+                        <table className="price-table bill-detail-table" style={{ fontSize: '0.85rem' }}>
+                          <thead>
+                            <tr>
+                              <th>Item</th>
+                              <th>Article Code</th>
+                              <th>Carat</th>
+                              <th>Diamond Ct</th>
+                              <th>Qty</th>
+                              <th>Rate (₹/g)</th>
+                              {selectedBill.totalDiamondAmount != null && parseFloat(selectedBill.totalDiamondAmount) > 0 && (
+                                <>
+                                  <th>Gold/Metal</th>
+                                  <th>Diamond</th>
+                                </>
+                              )}
+                              <th>Total</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {(selectedBill.items || []).map((item, i) => {
+                              const diamondAmt = item.diamondAmount != null ? parseFloat(item.diamondAmount) : 0;
+                              const metalAmt = (parseFloat(item.totalPrice) || 0) - diamondAmt;
+                              const showBreakdown = selectedBill.totalDiamondAmount != null && parseFloat(selectedBill.totalDiamondAmount) > 0;
+                              const w = parseFloat(item.weightGrams) || parseFloat(item.stock?.weightGrams) || 0;
+                              const ratePerGram = w > 0 && item.unitPrice != null ? parseFloat(item.unitPrice) / w : null;
+                              return (
+                                <tr key={i}>
+                                  <td>{item.itemName || '-'}</td>
+                                  <td>{item.articleCode || (item.stock?.articleCode) || '–'}</td>
+                                  <td>{item.carat != null ? String(item.carat) : (item.stock?.carat != null ? String(item.stock.carat) : '–')}</td>
+                                  <td>{item.diamondCarat != null ? String(item.diamondCarat) : (item.stock?.diamondCarat != null ? String(item.stock.diamondCarat) : '–')}</td>
+                                  <td>{item.quantity ?? 1}</td>
+                                  <td>{ratePerGram != null ? formatCurrency(ratePerGram) : '—'}</td>
+                                  {showBreakdown && (
+                                    <>
+                                      <td>{formatCurrency(metalAmt)}</td>
+                                      <td>{formatCurrency(diamondAmt)}</td>
+                                    </>
+                                  )}
+                                  <td>{formatCurrency(item.totalPrice)}</td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                      <div className="price-bill-summary bill-detail-summary" style={{ borderTop: '2px solid var(--adm-border-gold, rgba(201,162,39,0.35))', paddingTop: '0.75rem' }}>
+                        <div><span>Subtotal (items)</span><strong>{formatCurrency(selectedBill.totalAmount)}</strong></div>
+                        {selectedBill.totalDiamondAmount != null && parseFloat(selectedBill.totalDiamondAmount) > 0 && (
+                          <>
+                            <div><span>Gold / Metal</span><strong>{formatCurrency((parseFloat(selectedBill.totalAmount) || 0) - parseFloat(selectedBill.totalDiamondAmount))}</strong></div>
+                            <div><span>Diamond</span><strong>{formatCurrency(selectedBill.totalDiamondAmount)}</strong></div>
+                          </>
+                        )}
+                        <div><span>Discount</span><strong>-{formatCurrency(selectedBill.discountAmount || 0)}</strong></div>
+                        <div className="price-bill-total-row">
+                          <span>Total</span>
+                          <span className="price-bill-total-value">{formatCurrency(selectedBill.finalAmount)}</span>
+                        </div>
+                        {selectedBill.paidAmount != null && selectedBill.paidAmount > 0 && (
+                          <div className="price-bill-divider">
+                            <span>Paid</span>
+                            <strong className="price-bill-paid">{formatCurrency(selectedBill.paidAmount)}</strong>
+                          </div>
+                        )}
+                        {selectedBill.paidAmount != null && selectedBill.finalAmount != null && (parseFloat(selectedBill.paidAmount) || 0) < parseFloat(selectedBill.finalAmount) && (
+                          <div className="price-bill-divider">
+                            <span>Remaining (Udhari)</span>
+                            <strong className="price-bill-remaining">{formatCurrency(parseFloat(selectedBill.finalAmount) - parseFloat(selectedBill.paidAmount))}</strong>
+                          </div>
+                        )}
+                      </div>
+                      {selectedBill.notes && (
+                        <div className="bill-detail-notes">
+                          <strong>Notes:</strong> {selectedBill.notes}
+                        </div>
+                      )}
+                      <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                        <button type="button" onClick={() => setShowNormalReceipt(true)} className="stock-btn-edit">🧾 Print Normal Receipt</button>
+                        <button type="button" onClick={() => setShowGstReceipt(true)} className="stock-btn-edit">📄 Print GST Receipt</button>
+                        {selectedBill.emailSent && <span className="status-badge status-paid" style={{ marginRight: '0.25rem' }}>✅ Email sent</span>}
+                        <button type="button" onClick={() => sendEmail(selectedBill.id, 'NORMAL')} className="stock-btn-edit">📧 Email (Normal)</button>
+                        <button type="button" onClick={() => sendEmail(selectedBill.id, 'GST')} className="stock-btn-edit">📧 Email (GST)</button>
+                        {selectedBill.whatsappSent && <span className="status-badge status-paid" style={{ marginRight: '0.25rem' }}>✅ WhatsApp sent</span>}
+                        <button type="button" onClick={() => sendWhatsApp(selectedBill.id, 'NORMAL')} className="stock-btn-edit">💬 WhatsApp (Normal)</button>
+                        <button type="button" onClick={() => sendWhatsApp(selectedBill.id, 'GST')} className="stock-btn-edit">💬 WhatsApp (GST)</button>
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          )}
+
+      {showNormalReceipt && selectedBill && (
+            <div
+              className="stock-modal-overlay"
+              style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', zIndex: 10001, overflow: 'auto', padding: '1rem' }}
+              onClick={() => setShowNormalReceipt(false)}
+            >
+              <div
+                style={{ position: 'relative', maxWidth: '560px', width: '100%', margin: '0 auto', background: '#fff', borderRadius: '12px', boxShadow: '0 8px 32px rgba(0,0,0,0.2)', overflow: 'hidden' }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <button type="button" className="receipt-modal-close no-print" onClick={() => setShowNormalReceipt(false)} aria-label="Close">✕</button>
+                <NormalReceipt bill={selectedBill} onClose={() => setShowNormalReceipt(false)} showPrintButton />
+              </div>
+            </div>
+          )}
+
+      {showGstReceipt && selectedBill && (
+            <div
+              className="stock-modal-overlay"
+              style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', zIndex: 10001, overflow: 'auto', padding: '1rem' }}
+              onClick={() => setShowGstReceipt(false)}
+            >
+              <div
+                style={{ position: 'relative', maxWidth: '920px', width: '100%', margin: '0 auto', background: '#fff', borderRadius: '12px', boxShadow: '0 8px 32px rgba(0,0,0,0.2)', overflow: 'hidden' }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <button type="button" className="receipt-modal-close no-print" onClick={() => setShowGstReceipt(false)} aria-label="Close">✕</button>
+                <GSTReceipt bill={selectedBill} onClose={() => setShowGstReceipt(false)} showPrintButton />
+              </div>
+            </div>
+          )}
     </div>
   );
 }

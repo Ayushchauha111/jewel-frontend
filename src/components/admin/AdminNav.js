@@ -12,8 +12,7 @@ const NAV_LINKS = [
   { to: '/admin/credits', label: 'Udhari' },
   { to: '/admin/analytics', label: 'Analytics' },
   { to: '/admin/income-expense', label: 'Income/Expense' },
-  { to: '/admin/gold-price', label: 'Gold Price' },
-  { to: '/admin/silver-price', label: 'Silver Price' },
+  { to: '/admin/rates', label: 'Rates (Gold/Silver/Diamond)' },
   { to: '/admin/rate-limit', label: 'Rate Limits' },
 ];
 
@@ -25,33 +24,41 @@ function AdminNav({ title = 'Jewelry Shop Admin', onLogout }) {
 
   return (
     <nav className={`admin-nav ${menuOpen ? 'admin-nav--open' : ''}`}>
-      <div className="admin-nav-brand">
-        <h1 className="admin-nav-title">{title}</h1>
-        <button
-          type="button"
-          className="admin-nav-hamburger"
-          onClick={() => setMenuOpen(!menuOpen)}
-          aria-label={menuOpen ? 'Close menu' : 'Open menu'}
-          aria-expanded={menuOpen}
-        >
-          <span className="admin-nav-hamburger-bar" />
-          <span className="admin-nav-hamburger-bar" />
-          <span className="admin-nav-hamburger-bar" />
-        </button>
-      </div>
-      <div className="nav-links" onClick={closeMenu}>
-        {NAV_LINKS.map(({ to, label }) => (
-          <Link
-            key={to}
-            to={to}
-            className={location.pathname === to ? 'nav-link-active' : ''}
+      <div className="admin-nav-inner">
+        <div className="admin-nav-brand">
+          <h1 className="admin-nav-title">{title}</h1>
+          <button
+            type="button"
+            className="admin-nav-hamburger"
+            onClick={() => setMenuOpen(!menuOpen)}
+            aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+            aria-expanded={menuOpen}
           >
-            {label}
-          </Link>
-        ))}
-        <button type="button" onClick={onLogout} className="logout-btn">
-          Logout
-        </button>
+            <span className="admin-nav-hamburger-bar" />
+            <span className="admin-nav-hamburger-bar" />
+            <span className="admin-nav-hamburger-bar" />
+          </button>
+        </div>
+        <div className="admin-nav-center" onClick={closeMenu}>
+          <div className="nav-links-scroll">
+            <div className="nav-links">
+              {NAV_LINKS.map(({ to, label }) => (
+                <Link
+                  key={to}
+                  to={to}
+                  className={location.pathname === to ? 'nav-link-active' : ''}
+                >
+                  {label}
+                </Link>
+              ))}
+            </div>
+          </div>
+          <div className="admin-nav-logout">
+            <button type="button" onClick={onLogout} className="logout-btn">
+              Logout
+            </button>
+          </div>
+        </div>
       </div>
       {menuOpen && (
         <div

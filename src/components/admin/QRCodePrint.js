@@ -151,10 +151,10 @@ function QRCodePrint() {
     <div className="admin-dashboard">
       <AdminNav title="📱 QR Print" onLogout={handleLogout} />
 
-      <div className="price-management" style={{ background: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)' }}>
+      <div className="price-management">
         <div className="price-header">
           <h1>📱 QR Code Printing</h1>
-          <p style={{ color: '#7f8c8d', marginTop: '0.5rem' }}>Select and print QR codes for stock items</p>
+          <p>Select and print QR codes for stock items</p>
         </div>
 
         {error && (
@@ -182,27 +182,21 @@ function QRCodePrint() {
               <div className="price-icon">✅</div>
             </div>
             <div className="price-label">Available</div>
-            <p className="price-value" style={{ background: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
-              {stats.available}
-            </p>
+            <p className="price-value price-value-success">{stats.available}</p>
           </div>
           <div className="price-card">
             <div className="price-card-header">
               <div className="price-icon">📱</div>
             </div>
             <div className="price-label">With QR Code</div>
-            <p className="price-value" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
-              {stats.withQR}
-            </p>
+            <p className="price-value">{stats.withQR}</p>
           </div>
           <div className="price-card">
             <div className="price-card-header">
               <div className="price-icon">⚠️</div>
             </div>
             <div className="price-label">Without QR Code</div>
-            <p className="price-value" style={{ background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
-              {stats.withoutQR}
-            </p>
+            <p className="price-value price-value-danger">{stats.withoutQR}</p>
           </div>
         </div>
 
@@ -250,7 +244,7 @@ function QRCodePrint() {
               onClick={handlePrint}
               className="price-action-btn"
               disabled={selectedItems.size === 0}
-              style={{ fontSize: '0.875rem', padding: '0.75rem 1.5rem', background: selectedItems.size === 0 ? '#ccc' : '#667eea' }}
+              style={{ fontSize: '0.875rem', padding: '0.75rem 1.5rem'}}
             >
               🖨️ Print Selected ({selectedItems.size})
             </button>
@@ -276,7 +270,7 @@ function QRCodePrint() {
               </thead>
               <tbody>
                 {paginatedStock.map(item => (
-                  <tr key={item.id} style={{ background: selectedItems.has(item.id) ? '#e8f4f8' : 'transparent' }}>
+                  <tr key={item.id} className={selectedItems.has(item.id) ? 'row-selected' : ''}>
                     <td>
                       <input
                         type="checkbox"

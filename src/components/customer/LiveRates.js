@@ -1,367 +1,245 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
 import CustomerNav from './CustomerNav';
-import './CustomerHome.css';
 import './LiveRates.css';
 
-const API_URL = '/api';
+// Call exact external API (streaming)
+const LIVE_RATE_XML_URL = 'https://bcast.gangajewellers.co.in:7768/VOTSBroadcastStreaming/Services/xml/GetLiveRateByTemplateID/ganga';
+
+/**
+ * Parse streaming API response: tab-separated rows
+ * Format: ID \t LABEL \t VAL1 \t VAL2 \t VAL3 \t VAL4
+ * e.g. 5147	FINE GOLD GST	151501	155374	155374	155374
+ * We use the 4th column (index 3) as the main display PRICE.
+ */
+function parseLiveRateStreaming(text) {
+  if (!text || typeof text !== 'string') return null;
+  const trimmed = text.trim();
+  if (!trimmed) return null;
+
+  // Try tab-separated or multi-space format
+  const lines = trimmed.split(/\r?\n/).filter((line) => line.trim());
+  const rows = [];
+  for (const line of lines) {
+    const cols = line.split(/\t/).length >= 3
+      ? line.split(/\t/).map((c) => c.trim()).filter(Boolean)
+      : line.split(/\s{2,}/).map((c) => c.trim()).filter(Boolean);
+    if (cols.length >= 3) {
+      const id = cols[0];
+      const label = cols[1];
+      const values = cols.slice(2).map((v) => v.replace(/,/g, ''));
+      // Main price: 4th column (index 3) if present, else last value
+      const price = values.length >= 4 ? values[3] : values[values.length - 1];
+      rows.push({ id, label, values, price });
+    }
+  }
+  if (rows.length > 0) return { rows, byLabel: Object.fromEntries(rows.map((r) => [r.label, r.price])) };
+
+  // Fallback: try XML
+  try {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(trimmed, 'text/xml');
+    const rates = {};
+    doc.querySelectorAll('Rate, rate, Item, item, Row, row').forEach((el) => {
+      const name = el.getAttribute('name') || el.getAttribute('Name') || el.querySelector('Name, name')?.textContent?.trim();
+      const value = el.getAttribute('value') || el.getAttribute('Value') || el.querySelector('Value, value, Rate, rate')?.textContent?.trim();
+      if (name) rates[name] = value;
+    });
+    doc.querySelectorAll('[Name][Value], [name][value]').forEach((el) => {
+      const name = el.getAttribute('Name') || el.getAttribute('name');
+      const value = el.getAttribute('Value') || el.getAttribute('value');
+      if (name) rates[name] = value;
+    });
+    if (Object.keys(rates).length > 0) {
+      return { rows: Object.entries(rates).map(([label, price]) => ({ id: '', label, values: [price], price })), byLabel: rates };
+    }
+  } catch (_) {}
+  return null;
+}
 
 function LiveRates() {
-  const [rates, setRates] = useState(null);
+  const [liveRateStreaming, setLiveRateStreaming] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [lastUpdated, setLastUpdated] = useState(null);
 
-  useEffect(() => {
-    fetchRates();
-    // Auto-refresh every 30 seconds
-    const interval = setInterval(fetchRates, 30000);
-    return () => clearInterval(interval);
+  const apiHeaders = {
+    Accept: 'text/plain, */*; q=0.01',
+    Origin: 'https://gangajewellers.co.in',
+    Referer: 'https://gangajewellers.co.in/',
+  };
+
+  const fetchLiveRateStreaming = useCallback(async () => {
+    try {
+      const url = `${LIVE_RATE_XML_URL}?_=${Date.now()}`;
+      const res = await fetch(url, { method: 'GET', headers: apiHeaders });
+      if (!res.ok) throw new Error(res.statusText);
+      const text = await res.text();
+      setLiveRateStreaming(parseLiveRateStreaming(text));
+    } catch (e) {
+      console.warn('Live rate XML fetch failed:', e);
+    }
   }, []);
 
-  const fetchRates = async () => {
-    try {
-      const response = await axios.get(`${API_URL}/live-rates`);
-      setRates(response.data);
-      setLastUpdated(new Date());
-      setLoading(false);
-    } catch (error) {
-      console.error('Error fetching live rates:', error);
-      setLoading(false);
+  const fetchAll = useCallback(async () => {
+    setError(null);
+    await fetchLiveRateStreaming();
+    setLastUpdated(new Date());
+    setLoading(false);
+  }, [fetchLiveRateStreaming]);
+
+  useEffect(() => {
+    if (!loading && !liveRateStreaming) {
+      setError('Unable to load live rates. Please try again or check your connection.');
+    } else if (liveRateStreaming) {
+      setError(null);
     }
-  };
+  }, [loading, liveRateStreaming]);
+
+  useEffect(() => {
+    fetchAll();
+    const interval = setInterval(fetchAll, 15000);
+    return () => clearInterval(interval);
+  }, [fetchAll]);
 
   const formatNumber = (num) => {
-    if (!num) return '0';
-    const number = parseFloat(num);
-    if (isNaN(number)) return '0';
-    return Math.round(number).toLocaleString('en-IN');
+    if (num == null || num === '') return '–';
+    const n = parseFloat(String(num).replace(/[^0-9.-]/g, ''));
+    if (isNaN(n)) return String(num);
+    return Math.round(n).toLocaleString('en-IN');
   };
 
-  const formatDecimal = (num, decimals = 2) => {
-    if (!num) return '0.00';
-    const number = parseFloat(num);
-    if (isNaN(number)) return '0.00';
-    return number.toFixed(decimals);
-  };
+  const hasData = liveRateStreaming != null;
+  const streamingRows = liveRateStreaming?.rows || [];
+  const highlightRates = liveRateStreaming?.byLabel
+    ? {
+        'FINE GOLD GST': liveRateStreaming.byLabel['FINE GOLD GST'],
+        'GOLD 999': liveRateStreaming.byLabel['GOLD 999'],
+        'GOLD 995': liveRateStreaming.byLabel['GOLD 995'],
+      }
+    : null;
+
+  const isGold = (label) => /gold|gst|995|999|22kt|18kt|14kt|spot/i.test(label || '');
+  const isSilver = (label) => /silver/i.test(label || '');
 
   return (
     <div className="live-rates-page">
-      <CustomerNav />
-      {/* Header */}
-      <header className="live-rates-header">
-        <div className="header-content">
-          <div className="logo-section">
-            <div className="logo">
-              <svg className="gj-logo" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-                {/* Outer ornate decorative white border with 8 outward points */}
-                <g stroke="#fff" strokeWidth="3" fill="none">
-                  <circle cx="100" cy="100" r="95"/>
-                  <circle cx="100" cy="100" r="88"/>
-                </g>
-                {/* 8 outward-pointing decorative segments */}
-                {[...Array(8)].map((_, i) => {
-                  const angle = (i * 45) * Math.PI / 180;
-                  const angle1 = (i * 45 - 20) * Math.PI / 180;
-                  const angle2 = (i * 45 + 20) * Math.PI / 180;
-                  const x1 = 100 + 88 * Math.cos(angle1);
-                  const y1 = 100 + 88 * Math.sin(angle1);
-                  const x2 = 100 + 100 * Math.cos(angle);
-                  const y2 = 100 + 100 * Math.sin(angle);
-                  const x3 = 100 + 88 * Math.cos(angle2);
-                  const y3 = 100 + 88 * Math.sin(angle2);
-                  return (
-                    <path key={i} d={`M ${x1} ${y1} L ${x2} ${y2} L ${x3} ${y3}`} stroke="#fff" strokeWidth="3" fill="#fff"/>
-                  );
-                })}
-                {/* Inner golden multi-lobed shape (scalloped circle) */}
-                <path d="M 100 30 
-                         Q 120 35 135 50 
-                         Q 150 65 160 80 
-                         Q 170 95 160 110 
-                         Q 150 125 135 140 
-                         Q 120 155 100 170 
-                         Q 80 155 65 140 
-                         Q 50 125 40 110 
-                         Q 30 95 40 80 
-                         Q 50 65 65 50 
-                         Q 80 35 100 30 Z" 
-                      fill="#d4af37" stroke="#c9a227" strokeWidth="2"/>
-                {/* GJ Letters in white, serif font */}
-                <text x="100" y="110" fontSize="50" fontFamily="Georgia, 'Times New Roman', serif" fontWeight="bold" fill="#fff" textAnchor="middle" letterSpacing="3">G</text>
-                <text x="100" y="140" fontSize="50" fontFamily="Georgia, 'Times New Roman', serif" fontWeight="bold" fill="#fff" textAnchor="middle" letterSpacing="3">J</text>
-              </svg>
-            </div>
-            <div className="company-name">
-              <h1>GANGA JEWELLERS</h1>
-            </div>
+      <CustomerNav cartCount={0} />
+
+      <main className="live-rates-main">
+        <div className="live-rates-container">
+          <div className="live-rates-hero">
+            <h1 className="live-rates-hero-title">Live Bullion Rates</h1>
+            <p className="live-rates-hero-subtitle">Rates updated every 15 seconds</p>
           </div>
-          <div className="contact-section">
-            <div className="contact-label">CONTACT NUMBER</div>
-            <div className="contact-numbers">
-              <div>Gold - 8077256922</div>
-              <div>Silver - 7451849816</div>
-            </div>
+
+          <div className="live-rates-gst-banner">
+            GST AS PER GOVERNMENT NORMS APPLICABLE. WE DO NOT SELL BULLION. RATES CUTS ONLY/-
           </div>
+
+          {loading && !hasData ? (
+            <div className="live-rates-loading">
+              <div className="live-rates-spinner" />
+              <p>Loading live rates…</p>
+            </div>
+          ) : error ? (
+            <div className="live-rates-error">
+              <p>{error}</p>
+            </div>
+          ) : (
+            <>
+              {streamingRows.length > 0 && (
+                <>
+                  {highlightRates && (highlightRates['FINE GOLD GST'] || highlightRates['GOLD 999'] || highlightRates['GOLD 995']) && (
+                    <div className="live-rates-bullion-bars">
+                      {highlightRates['FINE GOLD GST'] != null && (
+                        <div className="live-rates-bar live-rates-bar--gold">
+                          <span className="live-rates-bar-label">FINE GOLD GST</span>
+                          <span className="live-rates-bar-value">{formatNumber(highlightRates['FINE GOLD GST'])}</span>
+                          <span className="live-rates-bar-unit">₹/10g</span>
+                        </div>
+                      )}
+                      {highlightRates['GOLD 999'] != null && (
+                        <div className="live-rates-bar live-rates-bar--gold">
+                          <span className="live-rates-bar-label">GOLD 999</span>
+                          <span className="live-rates-bar-value">{formatNumber(highlightRates['GOLD 999'])}</span>
+                          <span className="live-rates-bar-unit">₹/10g</span>
+                        </div>
+                      )}
+                      {highlightRates['GOLD 995'] != null && (
+                        <div className="live-rates-bar live-rates-bar--gold">
+                          <span className="live-rates-bar-label">GOLD 995</span>
+                          <span className="live-rates-bar-value">{formatNumber(highlightRates['GOLD 995'])}</span>
+                          <span className="live-rates-bar-unit">₹/10g</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  <section className="live-rates-board">
+                    <h2 className="live-rates-board-title">Product & Price</h2>
+                    <div className="live-rates-board-body">
+                      {streamingRows.map((row) => {
+                        const gold = isGold(row.label);
+                        const silver = isSilver(row.label);
+                        return (
+                          <div
+                            key={row.id || row.label}
+                            className={`live-rates-board-row ${gold ? 'live-rates-board-row--gold' : ''} ${silver ? 'live-rates-board-row--silver' : ''}`}
+                          >
+                            <span className="live-rates-board-label">{row.label}</span>
+                            <span className="live-rates-board-value">{formatNumber(row.price) || row.price}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </section>
+                </>
+              )}
+
+              {hasData && (
+                <div className="live-rates-message-banner">
+                  <p className="live-rates-message-hindi">
+                    <strong>विशेष ~</strong> आपकी सेवा में, हमने एक नया लिंक जोड़ा है और खुशी से 20k/18K हॉलमार्क ज्वैलरी,
+                    सिल्वर ज्वैलरी, पायल, मूर्तियां, बर्तन, सिक्के, एक पूर्ण रेंज और विशाल संग्रह (बहुत उचित कीमतों पर) प्रदान कर रहे हैं।
+                  </p>
+                  <p className="live-rates-message-english">
+                    <strong>Working Hours:</strong> 11:30 AM - 08:00 PM | <strong>We Do Not have Any Other Branch.</strong>
+                  </p>
+                  <p className="live-rates-contact">
+                    <strong>Gold:</strong> 8077256922 &nbsp;|&nbsp; <strong>Silver:</strong> 7451849816
+                  </p>
+                </div>
+              )}
+            </>
+          )}
+
+          {lastUpdated && (
+            <div className="live-rates-ticker">
+              <span className="live-rates-ticker-dot" aria-hidden="true" />
+              Last updated: {lastUpdated.toLocaleTimeString('en-IN')}
+            </div>
+          )}
         </div>
-      </header>
+      </main>
 
-      {/* Navigation */}
-      <nav className="live-rates-nav">
-        <Link to="/">Home</Link>
-        <Link to="/products">Products</Link>
-        <span className="active">Live Rate</span>
-        <Link to="/login">Login</Link>
-      </nav>
-
-      {/* GST Banner */}
-      <div className="gst-banner">
-        GST AS PER GOVERNMENT NORMS APPLICABLE. WE DO NOT SELL BULLION. RATES CUTS ONLY/-
-      </div>
-
-      {/* Special Message Banner */}
-      <div className="special-message-banner">
-        <div className="message-content">
-          <div className="hindi-message">
-            <strong>विशेष ~</strong> आपकी सेवा में, हमने एक नया लिंक जोड़ा है और खुशी से 20k/18K हॉलमार्क ज्वैलरी, 
-            सिल्वर ज्वैलरी, पायल, मूर्तियां, बर्तन, सिक्के, एक पूर्ण रेंज और विशाल संग्रह (बहुत उचित कीमतों पर) प्रदान कर रहे हैं। 
-            हम हमेशा आपके समर्थन और सहयोग की कामना करते हैं।
-          </div>
-          <div className="english-message">
-            <strong>Working Hours:</strong> 11:30 AM - 08:00 PM | <strong>We Do Not have Any Other Branch.</strong>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="live-rates-content">
-        {loading ? (
-          <div className="loading-state">
-            <div className="spinner">⏳</div>
-            <p>Loading live rates...</p>
-          </div>
-        ) : rates ? (
-          <div className="rates-layout">
-            {/* Left: Product & Sell Rates */}
-            <div className="left-section">
-              <div className="product-rates-table">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>PRODUCT</th>
-                      <th>SELL</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td>Gold 99.50</td>
-                      <td className="price-cell sell-price">{formatNumber(rates.product?.gold9950?.sell)}</td>
-                    </tr>
-                    <tr>
-                      <td>Silver 99.99</td>
-                      <td className="price-cell sell-price highlight-green">{formatNumber(rates.product?.silver9999?.sell)}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            {/* Right: MCX, SPOT, NEXT Tables */}
-            <div className="right-section">
-              {/* MCX Table */}
-              <div className="market-table">
-                <div className="table-header">MCX</div>
-                <table>
-                  <thead>
-                    <tr>
-                      <th>MCX</th>
-                      <th>BID</th>
-                      <th>ASK</th>
-                      <th>HIGH/LOW</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td>GOLD</td>
-                      <td className="price-cell highlight-green">{formatNumber(rates.mcx?.gold?.bid)}</td>
-                      <td className="price-cell">{formatNumber(rates.mcx?.gold?.ask)}</td>
-                      <td className="high-low">{formatNumber(rates.mcx?.gold?.high)} / {formatNumber(rates.mcx?.gold?.low)}</td>
-                    </tr>
-                    <tr>
-                      <td>SILVER</td>
-                      <td className="price-cell highlight-green">{formatNumber(rates.mcx?.silver?.bid)}</td>
-                      <td className="price-cell">{formatNumber(rates.mcx?.silver?.ask)}</td>
-                      <td className="high-low">{formatNumber(rates.mcx?.silver?.high)} / {formatNumber(rates.mcx?.silver?.low)}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-
-              {/* SPOT Table */}
-              <div className="market-table">
-                <div className="table-header">SPOT</div>
-                <table>
-                  <thead>
-                    <tr>
-                      <th>SPOT</th>
-                      <th>BID</th>
-                      <th>ASK</th>
-                      <th>HIGH/LOW</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td>GOLD $</td>
-                      <td className="price-cell highlight-green">{formatDecimal(rates.spot?.gold?.bid, 2)}</td>
-                      <td className="price-cell highlight-green">{formatDecimal(rates.spot?.gold?.ask, 2)}</td>
-                      <td className="high-low">{formatDecimal(rates.spot?.gold?.high, 2)} / {formatDecimal(rates.spot?.gold?.low, 2)}</td>
-                    </tr>
-                    <tr>
-                      <td>SILVER $</td>
-                      <td className="price-cell highlight-green">{formatDecimal(rates.spot?.silver?.bid, 2)}</td>
-                      <td className="price-cell highlight-red">{formatDecimal(rates.spot?.silver?.ask, 2)}</td>
-                      <td className="high-low">{formatDecimal(rates.spot?.silver?.high, 2)} / {formatDecimal(rates.spot?.silver?.low, 2)}</td>
-                    </tr>
-                    <tr>
-                      <td>INR $</td>
-                      <td className="price-cell highlight-green">{formatDecimal(rates.spot?.inr?.bid, 2)}</td>
-                      <td className="price-cell highlight-green">{formatDecimal(rates.spot?.inr?.ask, 2)}</td>
-                      <td className="high-low">{formatDecimal(rates.spot?.inr?.high, 2)} / {formatDecimal(rates.spot?.inr?.low, 2)}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-
-              {/* NEXT Table */}
-              <div className="market-table">
-                <div className="table-header">NEXT</div>
-                <table>
-                  <thead>
-                    <tr>
-                      <th>NEXT</th>
-                      <th>BID</th>
-                      <th>ASK</th>
-                      <th>HIGH/LOW</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td>GOLD NEXT</td>
-                      <td className="price-cell highlight-green">{formatNumber(rates.next?.gold?.bid)}</td>
-                      <td className="price-cell highlight-green">{formatNumber(rates.next?.gold?.ask)}</td>
-                      <td className="high-low">{formatNumber(rates.next?.gold?.high)} / {formatNumber(rates.next?.gold?.low)}</td>
-                    </tr>
-                    <tr>
-                      <td>SILVER NEXT</td>
-                      <td className="price-cell highlight-green">{formatNumber(rates.next?.silver?.bid)}</td>
-                      <td className="price-cell highlight-green">{formatNumber(rates.next?.silver?.ask)}</td>
-                      <td className="high-low">{formatNumber(rates.next?.silver?.high)} / {formatNumber(rates.next?.silver?.low)}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div className="error-state">
-            <p>Failed to load live rates. Please try again later.</p>
-          </div>
-        )}
-
-        {lastUpdated && (
-          <div className="last-updated">
-            Last Updated: {lastUpdated.toLocaleTimeString('en-IN')}
-          </div>
-        )}
-      </div>
-
-      {/* Footer */}
       <footer className="live-rates-footer">
-        <div className="footer-content">
-          <div className="footer-section">
-            <div className="footer-logo">
-              <svg className="gj-logo-footer" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-                {/* Outer ornate decorative gold border */}
-                <g stroke="#d4af37" strokeWidth="3" fill="none">
-                  <circle cx="100" cy="100" r="95"/>
-                  <circle cx="100" cy="100" r="88"/>
-                </g>
-                {/* 8 outward-pointing decorative segments */}
-                {[...Array(8)].map((_, i) => {
-                  const angle = (i * 45) * Math.PI / 180;
-                  const angle1 = (i * 45 - 20) * Math.PI / 180;
-                  const angle2 = (i * 45 + 20) * Math.PI / 180;
-                  const x1 = 100 + 88 * Math.cos(angle1);
-                  const y1 = 100 + 88 * Math.sin(angle1);
-                  const x2 = 100 + 100 * Math.cos(angle);
-                  const y2 = 100 + 100 * Math.sin(angle);
-                  const x3 = 100 + 88 * Math.cos(angle2);
-                  const y3 = 100 + 88 * Math.sin(angle2);
-                  return (
-                    <path key={i} d={`M ${x1} ${y1} L ${x2} ${y2} L ${x3} ${y3}`} stroke="#d4af37" strokeWidth="3" fill="#d4af37"/>
-                  );
-                })}
-                {/* Inner golden multi-lobed shape */}
-                <path d="M 100 30 
-                         Q 120 35 135 50 
-                         Q 150 65 160 80 
-                         Q 170 95 160 110 
-                         Q 150 125 135 140 
-                         Q 120 155 100 170 
-                         Q 80 155 65 140 
-                         Q 50 125 40 110 
-                         Q 30 95 40 80 
-                         Q 50 65 65 50 
-                         Q 80 35 100 30 Z" 
-                      fill="#d4af37" stroke="#c9a227" strokeWidth="2"/>
-                {/* GJ Letters */}
-                <text x="100" y="110" fontSize="50" fontFamily="Georgia, 'Times New Roman', serif" fontWeight="bold" fill="#fff" textAnchor="middle" letterSpacing="3">G</text>
-                <text x="100" y="140" fontSize="50" fontFamily="Georgia, 'Times New Roman', serif" fontWeight="bold" fill="#fff" textAnchor="middle" letterSpacing="3">J</text>
-              </svg>
-              <div className="footer-logo-text">
-                <div className="footer-company-name">GANGA</div>
-                <div className="footer-company-subtitle">JEWELLERS</div>
-              </div>
-            </div>
-            <div className="footer-about">
-              <h4>About Company</h4>
-            </div>
+        <div className="live-rates-footer-inner">
+          <div className="live-rates-footer-brand">
+            <img src="/logo-gj.png" alt="GangaJewellers" className="live-rates-footer-logo" width="48" height="48" />
+            <span className="live-rates-footer-name">GangaJewellers</span>
           </div>
-
-          <div className="footer-section">
-            <h4>MENU</h4>
-            <ul>
-              <li><Link to="/">About</Link></li>
-              <li><Link to="/live-rates">Live Rate</Link></li>
-              <li><Link to="/products">Coins Rates</Link></li>
-              <li><Link to="/products">Update</Link></li>
-              <li><Link to="/">Bank Detail</Link></li>
-              <li><Link to="/">Calendar</Link></li>
-              <li><Link to="/">Contact Us</Link></li>
-            </ul>
+          <div className="live-rates-footer-links">
+            <Link to="/">Home</Link>
+            <Link to="/products">Products</Link>
+            <Link to="/live-rates">Live Rate</Link>
+            <Link to="/login">Login</Link>
           </div>
-
-          <div className="footer-section">
-            <h4>ADDRESS</h4>
-            <div className="footer-contact">
-              <div className="contact-item">
-                <span className="contact-icon">📍</span>
-                <span>Ganga Jewellers, Sedwada, Homeganj, Etawah, Uttar Pradesh, India - 206001</span>
-              </div>
-              <div className="contact-item">
-                <span className="contact-icon">✉️</span>
-                <a href="mailto:info@gangajewellers.in">info@gangajewellers.in</a>
-              </div>
-              <div className="contact-item">
-                <span className="contact-icon">💬</span>
-                <a href={`https://wa.me/917451849816`} target="_blank" rel="noopener noreferrer">+91 7451849816</a>
-              </div>
-            </div>
+          <div className="live-rates-footer-address">
+            <span>Ganga Jewellers, Sedwada, Homeganj, Etawah, UP - 206001</span>
+            <a href="mailto:info@gangajewellers.in">info@gangajewellers.in</a>
           </div>
         </div>
-        <div className="footer-copyright">
-          ©2024 Ganga Jewellers
-        </div>
+        <div className="live-rates-footer-copy">©2024 Ganga Jewellers</div>
       </footer>
     </div>
   );
