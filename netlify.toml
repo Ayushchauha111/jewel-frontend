@@ -1,11 +1,11 @@
-# Netlify Configuration for Typogram
+# Netlify Configuration for gangajewellers
 # This file configures redirects and proxy rules
 # Order matters: more specific rules first, general rules last
 
 # Sitemap redirect (most specific - must come before catch-all)
 [[redirects]]
   from = "/sitemap.xml"
-  to = "https://api.typogram.in/api/sitemap/xml"
+  to = "https://api.gangajewellers.in/api/sitemap/xml"
   status = 200
   force = true
   headers = {X-From = "Netlify"}
@@ -13,7 +13,7 @@
 # Proxy sitemap endpoint to backend API
 [[redirects]]
   from = "/api/sitemap/xml"
-  to = "https://api.typogram.in/api/sitemap/xml"
+  to = "https://api.gangajewellers.in/api/sitemap/xml"
   status = 200
   force = true
   headers = {X-From = "Netlify"}
@@ -21,7 +21,7 @@
 # Proxy all other API requests to backend
 [[redirects]]
   from = "/api/*"
-  to = "https://api.typogram.in/api/:splat"
+  to = "https://api.gangajewellers.in/api/:splat"
   status = 200
   force = true
   headers = {X-From = "Netlify"}
@@ -50,5 +50,5 @@
     Referrer-Policy = "strict-origin-when-cross-origin"
     Permissions-Policy = "geolocation=(), microphone=(), camera=()"
     Strict-Transport-Security = "max-age=31536000; includeSubDomains; preload"
-    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com https://connect.facebook.net https://www.facebook.com https://accounts.google.com https://checkout.razorpay.com; script-src-elem 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com https://connect.facebook.net https://www.facebook.com https://accounts.google.com https://checkout.razorpay.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.linearicons.com https://accounts.google.com; style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.linearicons.com https://accounts.google.com; font-src 'self' https://fonts.gstatic.com https://cdn.linearicons.com; img-src 'self' data: https: blob:; connect-src 'self' https://api.typogram.in https://www.google-analytics.com https://www.googletagmanager.com https://connect.facebook.net https://accounts.google.com; frame-src 'self' https://www.youtube.com https://www.google.com https://accounts.google.com https://checkout.razorpay.com https://api.razorpay.com;"
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com https://connect.facebook.net https://www.facebook.com https://accounts.google.com https://checkout.razorpay.com; script-src-elem 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com https://connect.facebook.net https://www.facebook.com https://accounts.google.com https://checkout.razorpay.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.linearicons.com https://accounts.google.com; style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.linearicons.com https://accounts.google.com; font-src 'self' https://fonts.gstatic.com https://cdn.linearicons.com; img-src 'self' data: https: blob:; connect-src 'self' https://api.gangajewellers.in https://www.google-analytics.com https://www.googletagmanager.com https://connect.facebook.net https://accounts.google.com; frame-src 'self' https://www.youtube.com https://www.google.com https://accounts.google.com https://checkout.razorpay.com https://api.razorpay.com;"
 
