@@ -3,308 +3,83 @@
   <head>
     <meta charset="utf-8" />
     
-    <!-- Viewport and Color -->
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#000000" />
-    
-    <!-- Permissions Policy - Allow camera for exam photo capture -->
-    <meta http-equiv="Permissions-Policy" content="camera=(self), geolocation=(), microphone=()" />
+    <meta name="theme-color" content="#D4AF37" /> <meta http-equiv="Permissions-Policy" content="camera=(self), geolocation=(self), microphone=()" />
 
-    <!-- Title and Description -->
-    <title>Typogram - Master Typing for Exams & Typing Enthusiasts</title>
-    <meta name="description" content="Master typing for government exams (SSC, CHSL, RRB, Banking, UPSC) and improve your typing skills as a hobby. AI-powered courses, practice tests, typing games, and fun challenges for all typing enthusiasts." />
+    <title>Ganga Jewellers - Exquisite Gold, Diamond & Silver Jewelry</title>
+    <meta name="description" content="Discover timeless elegance at Ganga Jewellers. Browse our exclusive collection of BIS Hallmarked gold, certified diamonds, and traditional silver ornaments. Quality and trust since inception." />
 
-    <!-- Canonical URL -->
-    <link rel="canonical" href="https://typogram.in/" />
+    <link rel="canonical" href="https://gangajewellers.in/" />
 
-    <!-- Performance: DNS Prefetch & Preconnect -->
     <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
     <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
-    <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
-    <link rel="dns-prefetch" href="https://connect.facebook.net" />
-    <link rel="dns-prefetch" href="https://checkout.razorpay.com" />
     
-    <!-- Fonts - Optimized for LCP -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <!-- Load critical fonts with font-display: swap (non-blocking) -->
     <link
-      href="https://fonts.googleapis.com/css2?family=Tomorrow:wght@400;700;900&family=Muli:wght@400;600&family=Roboto+Mono:wght@400;500;700&family=Fira+Code:wght@400;500;700&family=JetBrains+Mono:wght@400;500;700&family=Source+Code+Pro:wght@400;500;700&family=Ubuntu+Mono:wght@400;700&family=Inconsolata:wght@400;500;700&display=swap"
-      rel="preload"
-      as="style"
-      onload="this.onload=null;this.rel='stylesheet'"
+      href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Lora:wght@400;600&family=Montserrat:wght@300;400;600&display=swap"
+      rel="stylesheet"
     />
-    <noscript>
-      <link
-        href="https://fonts.googleapis.com/css2?family=Tomorrow:wght@400;700;900&family=Muli:wght@400;600&family=Roboto+Mono:wght@400;500;700&family=Fira+Code:wght@400;500;700&family=JetBrains+Mono:wght@400;500;700&family=Source+Code+Pro:wght@400;500;700&family=Ubuntu+Mono:wght@400;700&family=Inconsolata:wght@400;500;700&display=swap"
-        rel="stylesheet"
-      />
-    </noscript>
-    <!-- Non-critical fonts load asynchronously with font-display: optional -->
-    <link
-      href="https://fonts.googleapis.com/css2?family=Rufina&family=Dancing+Script:wght@400;700&display=optional"
-      rel="preload"
-      as="style"
-      onload="this.onload=null;this.rel='stylesheet'"
-    />
-    <noscript>
-      <link
-        href="https://fonts.googleapis.com/css2?family=Rufina&family=Dancing+Script:wght@400;700&display=optional"
-        rel="stylesheet"
-      />
-    </noscript>
 
-    <!-- Styles - CSS is bundled by React build process -->
-    <!-- Non-critical icon font loads asynchronously -->
-    <link rel="stylesheet" href="https://cdn.linearicons.com/free/1.0.0/icon-font.min.css" media="print" onload="this.media='all'">
-    <noscript><link rel="stylesheet" href="https://cdn.linearicons.com/free/1.0.0/icon-font.min.css"></noscript>
+    <link rel="icon" href="%PUBLIC_URL%/gold-logo.png" />
+    <link rel="apple-touch-icon" href="%PUBLIC_URL%/gold-logo.png" />
 
-    <!-- Icons -->
-    <link rel="icon" href="%PUBLIC_URL%/logo.png" />
-    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo.png" />
-
-    <!-- Manifest -->
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
 
-    <!-- Meta Verification -->
-    <meta name="google-site-verification" content="FgPFghJONNR4AXjhUJVqahYJPSpF4V_-al2wk8hh11w" />
-    <meta name="msvalidate.01" content="A94B51151826398E1198E98DEB630ED1" />
-
-    <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://typogram.in/" />
-    <meta property="og:title" content="Typogram - Master Typing for Exams & Typing Enthusiasts" />
-    <meta property="og:description" content="Master typing for government exams (SSC, CHSL, RRB, Banking, UPSC) and improve your typing skills as a hobby. AI-powered courses, practice tests, typing games, and fun challenges for all typing enthusiasts." />
-    <meta property="og:image" content="https://typogram.in/og-image.jpg" />
-    <meta property="og:site_name" content="Typogram" />
-    <meta property="fb:app_id" content="" />
+    <meta property="og:url" content="https://gangajewellers.in/" />
+    <meta property="og:title" content="Ganga Jewellers - Pure Gold & Radiant Diamonds" />
+    <meta property="og:description" content="Shop the latest designs in bridal sets, necklaces, and daily wear jewelry at Ganga Jewellers. Experience the hallmark of purity." />
+    <meta property="og:image" content="https://gangajewellers.in/og-jewelry.jpg" />
+    <meta property="og:site_name" content="Ganga Jewellers" />
 
-    <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:url" content="https://typogram.in/" />
-    <meta name="twitter:title" content="Typogram - Master Typing for Exams & Typing Enthusiasts" />
-    <meta name="twitter:description" content="Master typing for government exams and improve your typing skills as a hobby. AI-powered courses, practice tests, typing games, and fun challenges." />
-    <meta name="twitter:image" content="https://typogram.in/og-image.jpg" />
-    <meta name="twitter:site" content="@typogram_in" />
+    <meta name="twitter:title" content="Ganga Jewellers - Exquisite Jewelry Collections" />
+    <meta name="twitter:description" content="Timeless gold and diamond jewelry for every occasion." />
+    <meta name="twitter:image" content="https://gangajewellers.in/og-jewelry.jpg" />
 
-    <!-- Razorpay Checkout - Load asynchronously -->
     <script src="https://checkout.razorpay.com/v1/checkout.js" defer></script>
 
-    <!-- Google Analytics - Load after page is interactive -->
-    <script>
-      // Load GA after page is interactive
-      if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', loadGA);
-      } else {
-        setTimeout(loadGA, 100);
-      }
-      function loadGA() {
-        const script = document.createElement('script');
-        script.async = true;
-        script.src = 'https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX';
-        document.head.appendChild(script);
-        
-        window.dataLayer = window.dataLayer || [];
-        function gtag(){dataLayer.push(arguments);}
-        gtag('js', new Date());
-        gtag('config', 'G-XXXXXXXXXX', {
-          'page_path': window.location.pathname,
-          'send_page_view': true
-        });
-      }
-    </script>
-
-    <!-- Facebook Pixel Code - Load after page load -->
-    <script>
-      // Load Facebook Pixel after page is interactive
-      // Only initialize if a valid Pixel ID is provided
-      const FACEBOOK_PIXEL_ID = 'YOUR_PIXEL_ID';
-      if (FACEBOOK_PIXEL_ID && FACEBOOK_PIXEL_ID !== 'YOUR_PIXEL_ID') {
-        if (document.readyState === 'loading') {
-          document.addEventListener('DOMContentLoaded', loadFBPixel);
-        } else {
-          setTimeout(loadFBPixel, 200);
-        }
-        function loadFBPixel() {
-          !function(f,b,e,v,n,t,s)
-          {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-          n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-          if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-          n.queue=[];t=b.createElement(e);t.async=!0;
-          t.src=v;s=b.getElementsByTagName(e)[0];
-          s.parentNode.insertBefore(t,s)}(window, document,'script',
-          'https://connect.facebook.net/en_US/fbevents.js');
-          fbq('init', FACEBOOK_PIXEL_ID);
-          fbq('track', 'PageView');
-        }
-      }
-    </script>
-    <!-- End Facebook Pixel Code -->
-
-    <!-- Schema.org Structured Data -->
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
-      "@type": "Organization",
-      "name": "Typogram",
-      "url": "https://typogram.in",
-      "logo": "https://typogram.in/logo.png",
-      "description": "AI-powered typing platform for government exam preparation and typing enthusiasts. Master typing skills with courses, practice tests, typing games, and fun challenges.",
-      "sameAs": [
-        "https://www.facebook.com/typogram",
-        "https://twitter.com/typogram_in",
-        "https://instagram.com/typogram_in",
-        "https://linkedin.com/company/typogramm",
-        "https://youtube.com/@typogram_in"
-      ],
+      "@type": "JewelryStore",
+      "name": "Ganga Jewellers",
+      "url": "https://gangajewellers.in",
+      "logo": "https://gangajewellers.in/logo.png",
+      "description": "Premium jewelry store offering gold, diamonds, and silver with a focus on craftsmanship and purity.",
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": "Your Shop Address Here",
+        "addressLocality": "Your City",
+        "addressRegion": "State",
+        "postalCode": "000000",
+        "addressCountry": "IN"
+      },
       "contactPoint": {
         "@type": "ContactPoint",
-        "email": "support@typogram.in",
-        "contactType": "Customer Support"
-      }
-    }
-    </script>
-    <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "WebSite",
-      "name": "Typogram",
-      "url": "https://typogram.in",
-      "potentialAction": {
-        "@type": "SearchAction",
-        "target": {
-          "@type": "EntryPoint",
-          "urlTemplate": "https://typogram.in/search?q={search_term_string}"
-        },
-        "query-input": "required name=search_term_string"
-      }
-    }
-    </script>
-    <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "EducationalOrganization",
-      "name": "Typogram",
-      "url": "https://typogram.in",
-      "description": "Online typing courses and practice platform for competitive exam preparation",
-      "educationalCredentialAwarded": "Certificate",
-      "offers": {
-        "@type": "Offer",
-        "category": "Typing Courses"
-      }
-    }
-    </script>
-    <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "ItemList",
-      "itemListElement": [
-        {
-          "@type": "ListItem",
-          "position": 1,
-          "name": "Free Account",
-          "url": "https://typogram.in/register"
-        },
-        {
-          "@type": "ListItem",
-          "position": 2,
-          "name": "Practice",
-          "url": "https://typogram.in/typing-display"
-        },
-        {
-          "@type": "ListItem",
-          "position": 3,
-          "name": "Demo Test",
-          "url": "https://typogram.in/start-test"
-        },
-        {
-          "@type": "ListItem",
-          "position": 4,
-          "name": "Exams",
-          "url": "https://typogram.in/courses"
-        },
-        {
-          "@type": "ListItem",
-          "position": 5,
-          "name": "Friends & Chat",
-          "url": "https://typogram.in/friends"
-        },
-        {
-          "@type": "ListItem",
-          "position": 6,
-          "name": "Typing Games",
-          "url": "https://typogram.in/games"
-        },
-        {
-          "@type": "ListItem",
-          "position": 7,
-          "name": "Daily Challenge",
-          "url": "https://typogram.in/daily-challenge"
-        },
-        {
-          "@type": "ListItem",
-          "position": 8,
-          "name": "Race Mode",
-          "url": "https://typogram.in/race"
-        },
-        {
-          "@type": "ListItem",
-          "position": 9,
-          "name": "Tournaments",
-          "url": "https://typogram.in/tournaments"
-        },
-        {
-          "@type": "ListItem",
-          "position": 10,
-          "name": "SSC CGL Typing Course",
-          "url": "https://typogram.in/courses?category=SSC"
-        },
-        {
-          "@type": "ListItem",
-          "position": 11,
-          "name": "CHSL Typing Test",
-          "url": "https://typogram.in/courses?category=CHSL"
-        },
-        {
-          "@type": "ListItem",
-          "position": 12,
-          "name": "RRB Typing Course",
-          "url": "https://typogram.in/courses?category=RRB"
-        },
-        {
-          "@type": "ListItem",
-          "position": 13,
-          "name": "Banking Typing Test",
-          "url": "https://typogram.in/courses?category=Banking"
-        }
+        "telephone": "+91-XXXXXXXXXX",
+        "contactType": "Sales"
+      },
+      "sameAs": [
+        "https://www.facebook.com/gangajewellers",
+        "https://instagram.com/gangajewellers"
       ]
     }
     </script>
   </head>
 
   <body>
-    <noscript>You need to enable JavaScript to run Typogram's typing platform.</noscript>
+    <noscript>You need to enable JavaScript to view the Ganga Jewellers collection.</noscript>
     
-    <!-- Hidden Navigation for Search Engine Crawlers -->
-    <nav style="position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden;">
-      <a href="https://typogram.in/">Home</a>
-      <a href="https://typogram.in/register">Free Account</a>
-      <a href="https://typogram.in/courses">Exams</a>
-      <a href="https://typogram.in/typing-display">Practice</a>
-      <a href="https://typogram.in/start-test">Demo Test</a>
-      <a href="https://typogram.in/friends">Friends & Chat</a>
-      <a href="https://typogram.in/games">Typing Games</a>
-      <a href="https://typogram.in/daily-challenge">Daily Challenge</a>
-      <a href="https://typogram.in/race">Race Mode</a>
-      <a href="https://typogram.in/tournaments">Tournaments</a>
-      <a href="https://typogram.in/courses?category=SSC">SSC CGL Typing Course</a>
-      <a href="https://typogram.in/courses?category=CHSL">CHSL Typing Test</a>
-      <a href="https://typogram.in/courses?category=RRB">RRB Typing Course</a>
-      <a href="https://typogram.in/courses?category=Banking">Banking Typing Test</a>
-      <a href="https://typogram.in/blog">Blog</a>
-      <a href="https://typogram.in/about">About Us</a>
-      <a href="https://typogram.in/contact-us">Contact</a>
-      <a href="https://typogram.in/leaderboard">Leaderboards</a>
+    <nav style="position: absolute; left: -9999px;">
+      <a href="/">Home</a>
+      <a href="/collections/gold">Gold Jewelry</a>
+      <a href="/collections/diamond">Diamond Collection</a>
+      <a href="/collections/bridal">Bridal Wear</a>
+      <a href="/gold-rate">Daily Gold Rate</a>
+      <a href="/about-us">Our Heritage</a>
+      <a href="/contact-us">Visit Our Store</a>
     </nav>
     
     <div id="root"></div>
