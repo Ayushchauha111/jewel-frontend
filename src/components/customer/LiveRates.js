@@ -8,9 +8,9 @@ const LIVE_RATE_STREAM_PROXY = '/api/live-rates/stream';
 
 /**
  * Parse streaming API response: tab-separated rows
- * Format: ID \t LABEL \t VAL1 \t VAL2 \t VAL3 \t VAL4
- * e.g. 5147	FINE GOLD GST	151501	155374	155374	155374
- * We use the 4th column (index 3) as the main display PRICE.
+ * Format: ID \t LABEL \t VAL0 \t VAL1 \t VAL2 \t VAL3 ...
+ * e.g. 5147	FINE GOLD GST	148000	152547	155374	142793
+ * We use the value at index 1 (second numeric column, VAL1) as the main display PRICE for all rows.
  */
 function parseLiveRateStreaming(text) {
   if (!text || typeof text !== 'string') return null;
@@ -28,9 +28,9 @@ function parseLiveRateStreaming(text) {
       const id = cols[0];
       const label = cols[1];
       const values = cols.slice(2).map((v) => v.replace(/,/g, ''));
-      // Main price: 4th column (index 3) if present, else last value
-      const price = values.length >= 4 ? values[3] : values[values.length - 1];
-      rows.push({ id, label, values, price });
+      // Main price: value at index 1 (second numeric column) for all, else index 0 or last
+      const price = values.length >= 2 ? values[1] : (values.length >= 1 ? values[0] : null);
+      if (price != null) rows.push({ id, label, values, price });
     }
   }
   if (rows.length > 0) return { rows, byLabel: Object.fromEntries(rows.map((r) => [r.label, r.price])) };
