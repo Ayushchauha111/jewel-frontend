@@ -95,12 +95,13 @@
   background: rgba(166, 139, 91, 0.2);
 }
 
-/* Actions: search, auth, cart, burger */
+/* Actions: search, auth, cart, burger - burger always visible on small screens */
 .nav-actions {
   display: flex;
   align-items: center;
   gap: 0.75rem;
   flex-shrink: 0;
+  min-width: 0;
 }
 
 /* Search */
@@ -221,9 +222,10 @@
   line-height: 1;
 }
 
-/* Hamburger (hidden on desktop) */
+/* Hamburger (hidden on desktop, always visible when nav-links hidden) */
 .nav-burger {
   display: none;
+  flex-shrink: 0;
   flex-direction: column;
   justify-content: center;
   align-items: center;
@@ -238,6 +240,8 @@
   color: var(--nav-text);
   transition: background var(--nav-transition);
   -webkit-tap-highlight-color: transparent;
+  position: relative;
+  z-index: 10;
 }
 
 .nav-burger span {
@@ -418,6 +422,21 @@
   background: var(--nav-gold-hover);
 }
 
+.nav-drawer-btn--logout {
+  width: 100%;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: center;
+  color: var(--nav-text-muted);
+  background: rgba(166, 139, 91, 0.1);
+}
+
+.nav-drawer-btn--logout:hover {
+  color: var(--nav-text);
+  background: rgba(166, 139, 91, 0.15);
+}
+
 .nav-drawer-cart {
   display: flex;
   align-items: center;
@@ -452,8 +471,10 @@
   }
 
   .nav-search {
-    min-width: 140px;
-    max-width: 180px;
+    min-width: 100px;
+    max-width: 160px;
+    flex: 1;
+    min-width: 0;
   }
 
   .nav-btn--text,
@@ -461,8 +482,14 @@
     display: none;
   }
 
+  /* Burger always visible on mobile so menu never vanishes */
   .nav-burger {
-    display: flex;
+    display: flex !important;
+    order: 10;
+  }
+
+  .nav-cart {
+    order: 5;
   }
 }
 
@@ -473,8 +500,10 @@
   }
 
   .nav-search {
-    min-width: 100px;
-    max-width: 140px;
+    min-width: 80px;
+    max-width: 120px;
+    flex: 1;
+    min-width: 0;
   }
 
   .nav-search-input {
@@ -482,11 +511,17 @@
   }
 
   .nav-logo-word {
-    font-size: 1.15rem;
+    font-size: 1.1rem;
   }
 
   .nav-logo-img {
     width: 32px;
     height: 32px;
+  }
+
+  /* Ensure burger never gets pushed off on tiny screens */
+  .nav-actions {
+    flex-wrap: nowrap;
+    min-width: 0;
   }
 }

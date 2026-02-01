@@ -14,6 +14,7 @@ const NAV_LINKS = [
   { to: '/admin/income-expense', label: 'Income/Expense' },
   { to: '/admin/rates', label: 'Rates (Gold/Silver/Diamond)' },
   { to: '/admin/rate-limit', label: 'Rate Limits' },
+  { to: '/', label: 'Home' },
 ];
 
 function AdminNav({ title = 'Jewelry Shop Admin', onLogout }) {

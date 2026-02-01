@@ -11,12 +11,20 @@ const CUSTOMER_LINKS = [
   { to: '/live-rates', label: 'Live Rates' },
 ];
 
+function isAdmin(user) {
+  if (!user) return false;
+  const roles = user.roles || [];
+  return roles.some((r) => r === 'ROLE_ADMIN' || r === 'ADMIN' || (typeof r === 'string' && r.includes('ADMIN')));
+}
+
 function CustomerNav({ cartCount = 0 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const navigate = useNavigate();
   const location = useLocation();
-  const isLoggedIn = !!AuthService.getCurrentUser();
+  const currentUser = AuthService.getCurrentUser();
+  const isLoggedIn = !!currentUser;
+  const showAdminLink = isAdmin(currentUser);
 
   const closeMenu = () => setMenuOpen(false);
 
@@ -57,6 +65,15 @@ function CustomerNav({ cartCount = 0 }) {
                 {label}
               </Link>
             ))}
+            {showAdminLink && (
+              <Link
+                to="/admin"
+                className={`nav-link ${location.pathname.startsWith('/admin') ? 'nav-link--active' : ''}`}
+                onClick={closeMenu}
+              >
+                Admin
+              </Link>
+            )}
           </nav>
 
           <div className="nav-actions">
@@ -120,13 +137,24 @@ function CustomerNav({ cartCount = 0 }) {
                 {label}
               </Link>
             ))}
+            {showAdminLink && (
+              <Link to="/admin" className={`nav-drawer-link ${location.pathname.startsWith('/admin') ? 'nav-drawer-link--active' : ''}`} onClick={closeMenu}>
+                Admin
+              </Link>
+            )}
           </nav>
-          {!isLoggedIn && (
-            <div className="nav-drawer-auth">
-              <Link to="/login" className="nav-drawer-btn" onClick={closeMenu}>Login</Link>
-              <Link to="/register" className="nav-drawer-btn nav-drawer-btn--primary" onClick={closeMenu}>Sign up</Link>
-            </div>
-          )}
+          <div className="nav-drawer-auth">
+            {isLoggedIn ? (
+              <button type="button" onClick={handleLogout} className="nav-drawer-btn nav-drawer-btn--logout">
+                Logout
+              </button>
+            ) : (
+              <>
+                <Link to="/login" className="nav-drawer-btn" onClick={closeMenu}>Login</Link>
+                <Link to="/register" className="nav-drawer-btn nav-drawer-btn--primary" onClick={closeMenu}>Sign up</Link>
+              </>
+            )}
+          </div>
           <Link to="/checkout" className="nav-drawer-cart" onClick={closeMenu}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
             Cart {cartCount > 0 && <span className="nav-cart-badge">{cartCount}</span>}
