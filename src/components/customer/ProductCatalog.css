@@ -293,6 +293,13 @@
   transform: scale(0.98);
 }
 
+.catalog-card-added {
+  margin-top: 0.35rem;
+  font-size: 0.8rem;
+  color: var(--catalog-gold);
+  font-weight: 600;
+}
+
 /* Loading & empty */
 .catalog-loading,
 .catalog-empty {

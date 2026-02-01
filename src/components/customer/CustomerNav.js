@@ -9,6 +9,7 @@ const CUSTOMER_LINKS = [
   { to: '/gold-mine', label: 'Gold Mine 10+1' },
   { to: '/gold-reserve', label: 'Gold Reserve' },
   { to: '/live-rates', label: 'Live Rates' },
+  { to: '/account', label: 'Account' },
 ];
 
 function isAdmin(user) {

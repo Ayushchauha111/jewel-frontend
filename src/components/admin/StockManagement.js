@@ -96,6 +96,7 @@ function StockManagement() {
     size: '',
     description: '',
     imageUrl: '',
+    makingChargesPerGram: '',
     sellingPrice: ''
   });
   const [editingId, setEditingId] = useState(null);
@@ -270,6 +271,7 @@ function StockManagement() {
         quantity: formData.quantity ? parseInt(formData.quantity) : 1,
         size: (formData.category && (formData.category.toLowerCase() === 'ring' || formData.category.toLowerCase() === 'rings')) ? (formData.size?.trim() || null) : null,
         description: formData.description && formData.description.trim() ? formData.description.trim() : null,
+        makingChargesPerGram: safeParseFloat(formData.makingChargesPerGram) || null,
         sellingPrice: safeParseFloat(formData.sellingPrice)
       };
 
@@ -313,6 +315,7 @@ function StockManagement() {
       size: item.size || '',
       description: item.description || '',
       imageUrl: item.imageUrl || '',
+      makingChargesPerGram: item.makingChargesPerGram != null ? String(item.makingChargesPerGram) : '',
       sellingPrice: item.sellingPrice != null ? String(item.sellingPrice) : ''
     });
     setEditingId(item.id);
@@ -331,6 +334,7 @@ function StockManagement() {
     setError(null);
     try {
       const params = new URLSearchParams({ weightGrams: weight, carat });
+      if (formData.makingChargesPerGram?.trim()) params.set('makingChargesPerGram', formData.makingChargesPerGram.trim());
       const response = await axios.get(`${API_URL}/stock/calculate-price?${params.toString()}`, {
         headers: getAuthHeaders()
       });
@@ -400,6 +404,7 @@ function StockManagement() {
       size: '',
       description: '',
       imageUrl: '',
+      makingChargesPerGram: '',
       sellingPrice: ''
     });
     setEditingId(null);
@@ -871,6 +876,19 @@ function StockManagement() {
                       value={formData.size}
                       onChange={(e) => setFormData({...formData, size: e.target.value})}
                       placeholder="e.g., 7, 7.5, 8"
+                    />
+                  </div>
+                )}
+                {(formData.material === 'Gold' || formData.material === 'Gold + Diamond') && (
+                  <div className="stock-form-group">
+                    <label>Making charges per gram (₹)</label>
+                    <input
+                      type="number"
+                      step="1"
+                      min="0"
+                      value={formData.makingChargesPerGram}
+                      onChange={(e) => setFormData({...formData, makingChargesPerGram: e.target.value})}
+                      placeholder="e.g. 1150 (leave blank for default)"
                     />
                   </div>
                 )}

@@ -1,0 +1,102 @@
+/* Account page – bank details */
+:root {
+  --account-gold: #b39359;
+  --account-gold-hover: #8e7340;
+  --account-border: rgba(179, 147, 89, 0.25);
+  --account-bg: #faf9f6;
+  --account-text: #2c2c2c;
+  --account-muted: #5c5c5c;
+}
+
+.account-page {
+  min-height: 100vh;
+  background: var(--account-bg);
+  font-family: 'Playfair Display', Georgia, serif;
+}
+
+.account-main {
+  padding: 2rem clamp(1rem, 4vw, 2rem);
+  max-width: 560px;
+  margin: 0 auto;
+}
+
+.account-container {
+  background: #fff;
+  border-radius: 12px;
+  padding: 2rem;
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+  border: 1px solid var(--account-border);
+}
+
+.account-title {
+  margin: 0 0 0.5rem;
+  font-size: 1.75rem;
+  font-weight: 600;
+  color: var(--account-text);
+}
+
+.account-subtitle {
+  margin: 0 0 1.5rem;
+  font-size: 0.95rem;
+  color: var(--account-muted);
+}
+
+.account-card {
+  margin-bottom: 1.5rem;
+  padding: 1.25rem;
+  background: rgba(179, 147, 89, 0.06);
+  border-radius: 10px;
+  border: 1px solid var(--account-border);
+}
+
+.account-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  padding: 0.65rem 0;
+  border-bottom: 1px solid rgba(179, 147, 89, 0.12);
+}
+
+.account-row:last-child {
+  border-bottom: none;
+}
+
+.account-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--account-muted);
+  flex-shrink: 0;
+}
+
+.account-value {
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--account-text);
+  text-align: right;
+}
+
+.account-value--mono {
+  font-family: ui-monospace, monospace;
+  letter-spacing: 0.02em;
+}
+
+.account-note {
+  margin: 0 0 1.5rem;
+  font-size: 0.9rem;
+  color: var(--account-muted);
+  line-height: 1.5;
+}
+
+.account-back {
+  display: inline-block;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--account-gold);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.account-back:hover {
+  color: var(--account-gold-hover);
+}

@@ -9,13 +9,22 @@ const API_URL = '/api';
 
 const CATEGORIES = [
   { label: 'Rings', to: '/products?category=Rings', img: 'https://images.unsplash.com/photo-1605100804763-247f67b3557e?auto=format&fit=crop&w=300' },
-  { label: 'Earrings', to: '/products?category=Earrings', img: 'https://images.unsplash.com/photo-1535633302704-5043df1774af?auto=format&fit=crop&w=300' },
+  { label: 'Earrings', to: '/products?category=Earrings', img: (process.env.PUBLIC_URL || '') + '/images/category-earrings.svg' },
   { label: 'Necklaces', to: '/products?category=Necklace', img: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&w=300' },
-  { label: 'Bangles', to: '/products?category=Bangle', img: 'https://images.unsplash.com/photo-1611591437281-460bfbe1520e?auto=format&fit=crop&w=300' },
+  { label: 'Bangles', to: '/products?category=Bangle', img: 'https://images.unsplash.com/photo-1602173574767-37ac01994b2a?auto=format&fit=crop&w=300' },
 ];
 
 const stagger = { animate: { transition: { staggerChildren: 0.08 } } };
 const itemFade = { initial: { opacity: 0, y: 20 }, animate: { opacity: 1, y: 0 } };
+
+const base = process.env.PUBLIC_URL || '';
+const showroomMedia = [
+  { type: 'image', src: `${base}/showroom-promo.png`, alt: 'Ganga Jewellers – Hallmark Jewellery Showroom' },
+  { type: 'image', src: `${base}/showroom-interior.png`, alt: 'Ganga Jewellers showroom interior' },
+  { type: 'image', src: `${base}/${encodeURIComponent('WhatsApp Image 2026-02-01 at 7.01.45 PM.jpeg')}`, alt: 'Ganga Jewellers showroom – modern interior' },
+  { type: 'video', src: `${base}/${encodeURIComponent('WhatsApp Video 2026-02-01 at 7.01.42 PM.mp4')}`, alt: 'Showroom experience 1' },
+  { type: 'video', src: `${base}/${encodeURIComponent('WhatsApp Video 2026-02-01 at 7.01.44 PM.mp4')}`, alt: 'Showroom experience 2' },
+];
 
 function CustomerHome() {
   const navigate = useNavigate();
@@ -97,22 +106,30 @@ function CustomerHome() {
         <span>✓ 30-Day Money Back</span>
       </motion.div>
 
-      {/* Showroom Photo Movie Scroller */}
+      {/* Showroom Photo & Movie Scroller */}
       <section className="showroom-scroller-wrap" aria-label="Showroom">
         <h2 className="showroom-scroller-title">Our Showroom</h2>
         <div className="showroom-scroller">
           <div className="showroom-scroller-inner">
             <div className="showroom-scroller-track">
-              {['/showroom-promo.png', '/showroom-interior.png'].map((src, i) => (
-                <div key={i} className="showroom-scroller-slide">
-                  <img src={src} alt={i === 0 ? 'Ganga Jewellers – Hallmark Jewellery Showroom' : 'Ganga Jewellers showroom interior'} loading="lazy" />
+              {showroomMedia.map((item, i) => (
+                <div key={`a-${i}-${item.src}`} className="showroom-scroller-slide">
+                  {item.type === 'video' ? (
+                    <video src={item.src} controls loop playsInline muted preload="metadata" className="showroom-slide-video" title={item.alt} />
+                  ) : (
+                    <img src={item.src} alt={item.alt} loading="lazy" />
+                  )}
                 </div>
               ))}
             </div>
             <div className="showroom-scroller-track" aria-hidden="true">
-              {['/showroom-promo.png', '/showroom-interior.png'].map((src, i) => (
-                <div key={i} className="showroom-scroller-slide">
-                  <img src={src} alt="" loading="lazy" />
+              {showroomMedia.map((item, i) => (
+                <div key={`b-${i}-${item.src}`} className="showroom-scroller-slide">
+                  {item.type === 'video' ? (
+                    <video src={item.src} controls loop playsInline muted preload="metadata" className="showroom-slide-video" title={item.alt} />
+                  ) : (
+                    <img src={item.src} alt="" loading="lazy" />
+                  )}
                 </div>
               ))}
             </div>
@@ -143,7 +160,23 @@ function CustomerHome() {
             <motion.div key={cat.label} variants={itemFade} transition={{ duration: 0.4 }}>
               <Link to={cat.to} className="cat-card">
                 <div className="cat-img-wrapper">
-                  <img src={cat.img} alt={cat.label} loading="lazy" />
+                  <img
+                    src={cat.img}
+                    alt={cat.label}
+                    loading="lazy"
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.style.display = 'none';
+                      const wrapper = e.target.closest('.cat-img-wrapper');
+                      if (wrapper && !wrapper.querySelector('.cat-img-fallback')) {
+                        const fallback = document.createElement('div');
+                        fallback.className = 'cat-img-fallback';
+                        fallback.setAttribute('aria-hidden', 'true');
+                        fallback.textContent = cat.label;
+                        wrapper.appendChild(fallback);
+                      }
+                    }}
+                  />
                 </div>
                 <div className="cat-info">
                   <span>{cat.label}</span>

@@ -15,11 +15,17 @@ const SORT_OPTIONS = [
   { value: 'name_desc', label: 'Name: Z to A' },
 ];
 
+const isGoldWithWeightCarat = (p) =>
+  p && (p.weightGrams != null && p.weightGrams > 0) && (p.carat != null && p.carat > 0) && String(p.material || '').toLowerCase().includes('gold');
+const needsEstimatedPrice = (p) => isGoldWithWeightCarat(p) && (!p.sellingPrice || Number(p.sellingPrice) <= 0);
+
 function ProductCatalog() {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [cart, setCart] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [estimatedPrices, setEstimatedPrices] = useState({});
+  const [addFeedback, setAddFeedback] = useState(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
 
@@ -50,6 +56,41 @@ function ProductCatalog() {
       setCart(saved);
     } catch (_) {}
   }, []);
+
+  // Fetch estimated prices for gold items without selling price (public API)
+  useEffect(() => {
+    if (!products.length) return;
+    const toFetch = products.filter(needsEstimatedPrice);
+    if (toFetch.length === 0) return;
+    const priceKey = (w, c, mc) => `${w}_${c}_${mc ?? 'd'}`;
+    const seen = new Set();
+    const unique = toFetch.filter((p) => {
+      const k = priceKey(p.weightGrams, p.carat, p.makingChargesPerGram);
+      if (seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    });
+    Promise.all(
+      unique.map(async (p) => {
+        try {
+          const params = new URLSearchParams({ weightGrams: String(p.weightGrams), carat: String(p.carat) });
+          if (p.makingChargesPerGram != null && p.makingChargesPerGram > 0) params.set('makingChargesPerGram', String(p.makingChargesPerGram));
+          const res = await axios.get(`${API_URL}/stock/estimate-price?${params}`);
+          const total = res.data?.totalPrice != null ? parseFloat(res.data.totalPrice) : null;
+          return { key: priceKey(p.weightGrams, p.carat, p.makingChargesPerGram), total };
+        } catch (_) {
+          return { key: priceKey(p.weightGrams, p.carat, p.makingChargesPerGram), total: null };
+        }
+      })
+    ).then((results) => {
+      const next = {};
+      toFetch.forEach((p) => {
+        const r = results.find((x) => x.key === priceKey(p.weightGrams, p.carat, p.makingChargesPerGram));
+        if (r?.total != null) next[p.id] = r.total;
+      });
+      setEstimatedPrices((prev) => ({ ...prev, ...next }));
+    });
+  }, [products]);
 
   const fetchProducts = async () => {
     setLoading(true);
@@ -85,21 +126,28 @@ function ProductCatalog() {
     setSearchParams(next);
   };
 
+  const getSortPrice = (p) => estimatedPrices[p.id] != null ? estimatedPrices[p.id] : (Number(p.sellingPrice) || 0);
   let displayProducts = [...products];
-  if (sort === 'price_asc') displayProducts.sort((a, b) => (Number(a.sellingPrice) || 0) - (Number(b.sellingPrice) || 0));
-  else if (sort === 'price_desc') displayProducts.sort((a, b) => (Number(b.sellingPrice) || 0) - (Number(a.sellingPrice) || 0));
+  if (sort === 'price_asc') displayProducts.sort((a, b) => getSortPrice(a) - getSortPrice(b));
+  else if (sort === 'price_desc') displayProducts.sort((a, b) => getSortPrice(b) - getSortPrice(a));
   else if (sort === 'name_asc') displayProducts.sort((a, b) => (a.articleName || '').localeCompare(b.articleName || ''));
   else if (sort === 'name_desc') displayProducts.sort((a, b) => (b.articleName || '').localeCompare(a.articleName || ''));
 
   const addToCart = (product) => {
+    const unitPrice = estimatedPrices[product.id] != null ? estimatedPrices[product.id] : (Number(product.sellingPrice) || 0);
     const existingItem = cart.find(item => item.id === product.id);
+    let nextCart;
     if (existingItem) {
-      setCart(cart.map(item =>
-        item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
-      ));
+      nextCart = cart.map(item =>
+        item.id === product.id ? { ...item, quantity: item.quantity + 1, sellingPrice: item.sellingPrice ?? unitPrice } : item
+      );
     } else {
-      setCart([...cart, { ...product, quantity: 1 }]);
+      nextCart = [...cart, { ...product, quantity: 1, sellingPrice: product.sellingPrice ?? unitPrice }];
     }
+    setCart(nextCart);
+    localStorage.setItem('cart', JSON.stringify(nextCart));
+    setAddFeedback(product.id);
+    setTimeout(() => setAddFeedback(null), 2000);
   };
 
   const goToCheckout = () => {
@@ -257,7 +305,13 @@ function ProductCatalog() {
                           </>
                         )}
                       </div>
-                      <p className="catalog-card-price">₹{Number(product.sellingPrice).toLocaleString('en-IN')}</p>
+                      <p className="catalog-card-price">
+                        {estimatedPrices[product.id] != null
+                          ? `₹${Number(estimatedPrices[product.id]).toLocaleString('en-IN')}`
+                          : product.weightGrams && product.carat && (!product.sellingPrice || Number(product.sellingPrice) <= 0) && String(product.material || '').toLowerCase().includes('gold')
+                            ? 'Price as per current gold rate'
+                            : `₹${Number(product.sellingPrice || 0).toLocaleString('en-IN')}`}
+                      </p>
                       <button
                         type="button"
                         onClick={() => addToCart(product)}
@@ -265,6 +319,9 @@ function ProductCatalog() {
                       >
                         Add to Cart
                       </button>
+                      {addFeedback === product.id && (
+                        <p className="catalog-card-added" role="status">Added to cart</p>
+                      )}
                     </div>
                   </div>
                 ))

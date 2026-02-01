@@ -108,6 +108,7 @@ function BillingManagement() {
     Promise.allSettled(
       goldMetalItems.map(async (s) => {
         const params = new URLSearchParams({ weightGrams: String(s.weightGrams), carat: String(s.carat) });
+        if (s.makingChargesPerGram != null && s.makingChargesPerGram > 0) params.set('makingChargesPerGram', String(s.makingChargesPerGram));
         const res = await axios.get(`${API_URL}/stock/calculate-price?${params.toString()}`, { headers: getAuthHeaders() });
         return { id: s.id, price: res.data?.calculatedPrice };
       })
@@ -446,6 +447,7 @@ function BillingManagement() {
         weightGrams: String(stockItem.weightGrams),
         carat: String(stockItem.carat)
       });
+      if (stockItem.makingChargesPerGram != null && stockItem.makingChargesPerGram > 0) params.set('makingChargesPerGram', String(stockItem.makingChargesPerGram));
       const response = await axios.get(`${API_URL}/stock/calculate-price?${params.toString()}`, {
         headers: getAuthHeaders()
       });
@@ -483,7 +485,8 @@ function BillingManagement() {
     try {
       const params = new URLSearchParams({ weightGrams: String(weightGrams), carat: String(carat.toFixed(2)) });
       const response = await axios.get(`${API_URL}/stock/calculate-price?${params.toString()}`, { headers: getAuthHeaders() });
-      const price = response.data?.calculatedPrice;
+      // Buy-back uses gold value only (no making charges or GST)
+      const price = response.data?.goldValue ?? response.data?.calculatedPrice;
       if (price != null) {
         setBuyBackPrices(prev => ({ ...prev, [index]: parseFloat(price) }));
       }

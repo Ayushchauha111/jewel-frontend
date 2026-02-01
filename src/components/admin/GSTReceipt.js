@@ -6,7 +6,7 @@ const SHOP_NAME = process.env.REACT_APP_SHOP_NAME || 'Jewelry Shop';
 const SHOP_ADDRESS = process.env.REACT_APP_SHOP_ADDRESS || 'Address line 1, City, State – PIN';
 const SHOP_PHONE = process.env.REACT_APP_SHOP_PHONE || '';
 const SHOP_EMAIL = process.env.REACT_APP_SHOP_EMAIL || '';
-const SHOP_GSTIN = process.env.REACT_APP_GSTIN || '';
+const SHOP_GSTIN = process.env.REACT_APP_GSTIN || '09AXDPK0044L1ZI';
 const SHOP_LOGO = process.env.REACT_APP_SHOP_LOGO || '/logo-gj.png';
 
 // Indian rupees amount in words (integer part only, no paise)

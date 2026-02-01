@@ -25,6 +25,7 @@ import OrderStatus from "./components/customer/OrderStatus";
 import LiveRates from "./components/customer/LiveRates";
 import GoldMine from "./components/customer/GoldMine";
 import GoldReserve from "./components/customer/GoldReserve";
+import Account from "./components/customer/Account";
 
 // Auth Components
 import Login from "./components/user/login.component";
@@ -39,6 +40,7 @@ function App() {
           <Route path="/" element={<CustomerHome />} />
           <Route path="/products" element={<ProductCatalog />} />
           <Route path="/live-rates" element={<LiveRates />} />
+          <Route path="/account" element={<Account />} />
           <Route path="/gold-mine" element={<GoldMine />} />
           <Route path="/gold-reserve" element={<GoldReserve />} />
           <Route path="/checkout" element={<Checkout />} />

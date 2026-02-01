@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#e8dcc8"/>
+      <stop offset="100%" style="stop-color:#d4c4a0"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#e8d4a0"/>
+      <stop offset="50%" style="stop-color:#c9a227"/>
+      <stop offset="100%" style="stop-color:#a67c00"/>
+    </linearGradient>
+  </defs>
+  <rect width="300" height="300" fill="url(#bg)"/>
+  <!-- Left earring -->
+  <ellipse cx="115" cy="140" rx="22" ry="38" fill="url(#gold)" stroke="#8b6914" stroke-width="2"/>
+  <circle cx="115" cy="105" r="8" fill="url(#gold)" stroke="#8b6914" stroke-width="1.5"/>
+  <!-- Right earring -->
+  <ellipse cx="185" cy="140" rx="22" ry="38" fill="url(#gold)" stroke="#8b6914" stroke-width="2"/>
+  <circle cx="185" cy="105" r="8" fill="url(#gold)" stroke="#8b6914" stroke-width="1.5"/>
+</svg>

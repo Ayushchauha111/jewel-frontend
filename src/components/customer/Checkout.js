@@ -3,11 +3,17 @@ import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import AuthService from '../../service/auth.service';
 import PaymentService from '../../service/payment.service';
+import CustomerNav from './CustomerNav';
 import './CustomerHome.css';
+import './Checkout.css';
 
 const API_URL = '/api';
 const SHIPPING_CHARGE = 10;
 const RAZORPAY_KEY = process.env.REACT_APP_RAZORPAY_KEY || 'rzp_test_Ng4zjvXBo18B7Z';
+const MAKING_CHARGES_PER_GM = 1150;
+const CGST_RATE = 0.015;  // 1.5%
+const SGST_RATE = 0.015;  // 1.5%
+const GST_RATE = 0.03;    // 3%
 
 function Checkout() {
   const [cart, setCart] = useState([]);
@@ -34,9 +40,18 @@ function Checkout() {
     navigate('/');
   };
 
-  const calculateTotal = () => {
-    const subtotal = cart.reduce((sum, item) => sum + (item.sellingPrice * item.quantity), 0);
-    return subtotal + SHIPPING_CHARGE;
+  const getSubtotal = () => cart.reduce((sum, item) => sum + ((parseFloat(item.sellingPrice) || 0) * (item.quantity || 1)), 0);
+
+  const calculateTotal = () => getSubtotal() + SHIPPING_CHARGE;
+
+  // Tax breakdown from subtotal (prices are inclusive of making + GST)
+  const getTaxBreakdown = () => {
+    const subtotal = getSubtotal();
+    const taxableValue = subtotal / (1 + GST_RATE); // value before 3% GST
+    const cgst = taxableValue * CGST_RATE;
+    const sgst = taxableValue * SGST_RATE;
+    const gstTotal = cgst + sgst;
+    return { cgst, sgst, gstTotal };
   };
 
   const loadRazorpayScript = () => {
@@ -178,155 +193,134 @@ function Checkout() {
     }
   };
 
-  return (
-    <div className="customer-home">
-      <nav className="customer-nav">
-        <h1>Jewelry Shop</h1>
-        <div className="nav-links">
-          <Link to="/">Home</Link>
-          <Link to="/products">Products</Link>
-          {isLoggedIn ? (
-            <button onClick={handleLogout} className="logout-btn">Logout</button>
-          ) : (
-            <Link to="/login">Login</Link>
-          )}
-        </div>
-      </nav>
+  const cartCount = cart.reduce((sum, i) => sum + (i.quantity || 1), 0);
 
-      <div className="featured-section" style={{ padding: '2rem' }}>
-        <h2 style={{ textAlign: 'center', marginBottom: '2rem' }}>Checkout</h2>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
-          <div className="checkout-summary">
-            <h3 style={{ marginBottom: '1.5rem', color: '#131921' }}>Order Summary</h3>
-            <div style={{ background: 'white', borderRadius: '12px', padding: '1.5rem', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+  if (cart.length === 0) {
+    return (
+      <div className="customer-home checkout-page">
+        <CustomerNav cartCount={0} />
+        <div className="checkout-main">
+          <div className="checkout-empty">
+            <p>Your cart is empty.</p>
+            <p><Link to="/products">Continue shopping</Link></p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="customer-home checkout-page">
+      <CustomerNav cartCount={cartCount} />
+
+      <div className="checkout-main">
+        <h1 className="checkout-title">Checkout</h1>
+
+        <div className="checkout-grid">
+          <div className="checkout-summary-card">
+            <h3>Order Summary</h3>
+            <div className="checkout-items">
               {cart.map((item) => (
-                <div key={item.id} style={{ 
-                  display: 'flex', 
-                  justifyContent: 'space-between', 
-                  alignItems: 'center',
-                  padding: '1rem 0',
-                  borderBottom: '1px solid #e0e0e0'
-                }}>
+                <div key={item.id} className="checkout-item-row">
                   <div>
-                    <h4 style={{ margin: 0, color: '#131921' }}>{item.articleName}</h4>
-                    <p style={{ margin: '0.25rem 0', color: '#666', fontSize: '0.9rem' }}>
-                      Quantity: {item.quantity} × ₹{item.sellingPrice}
+                    <h4 className="checkout-item-name">{item.articleName}</h4>
+                    <p className="checkout-item-meta">
+                      Qty {item.quantity} × ₹{Number(item.sellingPrice).toLocaleString('en-IN')}
                     </p>
                   </div>
-                  <p style={{ fontWeight: 'bold', color: '#131921', fontSize: '1.1rem' }}>
-                    ₹{item.sellingPrice * item.quantity}
-                  </p>
-                </div>
-              ))}
-              <div style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '2px solid #e0e0e0' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                  <span style={{ color: '#666' }}>Subtotal:</span>
-                  <span style={{ fontWeight: '600' }}>₹{cart.reduce((sum, item) => sum + (item.sellingPrice * item.quantity), 0)}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                  <span style={{ color: '#666' }}>Shipping:</span>
-                  <span style={{ fontWeight: '600' }}>₹{SHIPPING_CHARGE}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #e0e0e0' }}>
-                  <span style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#131921' }}>Total:</span>
-                  <span style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#B12704' }}>
-                    ₹{calculateTotal()}
+                  <span className="checkout-item-total">
+                    ₹{(item.sellingPrice * item.quantity).toLocaleString('en-IN')}
                   </span>
                 </div>
+              ))}
+            </div>
+
+            <div className="checkout-totals">
+              <div className="checkout-totals-row">
+                <span className="label">Subtotal (incl. GST & making charges)</span>
+                <span className="value">₹{getSubtotal().toLocaleString('en-IN')}</span>
+              </div>
+
+              {cart.length > 0 && (() => {
+                const { cgst, sgst, gstTotal } = getTaxBreakdown();
+                return (
+                  <div className="checkout-totals-breakdown">
+                    <div className="row">
+                      <span>CGST (1.5%)</span>
+                      <span>₹{cgst.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                    </div>
+                    <div className="row">
+                      <span>SGST (1.5%)</span>
+                      <span>₹{sgst.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                    </div>
+                    <div className="row">
+                      <span>GST (3%)</span>
+                      <span>₹{gstTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                    </div>
+                    <div className="row">
+                      <span>Making charges (₹{MAKING_CHARGES_PER_GM}/gm)</span>
+                      <span>incl. above</span>
+                    </div>
+                    <p className="checkout-totals-note">Tax & making charges are included in the subtotal.</p>
+                  </div>
+                );
+              })()}
+
+              <div className="checkout-totals-row">
+                <span className="label">Shipping</span>
+                <span className="value">₹{SHIPPING_CHARGE}</span>
+              </div>
+
+              <div className="checkout-totals-final">
+                <span className="label">Total</span>
+                <span className="value">₹{calculateTotal().toLocaleString('en-IN')}</span>
               </div>
             </div>
           </div>
 
-          <form onSubmit={handleSubmit} className="checkout-form" style={{ 
-            background: 'white', 
-            borderRadius: '12px', 
-            padding: '2rem', 
-            boxShadow: '0 2px 8px rgba(0,0,0,0.1)' 
-          }}>
-            <h3 style={{ marginBottom: '1.5rem', color: '#131921' }}>Customer Information</h3>
-            <div style={{ marginBottom: '1.25rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#131921' }}>
-                Name *
-              </label>
+          <form onSubmit={handleSubmit} className="checkout-form-card">
+            <h3>Customer Information</h3>
+            <div className="checkout-form-group">
+              <label>Name *</label>
               <input
                 type="text"
                 value={customerInfo.name}
-                onChange={(e) => setCustomerInfo({...customerInfo, name: e.target.value})}
+                onChange={(e) => setCustomerInfo({ ...customerInfo, name: e.target.value })}
                 required
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  border: '1px solid #ddd',
-                  borderRadius: '8px',
-                  fontSize: '1rem'
-                }}
+                placeholder="Your full name"
               />
             </div>
-            <div style={{ marginBottom: '1.25rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#131921' }}>
-                Phone *
-              </label>
+            <div className="checkout-form-group">
+              <label>Phone *</label>
               <input
                 type="tel"
                 value={customerInfo.phone}
-                onChange={(e) => setCustomerInfo({...customerInfo, phone: e.target.value})}
+                onChange={(e) => setCustomerInfo({ ...customerInfo, phone: e.target.value })}
                 required
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  border: '1px solid #ddd',
-                  borderRadius: '8px',
-                  fontSize: '1rem'
-                }}
+                placeholder="10-digit mobile number"
               />
             </div>
-            <div style={{ marginBottom: '1.25rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#131921' }}>
-                Email
-              </label>
+            <div className="checkout-form-group">
+              <label>Email</label>
               <input
                 type="email"
                 value={customerInfo.email}
-                onChange={(e) => setCustomerInfo({...customerInfo, email: e.target.value})}
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  border: '1px solid #ddd',
-                  borderRadius: '8px',
-                  fontSize: '1rem'
-                }}
+                onChange={(e) => setCustomerInfo({ ...customerInfo, email: e.target.value })}
+                placeholder="email@example.com"
               />
             </div>
-            <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#131921' }}>
-                Shipping Address *
-              </label>
+            <div className="checkout-form-group">
+              <label>Shipping Address *</label>
               <textarea
                 value={customerInfo.shippingAddress}
-                onChange={(e) => setCustomerInfo({...customerInfo, shippingAddress: e.target.value})}
-                rows="4"
+                onChange={(e) => setCustomerInfo({ ...customerInfo, shippingAddress: e.target.value })}
+                rows={4}
                 required
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  border: '1px solid #ddd',
-                  borderRadius: '8px',
-                  fontSize: '1rem',
-                  resize: 'vertical'
-                }}
+                placeholder="Full address for delivery"
               />
             </div>
-            <button 
-              type="submit" 
-              className="cta-button"
-              style={{
-                width: '100%',
-                padding: '1rem',
-                fontSize: '1.1rem',
-                fontWeight: 'bold'
-              }}
-            >
-              Proceed to Payment
+            <button type="submit" className="checkout-submit">
+              Proceed to Payment — ₹{calculateTotal().toLocaleString('en-IN')}
             </button>
           </form>
         </div>
