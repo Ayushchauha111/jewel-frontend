@@ -96,10 +96,14 @@ function LiveRates() {
       const proxyRes = await fetch(proxyUrl, { method: 'GET', headers: apiHeaders });
       if (proxyRes.ok) {
         const text = await proxyRes.text();
-        const parsed = parseLiveRateStreaming(text);
-        if (parsed) {
-          setLiveRateStreaming(parsed);
-          return;
+        // If we got HTML (e.g. SPA index.html from wrong proxy/backend), don't use it
+        const looksLikeHtml = /^\s*<(!DOCTYPE|html|HTML|\?xml)/i.test(text.trim());
+        if (!looksLikeHtml) {
+          const parsed = parseLiveRateStreaming(text);
+          if (parsed) {
+            setLiveRateStreaming(parsed);
+            return;
+          }
         }
       }
       // 2. Fallback: backend JSON live rates (from DB + currency) so page still shows something
