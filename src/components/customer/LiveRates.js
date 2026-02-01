@@ -3,8 +3,8 @@ import { Link } from 'react-router-dom';
 import CustomerNav from './CustomerNav';
 import './LiveRates.css';
 
-// Call exact external API (streaming)
-const LIVE_RATE_XML_URL = 'https://bcast.gangajewellers.co.in:7768/VOTSBroadcastStreaming/Services/xml/GetLiveRateByTemplateID/ganga';
+// Use backend proxy only (CSP does not allow direct fetch to bcast.gangajewellers.co.in).
+const LIVE_RATE_STREAM_PROXY = '/api/live-rates/stream';
 
 /**
  * Parse streaming API response: tab-separated rows
@@ -65,19 +65,52 @@ function LiveRates() {
 
   const apiHeaders = {
     Accept: 'text/plain, */*; q=0.01',
-    Origin: 'https://gangajewellers.co.in',
-    Referer: 'https://gangajewellers.co.in/',
+  };
+
+  const mapBackendRatesToStreaming = (data) => {
+    if (!data || !data.mcx) return null;
+    const rows = [];
+    const byLabel = {};
+    if (data.mcx.gold) {
+      const ask = data.mcx.gold.ask || data.mcx.gold.bid;
+      if (ask) {
+        rows.push({ id: 'gold', label: 'GOLD (MCX)', values: [ask], price: ask });
+        byLabel['GOLD (MCX)'] = ask;
+      }
+    }
+    if (data.mcx.silver) {
+      const ask = data.mcx.silver.ask || data.mcx.silver.bid;
+      if (ask) {
+        rows.push({ id: 'silver', label: 'SILVER (MCX)', values: [ask], price: ask });
+        byLabel['SILVER (MCX)'] = ask;
+      }
+    }
+    if (rows.length === 0) return null;
+    return { rows, byLabel };
   };
 
   const fetchLiveRateStreaming = useCallback(async () => {
     try {
-      const url = `${LIVE_RATE_XML_URL}?_=${Date.now()}`;
-      const res = await fetch(url, { method: 'GET', headers: apiHeaders });
-      if (!res.ok) throw new Error(res.statusText);
-      const text = await res.text();
-      setLiveRateStreaming(parseLiveRateStreaming(text));
+      // 1. Try backend proxy first (same origin – works on prod without CORS)
+      const proxyUrl = `${LIVE_RATE_STREAM_PROXY}?_=${Date.now()}`;
+      const proxyRes = await fetch(proxyUrl, { method: 'GET', headers: apiHeaders });
+      if (proxyRes.ok) {
+        const text = await proxyRes.text();
+        const parsed = parseLiveRateStreaming(text);
+        if (parsed) {
+          setLiveRateStreaming(parsed);
+          return;
+        }
+      }
+      // 2. Fallback: backend JSON live rates (from DB + currency) so page still shows something
+      const jsonRes = await fetch('/api/live-rates', { method: 'GET', headers: apiHeaders });
+      if (jsonRes.ok) {
+        const json = await jsonRes.json();
+        const fallback = mapBackendRatesToStreaming(json);
+        if (fallback) setLiveRateStreaming(fallback);
+      }
     } catch (e) {
-      console.warn('Live rate XML fetch failed:', e);
+      console.warn('Live rate fetch failed:', e);
     }
   }, []);
 
