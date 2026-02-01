@@ -43,6 +43,7 @@ function BillingManagement() {
     customerId: '',
     items: [{ stockId: '', quantity: 1 }],
     discountAmount: 0,
+    makingCharges: 0,
     paymentMethod: 'CASH',
     paidAmount: '',
     notes: ''
@@ -304,6 +305,7 @@ function BillingManagement() {
         items: billingItems,
         totalDiamondAmount: totalDiamondAmount > 0 ? Math.round(totalDiamondAmount * 100) / 100 : undefined,
         discountAmount: parseFloat(formData.discountAmount) || 0,
+        makingCharges: parseFloat(formData.makingCharges) || 0,
         paymentMethod: formData.paymentMethod,
         paidAmount: formData.paidAmount ? parseFloat(formData.paidAmount) : 0,
         notes: formData.notes
@@ -366,6 +368,7 @@ function BillingManagement() {
       customerId: '',
       items: [{ stockId: '', quantity: 1 }],
       discountAmount: 0,
+      makingCharges: 0,
       paymentMethod: 'CASH',
       paidAmount: '',
       notes: ''
@@ -546,7 +549,7 @@ function BillingManagement() {
     return calculateSubtotalSales() - calculateBuyBackTotal();
   };
 
-  const finalAmount = calculateTotal() - (parseFloat(formData.discountAmount) || 0);
+  const finalAmount = calculateTotal() - (parseFloat(formData.discountAmount) || 0) + (parseFloat(formData.makingCharges) || 0);
   const paidAmount = parseFloat(formData.paidAmount) || 0;
   const remainingAmount = finalAmount - paidAmount;
 
@@ -651,6 +654,17 @@ function BillingManagement() {
                     step="0.01"
                     value={formData.discountAmount}
                     onChange={(e) => setFormData({...formData, discountAmount: e.target.value})}
+                    placeholder="0.00"
+                  />
+                </div>
+                <div className="price-form-group">
+                  <label>Making Charges (₹)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={formData.makingCharges}
+                    onChange={(e) => setFormData({...formData, makingCharges: e.target.value})}
                     placeholder="0.00"
                   />
                 </div>
@@ -853,6 +867,10 @@ function BillingManagement() {
                 <div>
                   <span>Discount:</span>
                   <strong>-{formatCurrency(formData.discountAmount || 0)}</strong>
+                </div>
+                <div>
+                  <span>Making Charges:</span>
+                  <strong>{formatCurrency(formData.makingCharges || 0)}</strong>
                 </div>
                 <div className="price-bill-total-row">
                   <span>Total:</span>
@@ -1102,6 +1120,7 @@ function BillingManagement() {
                           </>
                         )}
                         <div><span>Discount</span><strong>-{formatCurrency(selectedBill.discountAmount || 0)}</strong></div>
+                        <div><span>Making Charges</span><strong>{formatCurrency(selectedBill.makingCharges || 0)}</strong></div>
                         <div className="price-bill-total-row">
                           <span>Total</span>
                           <span className="price-bill-total-value">{formatCurrency(selectedBill.finalAmount)}</span>

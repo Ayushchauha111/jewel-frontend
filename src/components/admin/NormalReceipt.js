@@ -164,6 +164,7 @@ function NormalReceipt({ bill, companyName, companyAddress, companyPhone, compan
             <p><span>Subtotal</span><span>{formatCurrency(bill?.totalAmount)}</span></p>
           )}
           <p><span>Discount</span><span>-{formatCurrency(bill?.discountAmount || 0)}</span></p>
+          <p><span>Making Charges</span><span>{formatCurrency(bill?.makingCharges || 0)}</span></p>
           <p className="normal-receipt-total-row"><span>Total</span><span>{formatCurrency(bill?.finalAmount)}</span></p>
           {bill?.paidAmount != null && parseFloat(bill.paidAmount) > 0 && (
             <p><span>Paid</span><span>{formatCurrency(bill.paidAmount)}</span></p>

@@ -76,14 +76,15 @@ function GSTReceipt({ bill, companyName, companyAddress, companyPhone, companyEm
   const finalAmount = parseFloat(bill?.finalAmount) || 0;
   const paidAmount = parseFloat(bill?.paidAmount) || 0;
 
-  // Simple tax placeholder: 3% CGST + 3% SGST on taxable value (final amount before tax in many cases we use finalAmount as taxable)
+  // CGST 1.5% + SGST 1.5% = 3% GST on taxable value (final amount = after discount + making charges)
   const taxableAmount = finalAmount;
-  const gstRate = 0.03;
+  const gstRate = 0.015;
   const cgstAmount = taxableAmount * gstRate;
   const sgstAmount = taxableAmount * gstRate;
   const totalGst = cgstAmount + sgstAmount;
   const grandTotal = taxableAmount + totalGst;
   const roundOff = Math.round(grandTotal * 100) / 100 - grandTotal;
+  const makingCharges = parseFloat(bill?.makingCharges) || 0;
 
   const totalGrossWeight = items.reduce((sum, i) => sum + (parseFloat(i.weightGrams) || 0) * (i.quantity || 1), 0);
   const totalNetWeight = totalGrossWeight; // same if no deduction; can be refined
@@ -245,6 +246,9 @@ function GSTReceipt({ bill, companyName, companyAddress, companyPhone, companyEm
           {bill?.totalDiamondAmount != null && parseFloat(bill.totalDiamondAmount) > 0 && (
             <p><strong>Diamond:</strong> {formatCurrency(bill.totalDiamondAmount)}</p>
           )}
+          <p><strong>Subtotal:</strong> {formatCurrency(totalAmount)}</p>
+          <p><strong>Discount:</strong> -{formatCurrency(discountAmount)}</p>
+          <p><strong>Making Charges:</strong> {formatCurrency(makingCharges)}</p>
           <p><strong>Total:</strong> {formatCurrency(finalAmount)}</p>
         </div>
 
@@ -261,8 +265,9 @@ function GSTReceipt({ bill, companyName, companyAddress, companyPhone, companyEm
           <table className="gst-receipt-tax-table">
             <tbody>
               <tr><td>Taxable Amount</td><td>{formatCurrency(taxableAmount)}</td></tr>
-              <tr><td>CGST (3%)</td><td>{formatCurrency(cgstAmount)}</td></tr>
-              <tr><td>SGST (3%)</td><td>{formatCurrency(sgstAmount)}</td></tr>
+              <tr><td>CGST (1.5%)</td><td>{formatCurrency(cgstAmount)}</td></tr>
+              <tr><td>SGST (1.5%)</td><td>{formatCurrency(sgstAmount)}</td></tr>
+              <tr><td>GST (3%)</td><td>{formatCurrency(totalGst)}</td></tr>
               <tr><td>Round Off</td><td>{formatCurrency(roundOff)}</td></tr>
               <tr><td><strong>Total Amount</strong></td><td><strong>{formatCurrency(grandTotal + roundOff)}</strong></td></tr>
               <tr><td>Net Received Amount</td><td>{formatCurrency(paidAmount)}</td></tr>
@@ -283,6 +288,8 @@ function GSTReceipt({ bill, companyName, companyAddress, companyPhone, companyEm
                 <th>CGST Amount</th>
                 <th>SGST Rate</th>
                 <th>SGST Amount</th>
+                <th>GST Rate</th>
+                <th>GST Amount</th>
                 <th>Total</th>
               </tr>
             </thead>
@@ -290,10 +297,12 @@ function GSTReceipt({ bill, companyName, companyAddress, companyPhone, companyEm
               <tr>
                 <td>7113</td>
                 <td>{formatCurrency(taxableAmount)}</td>
-                <td>3%</td>
+                <td>1.5%</td>
                 <td>{formatCurrency(cgstAmount)}</td>
-                <td>3%</td>
+                <td>1.5%</td>
                 <td>{formatCurrency(sgstAmount)}</td>
+                <td>3%</td>
+                <td>{formatCurrency(totalGst)}</td>
                 <td>{formatCurrency(taxableAmount + totalGst)}</td>
               </tr>
             </tbody>
