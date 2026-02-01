@@ -1,2 +1,4 @@
-/sitemap.xml  https://api.typogram.in/api/sitemap/xml  200
-/* /index.html 200
+# API proxy must come BEFORE the catch-all so /api/* hits the backend, not index.html
+/api/*  https://api.gangajewellers.in/api/:splat  200
+/sitemap.xml  https://api.gangajewellers.in/api/sitemap/xml  200
+/*  /index.html  200
