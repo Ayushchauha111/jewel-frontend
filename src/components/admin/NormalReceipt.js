@@ -90,6 +90,7 @@ function NormalReceipt({ bill, companyName, companyAddress, companyPhone, compan
                 <th>Item</th>
                 <th>Code</th>
                 <th>Carat</th>
+                <th>Wt (g)</th>
                 <th>Qty</th>
                 <th>Rate (₹/g)</th>
                 <th>Total</th>
@@ -121,6 +122,7 @@ function NormalReceipt({ bill, companyName, companyAddress, companyPhone, compan
                       </td>
                       <td>{item.articleCode || item.stock?.articleCode || '—'}</td>
                       <td>{carat != null ? String(carat) : '—'}</td>
+                      <td>{gswt > 0 ? gswt.toFixed(3) : '—'}</td>
                       <td>{qty}</td>
                       <td>{ratePerGramGold != null ? formatCurrency(ratePerGramGold) : '—'}</td>
                       <td>{formatCurrency(metalAmount)}</td>
@@ -129,12 +131,14 @@ function NormalReceipt({ bill, companyName, companyAddress, companyPhone, compan
                       <td>Diamond ({diamondCt} ct)</td>
                       <td>—</td>
                       <td>—</td>
+                      <td>—</td>
                       <td>{qty}</td>
                       <td>—</td>
                       <td>{formatCurrency(diamondAmt)}</td>
                     </tr>
                   ];
                 }
+                const itemGswt = w * qty;
                 return (
                   <tr key={item.id || idx}>
                     <td>
@@ -147,6 +151,7 @@ function NormalReceipt({ bill, companyName, companyAddress, companyPhone, compan
                     </td>
                     <td>{item.articleCode || item.stock?.articleCode || '—'}</td>
                     <td>{carat != null ? String(carat) : '—'}</td>
+                    <td>{itemGswt > 0 ? itemGswt.toFixed(3) : '—'}</td>
                     <td>{qty}</td>
                     <td>{rate != null ? formatCurrency(rate) : '—'}</td>
                     <td>{formatCurrency(item.totalPrice)}</td>

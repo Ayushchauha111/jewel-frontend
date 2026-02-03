@@ -106,10 +106,6 @@ function StockManagement() {
   const [loadingSalesHistory, setLoadingSalesHistory] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
-  const [showCamera, setShowCamera] = useState(false);
-  const [stream, setStream] = useState(null);
-  const videoRef = React.useRef(null);
-  const canvasRef = React.useRef(null);
 
   useEffect(() => {
     fetchStock();
@@ -413,7 +409,6 @@ function StockManagement() {
     setShowForm(false);
     setShowCustomArticleName(false);
     setShowCustomCategory(false);
-    stopCamera();
   };
 
   const handleFileSelect = (e) => {
@@ -427,52 +422,6 @@ function StockManagement() {
       reader.readAsDataURL(file);
     }
   };
-
-  const startCamera = async () => {
-    try {
-      const mediaStream = await navigator.mediaDevices.getUserMedia({ video: true });
-      setStream(mediaStream);
-      setShowCamera(true);
-      if (videoRef.current) {
-        videoRef.current.srcObject = mediaStream;
-      }
-    } catch (error) {
-      console.error('Error accessing camera:', error);
-      alert('Unable to access camera. Please check permissions.');
-    }
-  };
-
-  const stopCamera = () => {
-    if (stream) {
-      stream.getTracks().forEach(track => track.stop());
-      setStream(null);
-    }
-    setShowCamera(false);
-  };
-
-  const captureImage = () => {
-    if (videoRef.current && canvasRef.current) {
-      const canvas = canvasRef.current;
-      const video = videoRef.current;
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(video, 0, 0);
-      
-      canvas.toBlob((blob) => {
-        const file = new File([blob], 'captured-image.jpg', { type: 'image/jpeg' });
-        setSelectedImage(file);
-        setImagePreview(URL.createObjectURL(blob));
-        stopCamera();
-      }, 'image/jpeg', 0.9);
-    }
-  };
-
-  React.useEffect(() => {
-    return () => {
-      stopCamera();
-    };
-  }, []);
 
   const stats = {
     total: stock.length,
@@ -942,13 +891,6 @@ function StockManagement() {
                   <label htmlFor="image-upload" className="stock-action-btn" style={{ cursor: 'pointer', display: 'inline-block', margin: 0 }}>
                     📷 Upload Image
                   </label>
-                  <button
-                    type="button"
-                    onClick={showCamera ? stopCamera : startCamera}
-                    className="stock-action-btn secondary"
-                  >
-                    {showCamera ? '✕ Cancel Camera' : '📸 Capture Image'}
-                  </button>
                 </div>
                 {imagePreview && (
                   <div className="stock-image-preview">
@@ -964,20 +906,6 @@ function StockManagement() {
                       style={{ marginLeft: '1rem', marginTop: '0.5rem' }}
                     >
                       🗑️ Remove
-                    </button>
-                  </div>
-                )}
-                {showCamera && (
-                  <div className="stock-camera-container">
-                    <video ref={videoRef} autoPlay playsInline />
-                    <canvas ref={canvasRef} style={{ display: 'none' }} />
-                    <button
-                      type="button"
-                      onClick={captureImage}
-                      className="stock-action-btn"
-                      style={{ marginTop: '0.5rem' }}
-                    >
-                      📷 Capture
                     </button>
                   </div>
                 )}

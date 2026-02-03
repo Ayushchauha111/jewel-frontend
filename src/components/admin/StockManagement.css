@@ -103,7 +103,11 @@
   max-width: 640px;
   max-height: calc(100vh - 2rem);
   overflow-y: auto;
+  overflow-x: hidden;
   margin: auto;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
 }
 
 .stock-modal-close {
@@ -238,10 +242,44 @@
   margin-top: 1.5rem;
   padding-top: 1.5rem;
   border-top: 1px solid var(--adm-border-gold);
+  flex-shrink: 0;
 }
 
 .stock-submit-btn {
   min-width: 180px;
+  min-height: 48px;
+  touch-action: manipulation;
+}
+
+@media (max-width: 480px) {
+  .stock-modal-content {
+    max-height: 100vh;
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+
+  .stock-form-card {
+    padding-bottom: 0;
+  }
+
+  .stock-form-actions {
+    position: sticky;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--adm-bg-card, #242019);
+    padding: 1rem 2rem calc(1.5rem + env(safe-area-inset-bottom, 0)) 2rem;
+    margin-left: -2rem;
+    margin-right: -2rem;
+    margin-bottom: -2rem;
+    border-top: 1px solid var(--adm-border-gold);
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.3);
+  }
+
+  .stock-submit-btn {
+    width: 100%;
+    min-height: 48px;
+    font-size: 1rem;
+  }
 }
 
 .stock-image-preview {
