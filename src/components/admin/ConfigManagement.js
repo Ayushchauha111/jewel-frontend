@@ -10,9 +10,16 @@ import './PriceManagement.css';
 const API_URL = '/api';
 const CONFIG_API = `${API_URL}/config/category-making`;
 
+// Same predetermined categories as Stock / Billing
+const PREDEFINED_CATEGORIES = [
+  'Rings', 'Necklace', 'Earrings', 'Bracelet', 'Bangle', 'Chain', 'Pendant',
+  'Anklet', 'Mangalsutra', 'Kamarband', 'Tikka', 'Other'
+];
+
 function ConfigManagement() {
   const navigate = useNavigate();
   const [configs, setConfigs] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
@@ -21,7 +28,19 @@ function ConfigManagement() {
 
   useEffect(() => {
     fetchConfigs();
+    fetchCategories();
   }, []);
+
+  const fetchCategories = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/stock/categories`);
+      const fromApi = Array.isArray(response.data) ? response.data : [];
+      const merged = [...new Set([...fromApi, ...PREDEFINED_CATEGORIES])].filter(Boolean).sort();
+      setCategories(merged);
+    } catch (err) {
+      setCategories(PREDEFINED_CATEGORIES.slice().sort());
+    }
+  };
 
   const handleLogout = () => {
     AuthService.logout();
@@ -124,13 +143,17 @@ function ConfigManagement() {
             <div className="price-form-grid">
               <div className="price-form-group">
                 <label>Category *</label>
-                <input
-                  type="text"
+                <select
                   value={formData.category}
                   onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                  placeholder="e.g. Rings, Necklace, Earrings"
                   required
-                />
+                  style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--adm-border-gold)', background: 'var(--adm-bg-elevated)', color: 'var(--adm-text)' }}
+                >
+                  <option value="">Select Category</option>
+                  {categories.map((cat) => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
               </div>
               <div className="price-form-group">
                 <label>Making charges (₹/g) *</label>

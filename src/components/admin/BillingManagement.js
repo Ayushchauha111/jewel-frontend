@@ -317,10 +317,10 @@ function BillingManagement() {
 
       const billingItems = formData.items.map((item, index) => {
         if (item.isBuyBack) {
-          const price = buyBackPrices[index];
+          const price = getBuyBackUnitPrice(item, index);
           const p = item.purity;
           const purity = (p != null && p !== '' && p !== 'OTHER' && !isNaN(parseFloat(p))) ? parseFloat(p) : null;
-          if (!item.weightGrams || purity == null || price == null) return null;
+          if (!item.weightGrams || purity == null || price == null || price <= 0) return null;
           const qty = parseInt(item.quantity || 1, 10);
           const carat = purityToCarat(purity);
           return {
@@ -501,7 +501,7 @@ function BillingManagement() {
   const addBuyBackItem = () => {
     setFormData({
       ...formData,
-      items: [...formData.items, { isBuyBack: true, weightGrams: '', purity: '', quantity: 1 }]
+      items: [...formData.items, { isBuyBack: true, weightGrams: '', purity: '', quantity: 1, buyBackRatePerGram: '' }]
     });
   };
 
@@ -765,9 +765,11 @@ function BillingManagement() {
     newItems[index] = { ...newItems[index], [field]: value };
     setFormData({ ...formData, items: newItems });
     if (field === 'weightGrams' || field === 'purity') {
-      const w = field === 'weightGrams' ? value : newItems[index].weightGrams;
-      const p = field === 'purity' ? value : newItems[index].purity;
-      if (w && p) fetchBuyBackPrice(index, w, p);
+      if (field !== 'buyBackRatePerGram') {
+        const w = field === 'weightGrams' ? value : newItems[index].weightGrams;
+        const p = field === 'purity' ? value : newItems[index].purity;
+        if (w && p) fetchBuyBackPrice(index, w, p);
+      }
     }
   };
 
@@ -791,12 +793,21 @@ function BillingManagement() {
     }, 0);
   };
 
+  const getBuyBackUnitPrice = (item, index) => {
+    const rateOverride = item.buyBackRatePerGram != null && item.buyBackRatePerGram !== '' ? parseFloat(item.buyBackRatePerGram) : null;
+    const weight = parseFloat(item.weightGrams);
+    if (rateOverride != null && !isNaN(rateOverride) && rateOverride > 0 && weight > 0) {
+      return rateOverride * weight;
+    }
+    return buyBackPrices[index] != null ? buyBackPrices[index] : 0;
+  };
+
   const calculateBuyBackTotal = () => {
     return formData.items.reduce((sum, item, index) => {
       if (!item.isBuyBack) return sum;
-      const price = buyBackPrices[index] != null ? buyBackPrices[index] : 0;
+      const unitPrice = getBuyBackUnitPrice(item, index);
       const qty = parseInt(item.quantity || 1, 10);
-      return sum + (price * qty);
+      return sum + (unitPrice * qty);
     }, 0);
   };
 
@@ -1051,6 +1062,18 @@ function BillingManagement() {
                             />
                           )}
                         </div>
+                        <div style={{ flex: '1 1 100px' }}>
+                          <label>Rate (₹/g) – optional</label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={item.buyBackRatePerGram ?? ''}
+                            onChange={(e) => handleBuyBackChange(index, 'buyBackRatePerGram', e.target.value)}
+                            placeholder="Override rate"
+                            style={{ width: '100%', padding: '0.75rem', borderRadius: '8px' }}
+                          />
+                        </div>
                         <div style={{ flex: '0 0 70px' }}>
                           <label>Qty</label>
                           <input
@@ -1064,7 +1087,7 @@ function BillingManagement() {
                         <div style={{ flex: '0 0 100px' }}>
                           <label>Value</label>
                           <div className="price-buyback-value">
-                            {buyBackPrices[index] != null ? formatCurrency(buyBackPrices[index] * parseInt(item.quantity || 1, 10)) : '—'}
+                            {getBuyBackUnitPrice(item, index) > 0 ? formatCurrency(getBuyBackUnitPrice(item, index) * parseInt(item.quantity || 1, 10)) : '—'}
                           </div>
                         </div>
                         <button type="button" onClick={() => removeItem(index)} className="stock-btn-delete" style={{ padding: '0.75rem 1rem' }}>🗑️</button>
