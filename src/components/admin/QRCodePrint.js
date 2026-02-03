@@ -1,16 +1,19 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useReactToPrint } from 'react-to-print';
 import axios from 'axios';
 import { getAuthHeaders } from '../../utils/authHelper';
 import AuthService from '../../service/auth.service';
 import AdminNav from './AdminNav';
 import './AdminDashboard.css';
 import './PriceManagement.css';
+import './QRCodePrint.css';
 
 const API_URL = '/api';
 
 function QRCodePrint() {
   const navigate = useNavigate();
+  const printRef = useRef(null);
   const [stock, setStock] = useState([]);
   const [selectedItems, setSelectedItems] = useState(new Set());
   const [loading, setLoading] = useState(false);
@@ -19,6 +22,15 @@ function QRCodePrint() {
   const [filterStatus, setFilterStatus] = useState('ALL');
   const [currentPage, setCurrentPage] = useState(0);
   const [pageSize, setPageSize] = useState(20);
+
+  const handlePrint = useReactToPrint({
+    contentRef: printRef,
+    documentTitle: 'QR_Codes_Articles',
+    pageStyle: `
+      @page { size: A4; margin: 10mm; }
+      body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    `
+  });
 
   const handleLogout = () => {
     AuthService.logout();
@@ -74,13 +86,13 @@ function QRCodePrint() {
     setSelectedItems(newSelected);
   };
 
-  const handlePrint = () => {
+  const onPrintClick = () => {
     if (selectedItems.size === 0) {
       setError('Please select at least one item to print');
       setTimeout(() => setError(null), 3000);
       return;
     }
-    window.print();
+    handlePrint();
   };
 
   const getQRCodeImageUrl = (item) => {
@@ -241,7 +253,7 @@ function QRCodePrint() {
               {selectedItems.size === paginatedStock.length && paginatedStock.length > 0 ? '☐ Deselect All' : '☑ Select All'}
             </button>
             <button
-              onClick={handlePrint}
+              onClick={onPrintClick}
               className="price-action-btn"
               disabled={selectedItems.size === 0}
               style={{ fontSize: '0.875rem', padding: '0.75rem 1.5rem'}}
@@ -385,95 +397,22 @@ function QRCodePrint() {
           )}
         </div>
 
-        {/* Print-only section */}
-        <div className="print-only">
-          <style>{`
-            @media print {
-              body * {
-                visibility: hidden;
-              }
-              .print-only, .print-only * {
-                visibility: visible;
-              }
-              .print-only {
-                position: absolute;
-                left: 0;
-                top: 0;
-                width: 100%;
-                padding: 0;
-                margin: 0;
-              }
-              .qr-code-grid {
-                display: grid;
-                grid-template-columns: repeat(3, 1fr);
-                gap: 20px;
-                padding: 20px;
-                page-break-inside: avoid;
-              }
-              .qr-code-item {
-                border: 2px solid #000;
-                padding: 20px;
-                text-align: center;
-                page-break-inside: avoid;
-                break-inside: avoid;
-                min-height: 280px;
-                display: flex;
-                flex-direction: column;
-                justify-content: space-between;
-                background: #fff;
-              }
-              .qr-code-item img {
-                width: 200px;
-                height: 200px;
-                margin: 15px auto;
-                display: block;
-                border: 1px solid #ccc;
-              }
-              .qr-code-item h3 {
-                margin: 10px 0 5px 0;
-                font-size: 18px;
-                font-weight: bold;
-                color: #000;
-              }
-              .qr-code-item p {
-                margin: 3px 0;
-                font-size: 14px;
-                color: #000;
-              }
-              .qr-code-item .item-code {
-                font-size: 16px;
-                font-weight: bold;
-                color: #000;
-              }
-            }
-            @media screen {
-              .print-only {
-                display: none;
-              }
-            }
-          `}</style>
-
-          <div className="qr-code-grid">
+        {/* Printable QR sheet – small labels for sticking on articles (hidden on screen) */}
+        <div ref={printRef} className="qr-print-sheet">
+          <div className="qr-print-grid">
             {selectedStock.map(item => (
-              <div key={item.id} className="qr-code-item">
-                <div>
-                  <h3>{item.articleName}</h3>
-                  <p className="item-code"><strong>Code:</strong> {item.articleCode || 'N/A'}</p>
-                  <p><strong>Weight:</strong> {item.weightGrams || 'N/A'} g</p>
-                  <p><strong>Carat:</strong> {item.carat || 'N/A'}</p>
-                  {item.purityPercentage && item.purityPercentage <= 100 && (
-                    <p><strong>Purity:</strong> {item.purityPercentage}%</p>
-                  )}
-                  <p><strong>Price:</strong> {formatCurrency(item.sellingPrice)}</p>
-                </div>
+              <div key={item.id} className="qr-print-label">
                 {item.qrCode ? (
                   <img
                     src={getQRCodeImageUrl(item)}
-                    alt={`QR Code for ${item.articleName}`}
+                    alt=""
+                    className="qr-print-qr"
                   />
                 ) : (
-                  <div style={{ padding: '20px', color: 'red', fontWeight: 'bold' }}>No QR Code Available</div>
+                  <div className="qr-print-no-qr">No QR</div>
                 )}
+                <div className="qr-print-code">{item.articleCode || item.id}</div>
+                <div className="qr-print-name">{item.articleName}</div>
               </div>
             ))}
           </div>

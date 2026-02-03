@@ -22,6 +22,7 @@
     "crypto-browserify": "^3.12.1",
     "dompurify": "^3.2.5",
     "framer-motion": "^12.10.4",
+    "html5-qrcode": "^2.3.8",
     "lightbox.js-react": "^1.5.3",
     "lodash": "^4.17.21",
     "lucide-react": "^0.477.0",

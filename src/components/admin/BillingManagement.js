@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Html5Qrcode } from 'html5-qrcode';
 import axios from 'axios';
 import { getAuthHeaders } from '../../utils/authHelper';
 import AuthService from '../../service/auth.service';
@@ -59,6 +60,10 @@ function BillingManagement() {
   const [loadingBill, setLoadingBill] = useState(false);
   const [showGstReceipt, setShowGstReceipt] = useState(false);
   const [showNormalReceipt, setShowNormalReceipt] = useState(false);
+  const [showQRAddModal, setShowQRAddModal] = useState(false);
+  const [qrAddInput, setQrAddInput] = useState('');
+  const [qrScanning, setQrScanning] = useState(false);
+  const qrScannerRef = useRef(null);
 
   const isGoldItem = (s) => s && String(s.material || '').toLowerCase() === 'gold' && s.weightGrams && s.carat;
   // Gold + Diamond / Silver + Diamond etc.: has metal weight + carat, can use rate for metal part when sellingPrice not set
@@ -392,6 +397,83 @@ function BillingManagement() {
       items: [...formData.items, { isBuyBack: true, weightGrams: '', purity: '', quantity: 1 }]
     });
   };
+
+  // Shared logic: resolve raw string (manual input or scanned QR JSON) to stock and add to bill
+  const addItemFromScannedData = (raw) => {
+    const trimmed = (raw || '').trim();
+    if (!trimmed) {
+      setError('Enter article code or stock ID');
+      setTimeout(() => setError(null), 3000);
+      return false;
+    }
+    let found = null;
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (parsed != null && (parsed.id != null || parsed.articleCode)) {
+        if (parsed.id != null) found = stock.find(s => s.id === parsed.id);
+        if (!found && parsed.articleCode) found = stock.find(s => (s.articleCode || '').toLowerCase() === String(parsed.articleCode).toLowerCase());
+      }
+    } catch (_) {
+      // Not JSON: treat as article code or numeric ID
+    }
+    if (!found) {
+      const idNum = parseInt(trimmed, 10);
+      if (!isNaN(idNum)) found = stock.find(s => s.id === idNum);
+    }
+    if (!found) {
+      found = stock.find(s => (s.articleCode || '').toLowerCase() === trimmed.toLowerCase());
+    }
+    if (!found) {
+      setError('No stock found for: ' + trimmed);
+      setTimeout(() => setError(null), 3000);
+      return false;
+    }
+    setFormData(prev => ({
+      ...prev,
+      items: [...prev.items, { stockId: String(found.id), quantity: 1 }]
+    }));
+    if (isGoldMetalItem(found) && itemPrices[found.id] == null) {
+      fetchCalculatedPriceForStock(found);
+    }
+    setQrAddInput('');
+    setShowQRAddModal(false);
+    setQrScanning(false);
+    return true;
+  };
+
+  const addItemByQR = () => addItemFromScannedData(qrAddInput);
+
+  // Start/stop camera scanner when "Scan with camera" is active
+  useEffect(() => {
+    if (!showQRAddModal || !qrScanning) return;
+    const el = document.getElementById('billing-qr-reader');
+    if (!el) return;
+    const scanner = new Html5Qrcode('billing-qr-reader');
+    qrScannerRef.current = scanner;
+    scanner.start(
+      { facingMode: 'environment' },
+      { fps: 10, qrbox: { width: 220, height: 220 } },
+      (decodedText) => {
+        if (!addItemFromScannedData(decodedText)) return;
+        scanner.stop().catch(() => {}).finally(() => {
+          qrScannerRef.current = null;
+        });
+      },
+      () => {}
+    ).catch((err) => {
+      setError('Camera access failed: ' + (err?.message || 'Permission denied'));
+      setTimeout(() => setError(null), 4000);
+      setQrScanning(false);
+      qrScannerRef.current = null;
+    });
+    return () => {
+      if (qrScannerRef.current) {
+        qrScannerRef.current.stop().catch(() => {}).finally(() => {
+          qrScannerRef.current = null;
+        });
+      }
+    };
+  }, [showQRAddModal, qrScanning]);
 
   const removeItem = (index) => {
     const newItems = formData.items.filter((_, i) => i !== index);
@@ -838,9 +920,52 @@ function BillingManagement() {
                 ))}
                 <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
                   <button type="button" onClick={addItem} className="price-action-btn secondary">+ Add Item</button>
+                  <button type="button" onClick={() => setShowQRAddModal(true)} className="price-action-btn secondary">📱 Add item using QR code</button>
                   <button type="button" onClick={addBuyBackItem} className="price-action-btn secondary buyback">🪙 Customer selling gold (buy-back)</button>
                 </div>
               </div>
+
+              {showQRAddModal && (
+                <div className="stock-modal-overlay" style={{ zIndex: 10002 }} onClick={() => { setShowQRAddModal(false); setQrAddInput(''); setQrScanning(false); }}>
+                  <div className="stock-modal-content" style={{ maxWidth: qrScanning ? '320px' : '400px' }} onClick={(e) => e.stopPropagation()}>
+                    <div className="stock-form-card">
+                      <div className="stock-form-header" style={{ marginBottom: '1rem' }}>
+                        <h3>Add item by QR</h3>
+                        <button type="button" className="stock-modal-close" onClick={() => { setShowQRAddModal(false); setQrAddInput(''); setQrScanning(false); }} aria-label="Close">✕</button>
+                      </div>
+                      {qrScanning ? (
+                        <>
+                          <p style={{ fontSize: '0.9rem', color: '#64748b', marginBottom: '0.75rem' }}>Point the camera at the article&apos;s QR code.</p>
+                          <div id="billing-qr-reader" style={{ width: '100%', marginBottom: '1rem', borderRadius: '8px', overflow: 'hidden' }} />
+                          <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                            <button type="button" onClick={() => setQrScanning(false)} className="price-action-btn secondary">Cancel scan</button>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <p style={{ fontSize: '0.9rem', color: '#64748b', marginBottom: '1rem' }}>
+                            <strong>Scan with camera</strong> or enter <strong>Article code</strong> / <strong>Stock ID</strong> below.
+                          </p>
+                          <button type="button" onClick={() => setQrScanning(true)} className="price-action-btn" style={{ width: '100%', marginBottom: '1rem' }}>📷 Scan with camera</button>
+                          <input
+                            type="text"
+                            value={qrAddInput}
+                            onChange={(e) => setQrAddInput(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addItemByQR())}
+                            placeholder="e.g. RIN-911940 or 123"
+                            style={{ width: '100%', padding: '0.75rem', border: '2px solid #ecf0f1', borderRadius: '8px', marginBottom: '1rem', boxSizing: 'border-box' }}
+                            autoFocus
+                          />
+                          <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                            <button type="button" onClick={() => { setShowQRAddModal(false); setQrAddInput(''); }} className="price-action-btn secondary">Cancel</button>
+                            <button type="button" onClick={addItemByQR} className="price-action-btn">Add to bill</button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div className="price-bill-summary">
                 <div>
