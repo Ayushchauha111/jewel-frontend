@@ -112,10 +112,11 @@ export const validateSession = () => {
  * Clear session and redirect to login
  */
 export const clearSessionAndRedirect = () => {
-  // Clear user session
+  // Clear user session and token (someone else logged in, token invalid, or expired)
   localStorage.removeItem('user');
+  localStorage.removeItem('token');
   // Don't clear app version - we want to keep it for next login
-  
+
   // Always redirect to login (even if already there, it will refresh the page)
   // Use replace to avoid adding to history
   if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {

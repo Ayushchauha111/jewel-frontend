@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useRef } from 'react';
+import { useReactToPrint } from 'react-to-print';
 import './NormalReceipt.css';
 
 const SHOP_NAME = process.env.REACT_APP_SHOP_NAME || 'Jewelry Shop';
@@ -7,6 +8,7 @@ const SHOP_PHONE = process.env.REACT_APP_SHOP_PHONE || '';
 const SHOP_EMAIL = process.env.REACT_APP_SHOP_EMAIL || '';
 const SHOP_LOGO = process.env.REACT_APP_SHOP_LOGO || '/logo-gj.png';
 
+// --- Helpers ---
 function formatCurrency(amount) {
   if (amount == null) return '₹0.00';
   const n = parseFloat(amount);
@@ -27,7 +29,16 @@ function formatDate(dateString) {
   return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
+// --- Component ---
 function NormalReceipt({ bill, companyName, companyAddress, companyPhone, companyEmail, logoUrl, onClose, showPrintButton = true }) {
+  const contentRef = useRef(null);
+
+  // Hook for high-quality printing
+  const handlePrint = useReactToPrint({
+    contentRef,
+    documentTitle: `Receipt_${bill?.billNumber || 'Order'}`,
+  });
+
   const name = companyName || SHOP_NAME;
   const address = companyAddress || SHOP_ADDRESS;
   const phone = companyPhone || SHOP_PHONE;
@@ -37,15 +48,12 @@ function NormalReceipt({ bill, companyName, companyAddress, companyPhone, compan
   const items = bill?.items || [];
   const customer = bill?.customer || {};
 
-  const handlePrint = () => {
-    window.print();
-  };
-
   return (
     <div className="normal-receipt-wrap">
+      {/* Control Buttons (hidden during print) */}
       <div className="normal-receipt-actions no-print">
         {showPrintButton && (
-          <button type="button" className="normal-receipt-print-btn" onClick={handlePrint}>
+          <button type="button" className="normal-receipt-print-btn" onClick={() => handlePrint()}>
             🖨️ Print Receipt
           </button>
         )}
@@ -56,7 +64,8 @@ function NormalReceipt({ bill, companyName, companyAddress, companyPhone, compan
         )}
       </div>
 
-      <div className="normal-receipt">
+      {/* Printable Area */}
+      <div className="normal-receipt" ref={contentRef}>
         <header className="normal-receipt-header">
           {logo && <img src={logo} alt={name} className="normal-receipt-logo" />}
           <h1 className="normal-receipt-shop-name">{name}</h1>
@@ -79,9 +88,8 @@ function NormalReceipt({ bill, companyName, companyAddress, companyPhone, compan
             <thead>
               <tr>
                 <th>Item</th>
-                <th>Article Code</th>
+                <th>Code</th>
                 <th>Carat</th>
-                <th>Diamond Ct</th>
                 <th>Qty</th>
                 <th>Rate (₹/g)</th>
                 <th>Total</th>
@@ -113,16 +121,14 @@ function NormalReceipt({ bill, companyName, companyAddress, companyPhone, compan
                       </td>
                       <td>{item.articleCode || item.stock?.articleCode || '—'}</td>
                       <td>{carat != null ? String(carat) : '—'}</td>
-                      <td>—</td>
                       <td>{qty}</td>
                       <td>{ratePerGramGold != null ? formatCurrency(ratePerGramGold) : '—'}</td>
                       <td>{formatCurrency(metalAmount)}</td>
                     </tr>,
                     <tr key={`${item.id || idx}-diamond`} className="normal-receipt-diamond-row">
-                      <td>Diamond</td>
+                      <td>Diamond ({diamondCt} ct)</td>
                       <td>—</td>
                       <td>—</td>
-                      <td>{diamondCt != null ? (parseFloat(diamondCt) * qty).toFixed(3) : '—'}</td>
                       <td>{qty}</td>
                       <td>—</td>
                       <td>{formatCurrency(diamondAmt)}</td>
@@ -141,7 +147,6 @@ function NormalReceipt({ bill, companyName, companyAddress, companyPhone, compan
                     </td>
                     <td>{item.articleCode || item.stock?.articleCode || '—'}</td>
                     <td>{carat != null ? String(carat) : '—'}</td>
-                    <td>{diamondCt != null ? String(diamondCt) : '—'}</td>
                     <td>{qty}</td>
                     <td>{rate != null ? formatCurrency(rate) : '—'}</td>
                     <td>{formatCurrency(item.totalPrice)}</td>
@@ -153,26 +158,31 @@ function NormalReceipt({ bill, companyName, companyAddress, companyPhone, compan
         </div>
 
         <div className="normal-receipt-totals">
-          {bill?.totalDiamondAmount != null && parseFloat(bill.totalDiamondAmount) > 0 && (
-            <>
-              <p><span>Gold</span><span>{formatCurrency((parseFloat(bill.totalAmount) || 0) - parseFloat(bill.totalDiamondAmount))}</span></p>
-              <p><span>Diamond</span><span>{formatCurrency(bill.totalDiamondAmount)}</span></p>
-              <p><span>Total (Gold + Diamond)</span><span>{formatCurrency(bill?.totalAmount)}</span></p>
-            </>
-          )}
-          {(!bill?.totalDiamondAmount || parseFloat(bill.totalDiamondAmount) === 0) && (
-            <p><span>Subtotal</span><span>{formatCurrency(bill?.totalAmount)}</span></p>
-          )}
-          <p><span>Discount</span><span>-{formatCurrency(bill?.discountAmount || 0)}</span></p>
-          <p><span>Making Charges</span><span>{formatCurrency(bill?.makingCharges || 0)}</span></p>
-          <p className="normal-receipt-total-row"><span>Total</span><span>{formatCurrency(bill?.finalAmount)}</span></p>
-          {bill?.paidAmount != null && parseFloat(bill.paidAmount) > 0 && (
-            <p><span>Paid</span><span>{formatCurrency(bill.paidAmount)}</span></p>
-          )}
+          <div className="totals-content">
+            {bill?.totalDiamondAmount > 0 && (
+              <>
+                <p><span>Gold:</span> <span>{formatCurrency((parseFloat(bill.totalAmount) || 0) - parseFloat(bill.totalDiamondAmount))}</span></p>
+                <p><span>Diamond:</span> <span>{formatCurrency(bill.totalDiamondAmount)}</span></p>
+              </>
+            )}
+            <p><span>Subtotal:</span> <span>{formatCurrency(bill?.totalAmount)}</span></p>
+            <p><span>Discount:</span> <span>-{formatCurrency(bill?.discountAmount || 0)}</span></p>
+            <p><span>Making Charges:</span> <span>{formatCurrency(bill?.makingCharges || 0)}</span></p>
+            <div className="grand-total-divider"></div>
+            <p className="normal-receipt-total-row">
+              <span><strong>Grand Total:</strong></span> 
+              <span><strong>{formatCurrency(bill?.finalAmount)}</strong></span>
+            </p>
+            {bill?.paidAmount > 0 && (
+              <p><span>Paid Amount:</span> <span>{formatCurrency(bill.paidAmount)}</span></p>
+            )}
+          </div>
         </div>
 
         {bill?.notes && (
-          <p className="normal-receipt-notes"><strong>Notes:</strong> {bill.notes}</p>
+          <div className="normal-receipt-notes">
+            <strong>Notes:</strong> {bill.notes}
+          </div>
         )}
 
         <p className="normal-receipt-thanks">Thank you for your purchase!</p>

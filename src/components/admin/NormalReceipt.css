@@ -2,15 +2,18 @@
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap');
 
 .normal-receipt-wrap {
+  width: 100%;
   max-width: 520px;
   margin: 0 auto;
-  padding: 1.5rem;
+  padding: 1.5rem 1.25rem;
   background: #fff;
   color: #1a1a1a;
   font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   font-size: 15px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+  box-sizing: border-box;
+  overflow-x: hidden;
 }
 
 .normal-receipt-actions.no-print {
@@ -51,8 +54,13 @@
 .normal-receipt {
   border: 1px solid #e2e8f0;
   border-radius: 12px;
-  padding: 1.5rem 2rem;
+  padding: 1.5rem 1.5rem;
+  margin: 0 0.5rem;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  min-height: 0;
 }
 
 .normal-receipt-header {
@@ -90,6 +98,8 @@
   margin: 0.2em 0;
   color: #374151;
   font-size: 0.9rem;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .normal-receipt-title {
@@ -115,11 +125,13 @@
   overflow-x: auto;
   margin-bottom: 1rem;
   -webkit-overflow-scrolling: touch;
+  max-width: 100%;
 }
 
 .normal-receipt-table {
   width: 100%;
-  min-width: 560px;
+  max-width: 100%;
+  min-width: 320px;
   border-collapse: collapse;
   font-size: 0.9rem;
   table-layout: auto;
@@ -128,10 +140,12 @@
 .normal-receipt-table th,
 .normal-receipt-table td {
   border: 1px solid #e2e8f0;
-  padding: 0.5rem 0.4rem;
+  padding: 0.5rem 0.5rem;
   text-align: left;
   vertical-align: middle;
   box-sizing: border-box;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .normal-receipt-table thead th {
@@ -181,10 +195,16 @@
 .normal-receipt-item-img {
   width: 40px;
   height: 40px;
-  object-fit: cover;
+  min-width: 40px;
+  min-height: 40px;
+  max-width: 40px;
+  max-height: 40px;
+  object-fit: contain;
+  object-position: center;
   border-radius: 6px;
   border: 1px solid #e2e8f0;
   flex-shrink: 0;
+  background: #f9fafb;
 }
 
 .normal-receipt-totals {
@@ -222,10 +242,16 @@
 }
 
 /* Print */
+@page {
+  margin: 1.2cm;
+}
+
 @media print {
   .normal-receipt-wrap {
-    padding: 0;
+    padding: 0.75rem;
     max-width: 100%;
+    width: 100%;
+    overflow: visible;
   }
 
   .no-print {
@@ -235,7 +261,15 @@
   .normal-receipt {
     border: none;
     box-shadow: none;
-    padding: 0.5rem 0;
+    padding: 1rem 1.25rem;
+    margin: 0;
+    max-width: 100%;
+  }
+
+  .normal-receipt-item-img {
+    object-fit: contain;
+    max-width: 40px;
+    max-height: 40px;
   }
 
   body {

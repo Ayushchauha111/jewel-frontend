@@ -2,15 +2,18 @@
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap');
 
 .gst-receipt-wrap {
+  width: 100%;
   max-width: 900px;
   margin: 0 auto;
-  padding: 1.5rem;
+  padding: 1.5rem 1.25rem;
   background: #fff;
   color: #1a1a1a;
   font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   font-size: 15px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+  box-sizing: border-box;
+  overflow-x: hidden;
 }
 
 .gst-receipt-actions.no-print {
@@ -51,8 +54,13 @@
 .gst-receipt {
   border: 1px solid #e2e8f0;
   border-radius: 12px;
-  padding: 2rem;
+  padding: 1.75rem 1.5rem;
+  margin: 0 0.5rem;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  min-height: 0;
 }
 
 /* Header: shop info left, Tax Invoice right */
@@ -98,6 +106,8 @@
   font-size: 0.925rem;
   font-weight: 500;
   line-height: 1.45;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .gst-receipt-gstin {
@@ -145,6 +155,11 @@
 .gst-receipt-billto h3,
 .gst-receipt-payment h3,
 .gst-receipt-tax h3,
+.gst-receipt-hsn-section {
+  margin-bottom: 1.25rem;
+}
+
+.gst-receipt-hsn-heading,
 .gst-receipt-hsn h3,
 .gst-receipt-terms h3 {
   margin: 0 0 0.5rem;
@@ -158,16 +173,21 @@
 .gst-receipt-billto p {
   margin: 0.15em 0;
   font-size: 0.9rem;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 /* Table */
 .gst-receipt-table-wrap {
   overflow-x: auto;
   margin-bottom: 1rem;
+  max-width: 100%;
+  -webkit-overflow-scrolling: touch;
 }
 
 .gst-receipt-table {
   width: 100%;
+  max-width: 100%;
   border-collapse: collapse;
   font-size: 0.85rem;
 }
@@ -175,8 +195,10 @@
 .gst-receipt-table th,
 .gst-receipt-table td {
   border: 1px solid #e2e8f0;
-  padding: 0.5rem 0.4rem;
+  padding: 0.5rem 0.5rem;
   text-align: left;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .gst-receipt-table thead th {
@@ -194,8 +216,15 @@
   font-size: 0.9rem;
 }
 
+.gst-receipt-table tbody tr.gst-receipt-diamond-row {
+  background: rgba(201, 162, 39, 0.06);
+  font-weight: 500;
+}
+
 .gst-receipt-cell-design {
   width: 72px;
+  min-width: 72px;
+  max-width: 72px;
   text-align: center;
   vertical-align: middle;
 }
@@ -203,11 +232,18 @@
 .gst-receipt-article-img {
   width: 56px;
   height: 56px;
-  object-fit: cover;
+  min-width: 56px;
+  min-height: 56px;
+  max-width: 56px;
+  max-height: 56px;
+  object-fit: contain;
+  object-position: center;
   border-radius: 6px;
   border: 1px solid #e2e8f0;
   display: block;
   margin: 0 auto;
+  flex-shrink: 0;
+  background: #f9fafb;
 }
 
 .gst-receipt-no-img {
@@ -277,6 +313,10 @@
   text-align: right;
 }
 
+.gst-receipt-hsn-table td:nth-child(2) {
+  text-align: left;
+}
+
 /* Amount in words */
 .gst-receipt-words {
   margin: 0.75rem 0;
@@ -327,10 +367,16 @@
 }
 
 /* Print */
+@page {
+  margin: 1.2cm;
+}
+
 @media print {
   .gst-receipt-wrap {
-    padding: 0;
+    padding: 0.75rem;
     max-width: 100%;
+    width: 100%;
+    overflow: visible;
   }
 
   .no-print {
@@ -340,7 +386,9 @@
   .gst-receipt {
     border: none;
     box-shadow: none;
-    padding: 0.5rem 0;
+    padding: 1rem 1.25rem;
+    margin: 0;
+    max-width: 100%;
   }
 
   .gst-receipt-header {
@@ -354,6 +402,9 @@
 
   .gst-receipt-article-img {
     border-color: #1a1a1a;
+    object-fit: contain;
+    max-width: 56px;
+    max-height: 56px;
   }
 
   body {
