@@ -51,6 +51,8 @@ function BillingManagement() {
   });
   // Cache of calculated price from today's gold rate (stockId -> price); used for Gold items when weight+carat present
   const [itemPrices, setItemPrices] = useState({});
+  // Per-unit making charges from calculate-price API (stockId -> amount); used so invoice shows Making line and we don't double-count
+  const [itemMakingCharges, setItemMakingCharges] = useState({});
   const [pricesLoading, setPricesLoading] = useState(false);
   // Cache of calculated buy-back value (index -> price) when customer sells gold
   const [buyBackPrices, setBuyBackPrices] = useState({});
@@ -115,21 +117,28 @@ function BillingManagement() {
         const params = new URLSearchParams({ weightGrams: String(s.weightGrams), carat: String(s.carat) });
         if (s.makingChargesPerGram != null && s.makingChargesPerGram > 0) params.set('makingChargesPerGram', String(s.makingChargesPerGram));
         const res = await axios.get(`${API_URL}/stock/calculate-price?${params.toString()}`, { headers: getAuthHeaders() });
-        return { id: s.id, price: res.data?.calculatedPrice };
+        return {
+          id: s.id,
+          price: res.data?.calculatedPrice,
+          makingCharges: res.data?.makingCharges != null ? parseFloat(res.data.makingCharges) : 0
+        };
       })
     ).then((results) => {
       if (cancelled) return;
-      const next = {};
+      const nextPrices = {};
+      const nextMaking = {};
       let anyFail = false;
       results.forEach((r, i) => {
         if (r.status === 'fulfilled' && r.value?.price != null) {
-          next[r.value.id] = parseFloat(r.value.price);
+          nextPrices[r.value.id] = parseFloat(r.value.price);
+          if (r.value.makingCharges != null) nextMaking[r.value.id] = r.value.makingCharges;
         } else {
           anyFail = true;
         }
       });
-      setItemPrices(prev => ({ ...prev, ...next }));
-      if (anyFail && Object.keys(next).length === 0) {
+      setItemPrices(prev => ({ ...prev, ...nextPrices }));
+      setItemMakingCharges(prev => ({ ...prev, ...nextMaking }));
+      if (anyFail && Object.keys(nextPrices).length === 0) {
         setError('Set today\'s gold rate in Price Management to calculate item amounts.');
         setTimeout(() => setError(null), 8000);
       }
@@ -274,7 +283,10 @@ function BillingManagement() {
         }
         if (!item.stockId) return null;
         const selectedStock = stock.find(s => s.id === parseInt(item.stockId, 10));
-        const unitPrice = getUnitPrice(selectedStock);
+        const fullUnitPrice = getUnitPrice(selectedStock);
+        const makingPerUnit = getMakingCharges(selectedStock);
+        // Send unit price excluding making so backend totalAmount + makingCharges = correct total; invoice shows Making line
+        const unitPrice = isGoldMetalItem(selectedStock) ? fullUnitPrice - makingPerUnit : fullUnitPrice;
         const qty = parseInt(item.quantity, 10);
         const w = selectedStock?.weightGrams;
         const c = selectedStock?.carat;
@@ -306,12 +318,21 @@ function BillingManagement() {
         return sum + (getDiamondValue(selectedStock) * qty);
       }, 0);
 
+      const totalMakingFromItems = formData.items.reduce((sum, item) => {
+        if (item.isBuyBack || !item.stockId) return sum;
+        const s = stock.find(x => x.id === parseInt(item.stockId, 10));
+        const qty = parseInt(item.quantity, 10) || 1;
+        return sum + getMakingCharges(s) * qty;
+      }, 0);
+      const effectiveMakingCharges = (formData.makingCharges !== '' && formData.makingCharges != null && !isNaN(parseFloat(formData.makingCharges)))
+        ? parseFloat(formData.makingCharges) : Math.round(totalMakingFromItems * 100) / 100;
+
       const billingData = {
         customer: { id: parseInt(formData.customerId) },
         items: billingItems,
         totalDiamondAmount: totalDiamondAmount > 0 ? Math.round(totalDiamondAmount * 100) / 100 : undefined,
         discountAmount: parseFloat(formData.discountAmount) || 0,
-        makingCharges: parseFloat(formData.makingCharges) || 0,
+        makingCharges: effectiveMakingCharges,
         paymentMethod: formData.paymentMethod,
         paidAmount: formData.paidAmount ? parseFloat(formData.paidAmount) : 0,
         notes: formData.notes
@@ -380,6 +401,7 @@ function BillingManagement() {
       notes: ''
     });
     setItemPrices({});
+    setItemMakingCharges({});
     setBuyBackPrices({});
     setShowForm(false);
   };
@@ -497,6 +519,9 @@ function BillingManagement() {
 
   const isDiamondOnly = (s) => s && String(s.material || '').toLowerCase() === 'diamond';
 
+  // Per-unit making charges from API (default/prop or item-level). Used so invoice shows Making line.
+  const getMakingCharges = (s) => (s?.id != null && itemMakingCharges[s.id] != null) ? itemMakingCharges[s.id] : 0;
+
   // Unit price: metal part + diamond part (for Gold+Diamond); Diamond-only = sellingPrice only
   const getUnitPrice = (s) => {
     if (!s) return 0;
@@ -534,8 +559,10 @@ function BillingManagement() {
         headers: getAuthHeaders()
       });
       const price = response.data?.calculatedPrice;
+      const makingCharges = response.data?.makingCharges != null ? parseFloat(response.data.makingCharges) : 0;
       if (price != null) {
         setItemPrices(prev => ({ ...prev, [stockItem.id]: parseFloat(price) }));
+        setItemMakingCharges(prev => ({ ...prev, [stockItem.id]: makingCharges }));
       }
     } catch (err) {
       if (err.response?.status === 400 && !itemPrices[stockItem.id]) {
@@ -634,7 +661,28 @@ function BillingManagement() {
     return calculateSubtotalSales() - calculateBuyBackTotal();
   };
 
-  const finalAmount = calculateTotal() - (parseFloat(formData.discountAmount) || 0) + (parseFloat(formData.makingCharges) || 0);
+  // Subtotal sent to backend: item totals excluding making (so Making can be a separate line on invoice)
+  const calculateSubtotalExcludingMaking = () => {
+    return formData.items.reduce((sum, item) => {
+      if (item.isBuyBack || !item.stockId) return sum;
+      const s = stock.find(x => x.id === parseInt(item.stockId, 10));
+      const qty = parseInt(item.quantity, 10) || 1;
+      const fullUp = getUnitPrice(s);
+      const makingPerUnit = getMakingCharges(s);
+      const unitExcludingMaking = isGoldMetalItem(s) ? fullUp - makingPerUnit : fullUp;
+      return sum + unitExcludingMaking * qty;
+    }, 0);
+  };
+  const totalMakingFromItems = formData.items.reduce((sum, item) => {
+    if (item.isBuyBack || !item.stockId) return sum;
+    const s = stock.find(x => x.id === parseInt(item.stockId, 10));
+    const qty = parseInt(item.quantity, 10) || 1;
+    return sum + getMakingCharges(s) * qty;
+  }, 0);
+  const effectiveMakingCharges = (formData.makingCharges !== '' && formData.makingCharges != null && !isNaN(parseFloat(formData.makingCharges)))
+    ? parseFloat(formData.makingCharges) : Math.round(totalMakingFromItems * 100) / 100;
+
+  const finalAmount = calculateSubtotalExcludingMaking() - calculateBuyBackTotal() - (parseFloat(formData.discountAmount) || 0) + effectiveMakingCharges;
   const paidAmount = parseFloat(formData.paidAmount) || 0;
   const remainingAmount = finalAmount - paidAmount;
 
@@ -970,13 +1018,13 @@ function BillingManagement() {
               <div className="price-bill-summary">
                 <div>
                   <span>Subtotal (items):</span>
-                  <strong>{formatCurrency(calculateSubtotalSales())}</strong>
+                  <strong>{formatCurrency(calculateSubtotalExcludingMaking() - calculateBuyBackTotal())}</strong>
                 </div>
                 {(() => {
                   const totalDiamond = calculateTotalDiamondAmount();
                   if (totalDiamond > 0) {
-                    const subtotalSales = calculateSubtotalSales();
-                    const goldAmount = Math.round((subtotalSales - totalDiamond) * 100) / 100;
+                    const subtotalExMaking = calculateSubtotalExcludingMaking() - calculateBuyBackTotal();
+                    const goldAmount = Math.round((subtotalExMaking - totalDiamond) * 100) / 100;
                     return (
                       <>
                         <div><span>Gold:</span><strong>{formatCurrency(goldAmount)}</strong></div>
@@ -998,7 +1046,7 @@ function BillingManagement() {
                 </div>
                 <div>
                   <span>Making Charges:</span>
-                  <strong>{formatCurrency(formData.makingCharges || 0)}</strong>
+                  <strong>{formatCurrency(effectiveMakingCharges)}</strong>
                 </div>
                 <div className="price-bill-total-row">
                   <span>Total:</span>
