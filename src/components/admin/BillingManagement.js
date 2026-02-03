@@ -67,6 +67,10 @@ function BillingManagement() {
   const [todayGoldRatesByKarat, setTodayGoldRatesByKarat] = useState({});
   // Gold rate per gram per stock (from calculate-price goldRatePerGram), for dropdown – gold only, no GST
   const [itemGoldRatePerGram, setItemGoldRatePerGram] = useState({});
+  // Today's silver rate per gram (from Admin → Rates), for dropdown
+  const [todaySilverPerGram, setTodaySilverPerGram] = useState(null);
+  // Silver rate per gram per stock (from calculate-price-silver), for dropdown
+  const [itemSilverRatePerGram, setItemSilverRatePerGram] = useState({});
   const [selectedBill, setSelectedBill] = useState(null);
   const [loadingBill, setLoadingBill] = useState(false);
   const [showGstReceipt, setShowGstReceipt] = useState(false);
@@ -74,6 +78,10 @@ function BillingManagement() {
   const [showQRAddModal, setShowQRAddModal] = useState(false);
   const [qrAddInput, setQrAddInput] = useState('');
   const [qrScanning, setQrScanning] = useState(false);
+  const [qrZoom, setQrZoom] = useState(1);
+  const [qrTorchOn, setQrTorchOn] = useState(false);
+  const [qrZoomSupported, setQrZoomSupported] = useState(false);
+  const [qrTorchSupported, setQrTorchSupported] = useState(false);
   const qrScannerRef = useRef(null);
   const externalCodeRef = useRef(1);
 
@@ -81,6 +89,8 @@ function BillingManagement() {
   // Gold + Diamond / Silver + Diamond etc.: has metal weight + carat, can use rate for metal part when sellingPrice not set
   const hasMetalWeightAndCarat = (s) => s && (s.weightGrams != null && s.weightGrams > 0) && (s.carat != null && s.carat > 0);
   const isGoldMetalItem = (s) => s && String(s.material || '').toLowerCase().includes('gold') && hasMetalWeightAndCarat(s);
+  const hasMetalWeight = (s) => s && (s.weightGrams != null && parseFloat(s.weightGrams) > 0);
+  const isSilverMetalItem = (s) => s && String(s.material || '').toLowerCase().includes('silver') && hasMetalWeight(s);
   const isDiamondItem = (s) => s && String(s.material || '').toLowerCase().includes('diamond');
 
   const openBillDetail = async (billId) => {
@@ -123,6 +133,7 @@ function BillingManagement() {
       .then((res) => {
         if (cancelled || !res.data) return;
         if (res.data.makingChargesPerGram != null) setDefaultMakingPerGram(parseFloat(res.data.makingChargesPerGram));
+        if (res.data.silverPerGram != null && !isNaN(parseFloat(res.data.silverPerGram))) setTodaySilverPerGram(parseFloat(res.data.silverPerGram));
         const rates = {};
         [10, 12, 14, 18, 20, 21, 22, 24].forEach(k => {
           const v = res.data[`gold${k}K`];
@@ -134,37 +145,53 @@ function BillingManagement() {
     return () => { cancelled = true; };
   }, [showForm]);
 
-  // Pre-fetch calculated prices for Gold and Gold + Diamond (metal part) when Create Bill form is opened
+  // Pre-fetch calculated prices for Gold, Silver, and Gold+Diamond (metal part) when Create Bill form is opened
   useEffect(() => {
     if (!showForm || !stock.length) return;
     const goldMetalItems = stock.filter(isGoldMetalItem);
-    if (goldMetalItems.length === 0) return;
+    const silverMetalItems = stock.filter(isSilverMetalItem);
+    if (goldMetalItems.length === 0 && silverMetalItems.length === 0) return;
     let cancelled = false;
     setPricesLoading(true);
-    Promise.allSettled(
-      goldMetalItems.map(async (s) => {
-        const params = new URLSearchParams({ weightGrams: String(s.weightGrams), carat: String(s.carat) });
-        if (s.makingChargesPerGram != null && s.makingChargesPerGram > 0) params.set('makingChargesPerGram', String(s.makingChargesPerGram));
-        if (s.category) params.set('category', s.category);
-        const res = await axios.get(`${API_URL}/stock/calculate-price?${params.toString()}`, { headers: getAuthHeaders() });
-        return {
-          id: s.id,
-          price: res.data?.calculatedPrice,
-          makingCharges: res.data?.makingCharges != null ? parseFloat(res.data.makingCharges) : 0,
-          goldRatePerGram: res.data?.goldRatePerGram != null ? parseFloat(res.data.goldRatePerGram) : null
-        };
-      })
-    ).then((results) => {
+    const goldPromises = goldMetalItems.map(async (s) => {
+      const params = new URLSearchParams({ weightGrams: String(s.weightGrams), carat: String(s.carat) });
+      if (s.makingChargesPerGram != null && s.makingChargesPerGram > 0) params.set('makingChargesPerGram', String(s.makingChargesPerGram));
+      if (s.category) params.set('category', s.category);
+      const res = await axios.get(`${API_URL}/stock/calculate-price?${params.toString()}`, { headers: getAuthHeaders() });
+      return {
+        id: s.id,
+        price: res.data?.calculatedPrice,
+        makingCharges: res.data?.makingCharges != null ? parseFloat(res.data.makingCharges) : 0,
+        goldRatePerGram: res.data?.goldRatePerGram != null ? parseFloat(res.data.goldRatePerGram) : null,
+        silverRatePerGram: null
+      };
+    });
+    const silverPromises = silverMetalItems.map(async (s) => {
+      const params = new URLSearchParams({ weightGrams: String(s.weightGrams) });
+      if (s.makingChargesPerGram != null && s.makingChargesPerGram > 0) params.set('makingChargesPerGram', String(s.makingChargesPerGram));
+      if (s.category) params.set('category', s.category);
+      const res = await axios.get(`${API_URL}/stock/calculate-price-silver?${params.toString()}`, { headers: getAuthHeaders() });
+      return {
+        id: s.id,
+        price: res.data?.calculatedPrice,
+        makingCharges: res.data?.makingCharges != null ? parseFloat(res.data.makingCharges) : 0,
+        goldRatePerGram: null,
+        silverRatePerGram: res.data?.silverRatePerGram != null ? parseFloat(res.data.silverRatePerGram) : null
+      };
+    });
+    Promise.allSettled([...goldPromises, ...silverPromises]).then((results) => {
       if (cancelled) return;
       const nextPrices = {};
       const nextMaking = {};
       const nextGoldRate = {};
+      const nextSilverRate = {};
       let anyFail = false;
-      results.forEach((r, i) => {
+      results.forEach((r) => {
         if (r.status === 'fulfilled' && r.value?.price != null) {
           nextPrices[r.value.id] = parseFloat(r.value.price);
           if (r.value.makingCharges != null) nextMaking[r.value.id] = r.value.makingCharges;
           if (r.value.goldRatePerGram != null) nextGoldRate[r.value.id] = r.value.goldRatePerGram;
+          if (r.value.silverRatePerGram != null) nextSilverRate[r.value.id] = r.value.silverRatePerGram;
         } else {
           anyFail = true;
         }
@@ -172,6 +199,7 @@ function BillingManagement() {
       setItemPrices(prev => ({ ...prev, ...nextPrices }));
       setItemMakingCharges(prev => ({ ...prev, ...nextMaking }));
       setItemGoldRatePerGram(prev => ({ ...prev, ...nextGoldRate }));
+      setItemSilverRatePerGram(prev => ({ ...prev, ...nextSilverRate }));
       if (anyFail && Object.keys(nextPrices).length === 0) {
         setError('Set today\'s gold rate in Price Management to calculate item amounts.');
         setTimeout(() => setError(null), 8000);
@@ -554,7 +582,7 @@ function BillingManagement() {
       ...prev,
       items: [...prev.items, { stockId: String(found.id), quantity: 1, overrideRatePerGram: '' }]
     }));
-    if (isGoldMetalItem(found) && itemPrices[found.id] == null) {
+    if ((isGoldMetalItem(found) || isSilverMetalItem(found)) && itemPrices[found.id] == null) {
       fetchCalculatedPriceForStock(found);
     }
     setQrAddInput('');
@@ -568,15 +596,26 @@ function BillingManagement() {
   // Start/stop camera scanner when "Scan with camera" is active (delay so DOM element is mounted)
   useEffect(() => {
     if (!showQRAddModal || !qrScanning) return;
+    setQrZoomSupported(false);
+    setQrTorchSupported(false);
+    setQrTorchOn(false);
     let cancelled = false;
     const timer = setTimeout(() => {
       const el = document.getElementById('billing-qr-reader');
       if (cancelled || !el) return;
       const scanner = new Html5Qrcode('billing-qr-reader');
       qrScannerRef.current = scanner;
+      const scanConfig = {
+        fps: 20,
+        qrbox: (viewfinderWidth, viewfinderHeight) => {
+          const size = Math.min(viewfinderWidth, viewfinderHeight, 280);
+          return { width: Math.max(200, size), height: Math.max(200, size) };
+        },
+        aspectRatio: 1
+      };
       scanner.start(
         { facingMode: 'environment' },
-        { fps: 10, qrbox: { width: 250, height: 250 } },
+        scanConfig,
         (decodedText) => {
           if (!addItemFromScannedData(decodedText)) return;
           scanner.stop().catch(() => {}).finally(() => {
@@ -584,7 +623,14 @@ function BillingManagement() {
           });
         },
         () => {}
-      ).catch((err) => {
+      ).then(() => {
+        if (cancelled || !qrScannerRef.current) return;
+        try {
+          const caps = scanner.getRunningTrackCameraCapabilities?.();
+          if (caps?.zoomFeature?.()?.isSupported?.()) setQrZoomSupported(true);
+          if (caps?.torchFeature?.()?.isSupported?.()) setQrTorchSupported(true);
+        } catch (_) {}
+      }).catch((err) => {
         if (cancelled) return;
         setError('Camera access failed: ' + (err?.message || 'Permission denied. Use HTTPS or localhost.'));
         setTimeout(() => setError(null), 5000);
@@ -602,6 +648,32 @@ function BillingManagement() {
       }
     };
   }, [showQRAddModal, qrScanning]);
+
+  const applyQrZoom = (factor) => {
+    const sc = qrScannerRef.current;
+    if (!sc) return;
+    try {
+      const caps = sc.getRunningTrackCameraCapabilities?.();
+      const zoomF = caps?.zoomFeature?.();
+      if (!zoomF?.isSupported?.()) return;
+      const minV = zoomF.min?.() ?? 1;
+      const maxV = zoomF.max?.() ?? 10;
+      const clamped = Math.max(minV, Math.min(maxV, factor));
+      zoomF.apply(clamped).then(() => setQrZoom(clamped)).catch(() => {});
+    } catch (_) {}
+  };
+
+  const toggleQrTorch = () => {
+    const sc = qrScannerRef.current;
+    if (!sc) return;
+    try {
+      const caps = sc.getRunningTrackCameraCapabilities?.();
+      const torchF = caps?.torchFeature?.();
+      if (!torchF?.isSupported?.()) return;
+      const next = !qrTorchOn;
+      torchF.apply(next).then(() => setQrTorchOn(next)).catch(() => {});
+    } catch (_) {}
+  };
 
   const removeItem = (index) => {
     const newItems = formData.items.filter((_, i) => i !== index);
@@ -628,47 +700,54 @@ function BillingManagement() {
   // Per-unit making charges from API (default/prop or item-level). Used so invoice shows Making line.
   const getMakingCharges = (s) => (s?.id != null && itemMakingCharges[s.id] != null) ? itemMakingCharges[s.id] : 0;
 
-  // Gold rate per gram for display only – no GST (from calculate-price or today's rates). Used in item dropdown.
+  // Rate per gram for display – gold or silver (from calculate-price / calculate-price-silver or today's rates). Used in item dropdown.
   const getDisplayRatePerGram = (s) => {
-    if (!s || !isGoldMetalItem(s)) return null;
-    if (itemGoldRatePerGram[s.id] != null) return itemGoldRatePerGram[s.id];
-    const carat = s.carat != null ? parseInt(s.carat, 10) : null;
-    if (carat != null && todayGoldRatesByKarat[carat] != null) return todayGoldRatesByKarat[carat];
+    if (!s) return null;
+    if (isGoldMetalItem(s)) {
+      if (itemGoldRatePerGram[s.id] != null) return itemGoldRatePerGram[s.id];
+      const carat = s.carat != null ? parseInt(s.carat, 10) : null;
+      if (carat != null && todayGoldRatesByKarat[carat] != null) return todayGoldRatesByKarat[carat];
+      return null;
+    }
+    if (isSilverMetalItem(s)) {
+      if (itemSilverRatePerGram[s.id] != null) return itemSilverRatePerGram[s.id];
+      return todaySilverPerGram;
+    }
     return null;
   };
 
-  // Effective unit price for a line item: uses override rate, else gold rate from dropdown (getDisplayRatePerGram) × weight + diamond, else getUnitPrice(s)
+  // Effective unit price for a line item: uses override rate, else gold/silver rate × weight + diamond (for Gold+Diamond or Silver+Diamond), else getUnitPrice(s)
   const getEffectiveUnitPriceForItem = (item, s) => {
     if (!s) return 0;
     const w = parseFloat(s.weightGrams);
     let rate = 0;
     const override = item?.overrideRatePerGram != null && item.overrideRatePerGram !== '' && !isNaN(parseFloat(item.overrideRatePerGram));
     if (override) rate = parseFloat(item.overrideRatePerGram);
-    else if (isGoldMetalItem(s) && w > 0) rate = getDisplayRatePerGram(s) ?? 0;
-    if (rate > 0 && w > 0 && isGoldMetalItem(s)) {
+    else if ((isGoldMetalItem(s) || isSilverMetalItem(s)) && w > 0) rate = getDisplayRatePerGram(s) ?? 0;
+    if (rate > 0 && w > 0) {
       const metalPart = rate * w;
-      const diamondPart = getDiamondValue(s);
+      const diamondPart = (isGoldMetalItem(s) || isSilverMetalItem(s)) ? getDiamondValue(s) : 0;
       return Math.round((metalPart + diamondPart) * 100) / 100;
     }
     return getUnitPrice(s);
   };
 
-  // Unit value for subtotal (items): gold rate × weight + diamond (no making, no GST). Uses override or display rate.
+  // Unit value for subtotal (items): gold/silver rate × weight + diamond (for Gold+Diamond or Silver+Diamond) (no making, no GST). Uses override or display rate.
   const getSubtotalUnitValue = (item, s) => {
     if (!s) return 0;
     const w = parseFloat(s.weightGrams);
     let rate = 0;
     const override = item?.overrideRatePerGram != null && item.overrideRatePerGram !== '' && !isNaN(parseFloat(item.overrideRatePerGram));
     if (override) rate = parseFloat(item.overrideRatePerGram);
-    else if (isGoldMetalItem(s) && w > 0) rate = getDisplayRatePerGram(s) ?? 0;
-    if (rate > 0 && w > 0 && isGoldMetalItem(s)) {
+    else if ((isGoldMetalItem(s) || isSilverMetalItem(s)) && w > 0) rate = getDisplayRatePerGram(s) ?? 0;
+    if (rate > 0 && w > 0 && (isGoldMetalItem(s) || isSilverMetalItem(s))) {
       const metalPart = rate * w;
-      const diamondPart = getDiamondValue(s);
+      const diamondPart = getDiamondValue(s); // include diamond for both Gold+Diamond and Silver+Diamond
       return Math.round((metalPart + diamondPart) * 100) / 100;
     }
     const fullUp = getUnitPrice(s);
     const makingPerUnit = getMakingCharges(s);
-    return isGoldMetalItem(s) ? fullUp - makingPerUnit : fullUp;
+    return (isGoldMetalItem(s) || isSilverMetalItem(s)) ? fullUp - makingPerUnit : fullUp;
   };
 
   // Unit price: metal part + diamond part (for Gold+Diamond); Diamond-only = sellingPrice only
@@ -683,7 +762,7 @@ function BillingManagement() {
       // Gold + Diamond etc.: metal part + diamond part
       const sp = s.sellingPrice;
       if (sp != null && sp > 0) metalPart = parseFloat(sp);
-      else if (isGoldMetalItem(s) && itemPrices[s.id] != null) metalPart = itemPrices[s.id];
+      else if ((isGoldMetalItem(s) || isSilverMetalItem(s)) && itemPrices[s.id] != null) metalPart = itemPrices[s.id];
       const diamondPart = getDiamondValue(s);
       return Math.round((metalPart + diamondPart) * 100) / 100;
     }
@@ -692,36 +771,55 @@ function BillingManagement() {
       const sp = s.sellingPrice;
       metalPart = (sp != null && sp > 0) ? parseFloat(sp) : 0;
     }
-    const diamondPart = getDiamondValue(s);
+    const diamondPart = isGoldMetalItem(s) ? getDiamondValue(s) : 0;
     return Math.round((metalPart + diamondPart) * 100) / 100;
   };
 
   const fetchCalculatedPriceForStock = async (stockItem) => {
-    if (!isGoldMetalItem(stockItem)) return;
-    try {
-      const params = new URLSearchParams({
-        weightGrams: String(stockItem.weightGrams),
-        carat: String(stockItem.carat)
-      });
-      if (stockItem.makingChargesPerGram != null && stockItem.makingChargesPerGram > 0) params.set('makingChargesPerGram', String(stockItem.makingChargesPerGram));
-      if (stockItem.category) params.set('category', stockItem.category);
-      const response = await axios.get(`${API_URL}/stock/calculate-price?${params.toString()}`, {
-        headers: getAuthHeaders()
-      });
-      const price = response.data?.calculatedPrice;
-      const makingCharges = response.data?.makingCharges != null ? parseFloat(response.data.makingCharges) : 0;
-      const goldRatePerGram = response.data?.goldRatePerGram != null ? parseFloat(response.data.goldRatePerGram) : null;
-      if (price != null) {
-        setItemPrices(prev => ({ ...prev, [stockItem.id]: parseFloat(price) }));
-        setItemMakingCharges(prev => ({ ...prev, [stockItem.id]: makingCharges }));
-        if (goldRatePerGram != null) setItemGoldRatePerGram(prev => ({ ...prev, [stockItem.id]: goldRatePerGram }));
+    if (isGoldMetalItem(stockItem)) {
+      try {
+        const params = new URLSearchParams({ weightGrams: String(stockItem.weightGrams), carat: String(stockItem.carat) });
+        if (stockItem.makingChargesPerGram != null && stockItem.makingChargesPerGram > 0) params.set('makingChargesPerGram', String(stockItem.makingChargesPerGram));
+        if (stockItem.category) params.set('category', stockItem.category);
+        const response = await axios.get(`${API_URL}/stock/calculate-price?${params.toString()}`, { headers: getAuthHeaders() });
+        const price = response.data?.calculatedPrice;
+        const makingCharges = response.data?.makingCharges != null ? parseFloat(response.data.makingCharges) : 0;
+        const goldRatePerGram = response.data?.goldRatePerGram != null ? parseFloat(response.data.goldRatePerGram) : null;
+        if (price != null) {
+          setItemPrices(prev => ({ ...prev, [stockItem.id]: parseFloat(price) }));
+          setItemMakingCharges(prev => ({ ...prev, [stockItem.id]: makingCharges }));
+          if (goldRatePerGram != null) setItemGoldRatePerGram(prev => ({ ...prev, [stockItem.id]: goldRatePerGram }));
+        }
+      } catch (err) {
+        if (err.response?.status === 400 && !itemPrices[stockItem.id]) {
+          setError(err.response?.data?.error || 'Set today\'s gold rate in Price Management to calculate amounts.');
+          setTimeout(() => setError(null), 6000);
+        }
+        console.error('Error fetching calculated price for stock:', err);
       }
-    } catch (err) {
-      if (err.response?.status === 400 && !itemPrices[stockItem.id]) {
-        setError(err.response?.data?.error || 'Set today\'s gold rate in Price Management to calculate amounts.');
-        setTimeout(() => setError(null), 6000);
+      return;
+    }
+    if (isSilverMetalItem(stockItem)) {
+      try {
+        const params = new URLSearchParams({ weightGrams: String(stockItem.weightGrams) });
+        if (stockItem.makingChargesPerGram != null && stockItem.makingChargesPerGram > 0) params.set('makingChargesPerGram', String(stockItem.makingChargesPerGram));
+        if (stockItem.category) params.set('category', stockItem.category);
+        const response = await axios.get(`${API_URL}/stock/calculate-price-silver?${params.toString()}`, { headers: getAuthHeaders() });
+        const price = response.data?.calculatedPrice;
+        const makingCharges = response.data?.makingCharges != null ? parseFloat(response.data.makingCharges) : 0;
+        const silverRatePerGram = response.data?.silverRatePerGram != null ? parseFloat(response.data.silverRatePerGram) : null;
+        if (price != null) {
+          setItemPrices(prev => ({ ...prev, [stockItem.id]: parseFloat(price) }));
+          setItemMakingCharges(prev => ({ ...prev, [stockItem.id]: makingCharges }));
+          if (silverRatePerGram != null) setItemSilverRatePerGram(prev => ({ ...prev, [stockItem.id]: silverRatePerGram }));
+        }
+      } catch (err) {
+        if (err.response?.status === 400 && !itemPrices[stockItem.id]) {
+          setError(err.response?.data?.error || 'Set today\'s silver rate in Rates to calculate amounts.');
+          setTimeout(() => setError(null), 6000);
+        }
+        console.error('Error fetching calculated price for silver stock:', err);
       }
-      console.error('Error fetching calculated price for stock:', err);
     }
   };
 
@@ -731,7 +829,7 @@ function BillingManagement() {
     setFormData({ ...formData, items: newItems });
     if (stockId) {
       const s = stock.find(x => x.id === parseInt(stockId, 10));
-      if (isGoldMetalItem(s) && itemPrices[s.id] == null) {
+      if ((isGoldMetalItem(s) || isSilverMetalItem(s)) && itemPrices[s.id] == null) {
         fetchCalculatedPriceForStock(s);
       }
     }
@@ -817,6 +915,38 @@ function BillingManagement() {
       const selectedStock = stock.find(s => s.id === parseInt(item.stockId, 10));
       const qty = parseInt(item.quantity, 10) || 1;
       return sum + (getDiamondValue(selectedStock) * qty);
+    }, 0);
+  };
+
+  // Metal-only amount for gold items (rate × weight × qty), for summary breakdown
+  const calculateTotalGoldMetalAmount = () => {
+    return formData.items.reduce((sum, item) => {
+      if (item.isBuyBack || !item.stockId) return sum;
+      const s = stock.find(x => x.id === parseInt(item.stockId, 10));
+      if (!isGoldMetalItem(s)) return sum;
+      const w = parseFloat(s.weightGrams);
+      let rate = 0;
+      const override = item?.overrideRatePerGram != null && item.overrideRatePerGram !== '' && !isNaN(parseFloat(item.overrideRatePerGram));
+      if (override) rate = parseFloat(item.overrideRatePerGram);
+      else rate = getDisplayRatePerGram(s) ?? 0;
+      const qty = parseInt(item.quantity, 10) || 1;
+      return sum + (rate > 0 && w > 0 ? Math.round(rate * w * qty * 100) / 100 : 0);
+    }, 0);
+  };
+
+  // Metal-only amount for silver items (rate × weight × qty), for summary breakdown
+  const calculateTotalSilverMetalAmount = () => {
+    return formData.items.reduce((sum, item) => {
+      if (item.isBuyBack || !item.stockId) return sum;
+      const s = stock.find(x => x.id === parseInt(item.stockId, 10));
+      if (!isSilverMetalItem(s)) return sum;
+      const w = parseFloat(s.weightGrams);
+      let rate = 0;
+      const override = item?.overrideRatePerGram != null && item.overrideRatePerGram !== '' && !isNaN(parseFloat(item.overrideRatePerGram));
+      if (override) rate = parseFloat(item.overrideRatePerGram);
+      else rate = getDisplayRatePerGram(s) ?? 0;
+      const qty = parseInt(item.quantity, 10) || 1;
+      return sum + (rate > 0 && w > 0 ? Math.round(rate * w * qty * 100) / 100 : 0);
     }, 0);
   };
 
@@ -1201,6 +1331,8 @@ function BillingManagement() {
                                 parts.push('Diamond', s.carat != null ? `${s.carat} ct` : null, formatCurrency(getUnitPrice(s)));
                               } else if (diamondWithMetal) {
                                 parts.push(s.material, s.weightGrams != null ? `${s.weightGrams}g` : null, s.carat != null ? (mat.includes('gold') ? `${s.carat}K` : `${s.carat}`) : null, s.diamondCarat != null ? `${s.diamondCarat} ct D` : null, rateStr || '—');
+                              } else if (isSilverMetalItem(s)) {
+                                parts.push(s.weightGrams != null ? `${s.weightGrams}g` : null, s.carat != null ? `${s.carat}K` : null, rateStr || '—');
                               } else {
                                 parts.push(`${s.weightGrams}g`, `${s.carat}K`, rateStr || '—');
                               }
@@ -1254,7 +1386,7 @@ function BillingManagement() {
                         </div>
                         {(() => {
                           const sel = stock.find(s => s.id === parseInt(item.stockId, 10));
-                          const hasWeight = sel?.weightGrams != null && parseFloat(sel.weightGrams) > 0 && isGoldMetalItem(sel);
+                          const hasWeight = sel?.weightGrams != null && parseFloat(sel.weightGrams) > 0 && (isGoldMetalItem(sel) || isSilverMetalItem(sel));
                           const effUnit = sel ? getEffectiveUnitPriceForItem(item, sel) : 0;
                           const qty = parseInt(item.quantity, 10) || 1;
                           return (
@@ -1294,7 +1426,7 @@ function BillingManagement() {
 
               {showQRAddModal && (
                 <div className="stock-modal-overlay" style={{ zIndex: 10002 }} onClick={() => { setShowQRAddModal(false); setQrAddInput(''); setQrScanning(false); }}>
-                  <div className="stock-modal-content" style={{ maxWidth: qrScanning ? '320px' : '400px' }} onClick={(e) => e.stopPropagation()}>
+                  <div className="stock-modal-content" style={{ maxWidth: qrScanning ? '360px' : '400px' }} onClick={(e) => e.stopPropagation()}>
                     <div className="stock-form-card">
                       <div className="stock-form-header" style={{ marginBottom: '1rem' }}>
                         <h3>Add item by QR</h3>
@@ -1303,8 +1435,38 @@ function BillingManagement() {
                       {qrScanning ? (
                         <>
                           <p style={{ fontSize: '0.9rem', color: '#64748b', marginBottom: '0.75rem' }}>Point the camera at the article&apos;s QR code.</p>
-                          <div id="billing-qr-reader" style={{ width: '100%', minHeight: '280px', marginBottom: '1rem', borderRadius: '8px', overflow: 'hidden', background: '#1a1a1a' }} />
-                          <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                          <div className="billing-qr-reader-wrap">
+                            <div id="billing-qr-reader" className="billing-qr-reader" />
+                          </div>
+                          <div className="billing-qr-controls">
+                            {qrZoomSupported && (
+                              <div className="billing-qr-zoom">
+                                <span className="billing-qr-control-label">Zoom</span>
+                                {[1, 2, 5].map((factor) => (
+                                  <button
+                                    key={factor}
+                                    type="button"
+                                    className={`billing-qr-zoom-btn ${qrZoom === factor ? 'active' : ''}`}
+                                    onClick={() => { setQrZoom(factor); applyQrZoom(factor); }}
+                                  >
+                                    {factor}X
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                            {qrTorchSupported && (
+                              <button
+                                type="button"
+                                className={`billing-qr-flash-btn ${qrTorchOn ? 'on' : ''}`}
+                                onClick={toggleQrTorch}
+                                title={qrTorchOn ? 'Turn off flash' : 'Turn on flash'}
+                                aria-label={qrTorchOn ? 'Flash on' : 'Flash off'}
+                              >
+                                {qrTorchOn ? '🔦 Flash ON' : '💡 Flash'}
+                              </button>
+                            )}
+                          </div>
+                          <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', marginTop: '1rem' }}>
                             <button type="button" onClick={() => setQrScanning(false)} className="price-action-btn secondary">Cancel scan</button>
                           </div>
                         </>
@@ -1340,18 +1502,18 @@ function BillingManagement() {
                   <strong>{formatCurrency(calculateSubtotalExcludingMaking() - calculateBuyBackTotal())}</strong>
                 </div>
                 {(() => {
+                  const totalGold = calculateTotalGoldMetalAmount();
+                  const totalSilver = calculateTotalSilverMetalAmount();
                   const totalDiamond = calculateTotalDiamondAmount();
-                  if (totalDiamond > 0) {
-                    const subtotalExMaking = calculateSubtotalExcludingMaking() - calculateBuyBackTotal();
-                    const goldAmount = Math.round((subtotalExMaking - totalDiamond) * 100) / 100;
-                    return (
-                      <>
-                        <div><span>Gold:</span><strong>{formatCurrency(goldAmount)}</strong></div>
-                        <div><span>Diamond:</span><strong>{formatCurrency(totalDiamond)}</strong></div>
-                      </>
-                    );
-                  }
-                  return null;
+                  const showBreakdown = totalGold > 0 || totalSilver > 0 || totalDiamond > 0;
+                  if (!showBreakdown) return null;
+                  return (
+                    <>
+                      {totalGold > 0 && <div><span>Gold:</span><strong>{formatCurrency(totalGold)}</strong></div>}
+                      {totalSilver > 0 && <div><span>Silver:</span><strong>{formatCurrency(totalSilver)}</strong></div>}
+                      {totalDiamond > 0 && <div><span>Diamond:</span><strong>{formatCurrency(totalDiamond)}</strong></div>}
+                    </>
+                  );
                 })()}
                 {calculateBuyBackTotal() > 0 && (
                   <div className="price-bill-buyback">

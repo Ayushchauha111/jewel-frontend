@@ -23,6 +23,7 @@ function RatesManagement() {
     priceDate: new Date().toISOString().split('T')[0],
     ...Object.fromEntries(GOLD_CARATS.map(c => [`gold${c}K`, ''])),
     silverPerGram: '',
+    silverPurityPercentage: '',  // e.g. 92.5 or 999 for accuracy
     diamondPerCarat: '',
     makingChargesPerGram: '',
     notes: ''
@@ -75,6 +76,7 @@ function RatesManagement() {
         gold22K: formData.gold22K ? parseFloat(formData.gold22K) : null,
         gold24K: formData.gold24K ? parseFloat(formData.gold24K) : null,
         silverPerGram: formData.silverPerGram ? parseFloat(formData.silverPerGram) : null,
+        silverPurityPercentage: formData.silverPurityPercentage ? parseFloat(formData.silverPurityPercentage) : null,
         diamondPerCarat: formData.diamondPerCarat ? parseFloat(formData.diamondPerCarat) : null,
         makingChargesPerGram: formData.makingChargesPerGram ? parseFloat(formData.makingChargesPerGram) : null,
         notes: formData.notes?.trim() || null
@@ -99,6 +101,7 @@ function RatesManagement() {
       priceDate: new Date().toISOString().split('T')[0],
       ...Object.fromEntries(GOLD_CARATS.map(c => [`gold${c}K`, ''])),
       silverPerGram: '',
+      silverPurityPercentage: '',
       diamondPerCarat: '',
       makingChargesPerGram: '',
       notes: ''
@@ -127,6 +130,7 @@ function RatesManagement() {
     return {
       ...Object.fromEntries(GOLD_CARATS.map(c => [`gold${c}K`, r[`gold${c}K`] != null ? String(r[`gold${c}K`]) : ''])),
       silverPerGram: r.silverPerGram != null ? String(r.silverPerGram) : '',
+      silverPurityPercentage: r.silverPurityPercentage != null ? String(r.silverPurityPercentage) : '',
       diamondPerCarat: r.diamondPerCarat != null ? String(r.diamondPerCarat) : '',
       makingChargesPerGram: r.makingChargesPerGram != null ? String(r.makingChargesPerGram) : '',
       notes: r.notes?.trim() ?? ''
@@ -246,7 +250,8 @@ function RatesManagement() {
                 />
               </div>
               <div className="price-form-group">
-                <label>Gold – price per gram (₹) by carat</label>
+                <label>Gold – rate (₹/g) + accuracy (by karat)</label>
+                <p className="price-form-hint">Set rate per gram for each purity (10K–24K).</p>
                 <div className="rates-gold-grid">
                   {GOLD_CARATS.map(c => (
                     <div key={c} className="rates-gold-cell">
@@ -265,14 +270,24 @@ function RatesManagement() {
               </div>
               <div className="price-form-grid">
                 <div className="price-form-group">
-                  <label>Silver – price per gram (₹)</label>
+                  <label>Silver – rate (₹/g) + accuracy (purity %)</label>
                   <input
                     type="number"
                     step="0.01"
                     min="0"
                     value={formData.silverPerGram}
                     onChange={(e) => setFormData({ ...formData, silverPerGram: e.target.value })}
-                    placeholder="e.g. 85.50"
+                    placeholder="Rate ₹/g e.g. 95"
+                  />
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max="100"
+                    value={formData.silverPurityPercentage}
+                    onChange={(e) => setFormData({ ...formData, silverPurityPercentage: e.target.value })}
+                    placeholder="Purity % e.g. 92.5 or 99.9"
+                    style={{ marginTop: '0.5rem' }}
                   />
                 </div>
                 <div className="price-form-group">

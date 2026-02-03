@@ -17,7 +17,12 @@ const SORT_OPTIONS = [
 
 const isGoldWithWeightCarat = (p) =>
   p && (p.weightGrams != null && p.weightGrams > 0) && (p.carat != null && p.carat > 0) && String(p.material || '').toLowerCase().includes('gold');
-const needsEstimatedPrice = (p) => isGoldWithWeightCarat(p) && (!p.sellingPrice || Number(p.sellingPrice) <= 0);
+const isSilverWithWeight = (p) =>
+  p && (p.weightGrams != null && parseFloat(p.weightGrams) > 0) && String(p.material || '').toLowerCase().includes('silver');
+const needsEstimatedPrice = (p) => {
+  if (p.sellingPrice != null && Number(p.sellingPrice) > 0) return false;
+  return (isGoldWithWeightCarat(p) || isSilverWithWeight(p));
+};
 
 function ProductCatalog() {
   const [products, setProducts] = useState([]);
@@ -25,6 +30,7 @@ function ProductCatalog() {
   const [cart, setCart] = useState([]);
   const [loading, setLoading] = useState(true);
   const [estimatedPrices, setEstimatedPrices] = useState({});
+  const [diamondRatePerCarat, setDiamondRatePerCarat] = useState(null);
   const [addFeedback, setAddFeedback] = useState(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -57,41 +63,84 @@ function ProductCatalog() {
     } catch (_) {}
   }, []);
 
-  // Fetch estimated prices for gold items without selling price (public API)
+  // Fetch diamond rate for Silver+Diamond price (public)
+  useEffect(() => {
+    let cancelled = false;
+    axios.get(`${API_URL}/rates/rate?metal=DIAMOND`).then((res) => {
+      if (!cancelled && res.data?.ratePerCarat != null) setDiamondRatePerCarat(parseFloat(res.data.ratePerCarat));
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
+
+  // Fetch estimated prices for gold and silver items without selling price (public API)
   useEffect(() => {
     if (!products.length) return;
     const toFetch = products.filter(needsEstimatedPrice);
     if (toFetch.length === 0) return;
-    const priceKey = (w, c, mc) => `${w}_${c}_${mc ?? 'd'}`;
-    const seen = new Set();
-    const unique = toFetch.filter((p) => {
-      const k = priceKey(p.weightGrams, p.carat, p.makingChargesPerGram);
-      if (seen.has(k)) return false;
-      seen.add(k);
+
+    const goldItems = toFetch.filter(isGoldWithWeightCarat);
+    const silverItems = toFetch.filter(isSilverWithWeight);
+
+    const priceKeyGold = (w, c, mc) => `g_${w}_${c}_${mc ?? 'd'}`;
+    const priceKeySilver = (w, cat, mc) => `s_${w}_${cat ?? ''}_${mc ?? 'd'}`;
+    const seenGold = new Set();
+    const seenSilver = new Set();
+    const uniqueGold = goldItems.filter((p) => {
+      const k = priceKeyGold(p.weightGrams, p.carat, p.makingChargesPerGram);
+      if (seenGold.has(k)) return false;
+      seenGold.add(k);
       return true;
     });
-    Promise.all(
-      unique.map(async (p) => {
-        try {
-          const params = new URLSearchParams({ weightGrams: String(p.weightGrams), carat: String(p.carat) });
-          if (p.makingChargesPerGram != null && p.makingChargesPerGram > 0) params.set('makingChargesPerGram', String(p.makingChargesPerGram));
-          if (p.category) params.set('category', p.category);
-          const res = await axios.get(`${API_URL}/stock/estimate-price?${params}`);
-          const total = res.data?.totalPrice != null ? parseFloat(res.data.totalPrice) : null;
-          return { key: priceKey(p.weightGrams, p.carat, p.makingChargesPerGram), total };
-        } catch (_) {
-          return { key: priceKey(p.weightGrams, p.carat, p.makingChargesPerGram), total: null };
-        }
-      })
-    ).then((results) => {
+    const uniqueSilver = silverItems.filter((p) => {
+      const k = priceKeySilver(p.weightGrams, p.category, p.makingChargesPerGram);
+      if (seenSilver.has(k)) return false;
+      seenSilver.add(k);
+      return true;
+    });
+
+    const goldPromises = uniqueGold.map(async (p) => {
+      try {
+        const params = new URLSearchParams({ weightGrams: String(p.weightGrams), carat: String(p.carat) });
+        if (p.makingChargesPerGram != null && p.makingChargesPerGram > 0) params.set('makingChargesPerGram', String(p.makingChargesPerGram));
+        if (p.category) params.set('category', p.category);
+        const res = await axios.get(`${API_URL}/stock/estimate-price?${params}`);
+        const total = res.data?.totalPrice != null ? parseFloat(res.data.totalPrice) : null;
+        return { key: priceKeyGold(p.weightGrams, p.carat, p.makingChargesPerGram), total };
+      } catch (_) {
+        return { key: priceKeyGold(p.weightGrams, p.carat, p.makingChargesPerGram), total: null };
+      }
+    });
+
+    const silverPromises = uniqueSilver.map(async (p) => {
+      try {
+        const params = new URLSearchParams({ weightGrams: String(p.weightGrams) });
+        if (p.makingChargesPerGram != null && p.makingChargesPerGram > 0) params.set('makingChargesPerGram', String(p.makingChargesPerGram));
+        if (p.category) params.set('category', p.category);
+        const res = await axios.get(`${API_URL}/stock/estimate-price-silver?${params}`);
+        const total = res.data?.totalPrice != null ? parseFloat(res.data.totalPrice) : null;
+        return { key: priceKeySilver(p.weightGrams, p.category, p.makingChargesPerGram), total };
+      } catch (_) {
+        return { key: priceKeySilver(p.weightGrams, p.category, p.makingChargesPerGram), total: null };
+      }
+    });
+
+    Promise.all([...goldPromises, ...silverPromises]).then((results) => {
       const next = {};
-      toFetch.forEach((p) => {
-        const r = results.find((x) => x.key === priceKey(p.weightGrams, p.carat, p.makingChargesPerGram));
+      goldItems.forEach((p) => {
+        const r = results.find((x) => x.key === priceKeyGold(p.weightGrams, p.carat, p.makingChargesPerGram));
         if (r?.total != null) next[p.id] = r.total;
+      });
+      silverItems.forEach((p) => {
+        const r = results.find((x) => x.key === priceKeySilver(p.weightGrams, p.category, p.makingChargesPerGram));
+        let total = r?.total ?? null;
+        if (total != null && p.diamondCarat != null && diamondRatePerCarat != null) {
+          total = Math.round((total + parseFloat(p.diamondCarat) * diamondRatePerCarat) * 100) / 100;
+        }
+        if (total != null) next[p.id] = total;
       });
       setEstimatedPrices((prev) => ({ ...prev, ...next }));
     });
-  }, [products]);
+  }, [products, diamondRatePerCarat]);
 
   const fetchProducts = async () => {
     setLoading(true);
@@ -309,9 +358,11 @@ function ProductCatalog() {
                       <p className="catalog-card-price">
                         {estimatedPrices[product.id] != null
                           ? `₹${Number(estimatedPrices[product.id]).toLocaleString('en-IN')}`
-                          : product.weightGrams && product.carat && (!product.sellingPrice || Number(product.sellingPrice) <= 0) && String(product.material || '').toLowerCase().includes('gold')
+                          : (!product.sellingPrice || Number(product.sellingPrice) <= 0) && isGoldWithWeightCarat(product)
                             ? 'Price as per current gold rate'
-                            : `₹${Number(product.sellingPrice || 0).toLocaleString('en-IN')}`}
+                            : (!product.sellingPrice || Number(product.sellingPrice) <= 0) && isSilverWithWeight(product)
+                              ? 'Price as per current silver rate'
+                              : `₹${Number(product.sellingPrice || 0).toLocaleString('en-IN')}`}
                       </p>
                       <button
                         type="button"

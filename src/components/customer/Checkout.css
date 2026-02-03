@@ -81,6 +81,25 @@
   font-size: 1rem;
 }
 
+.checkout-item-meta {
+  font-size: 0.8rem;
+  color: var(--text-muted, #666);
+  margin: 0 0 0.5rem 0;
+}
+
+.checkout-item-breakdown {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  font-size: 0.8rem;
+  color: var(--text-muted, #666);
+  margin-top: 0.5rem;
+}
+
+.checkout-item-breakdown span {
+  white-space: nowrap;
+}
+
 .checkout-item-controls {
   display: flex;
   flex-wrap: wrap;
@@ -232,6 +251,15 @@
 .checkout-totals-row .value {
   font-weight: 600;
   color: var(--text-main);
+}
+
+.checkout-totals-breakdown-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted, #666);
+  margin: 0 0 0.5rem 0;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
 }
 
 .checkout-totals-breakdown {

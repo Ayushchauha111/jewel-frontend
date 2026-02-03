@@ -10,10 +10,18 @@ import './Checkout.css';
 const API_URL = '/api';
 const SHIPPING_CHARGE = 10;
 const RAZORPAY_KEY = process.env.REACT_APP_RAZORPAY_KEY || 'rzp_test_Ng4zjvXBo18B7Z';
-const MAKING_CHARGES_PER_GM = 1150;
 const CGST_RATE = 0.015;  // 1.5%
 const SGST_RATE = 0.015;  // 1.5%
 const GST_RATE = 0.03;    // 3%
+const FALLBACK_MAKING_PER_GRAM = 1150;
+
+// Item type helpers (cart items have material, weightGrams, carat, diamondCarat from product)
+const isGoldItem = (item) =>
+  item && (item.weightGrams != null && parseFloat(item.weightGrams) > 0) && (item.carat != null && item.carat > 0) && String(item.material || '').toLowerCase().includes('gold');
+const isSilverItem = (item) =>
+  item && (item.weightGrams != null && parseFloat(item.weightGrams) > 0) && String(item.material || '').toLowerCase().includes('silver');
+const hasDiamond = (item) => item?.diamondCarat != null && parseFloat(item.diamondCarat) > 0;
+const hasWeight = (item) => item?.weightGrams != null && parseFloat(item.weightGrams) > 0;
 
 function Checkout() {
   const [cart, setCart] = useState([]);
@@ -24,6 +32,13 @@ function Checkout() {
     shippingAddress: ''
   });
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [rates, setRates] = useState({
+    goldByKarat: {},
+    silverPerGram: null,
+    diamondPerCarat: null,
+    makingPerGram: FALLBACK_MAKING_PER_GRAM
+  });
+  const [categoryMakingConfigs, setCategoryMakingConfigs] = useState([]);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -43,6 +58,46 @@ function Checkout() {
     }
   }, []);
 
+  // Fetch today's rates for breakdown (gold, silver, diamond, making)
+  useEffect(() => {
+    let cancelled = false;
+    const goldCarats = [10, 12, 14, 18, 20, 21, 22, 24];
+    axios.get(`${API_URL}/rates/today`).then((res) => {
+      if (cancelled || !res.data) return;
+      const goldByKarat = {};
+      goldCarats.forEach((k) => {
+        const v = res.data[`gold${k}K`];
+        if (v != null && !isNaN(parseFloat(v))) goldByKarat[k] = parseFloat(v);
+      });
+      const silverPerGram = res.data.silverPerGram != null && !isNaN(parseFloat(res.data.silverPerGram)) ? parseFloat(res.data.silverPerGram) : null;
+      const makingPerGram = res.data.makingChargesPerGram != null && !isNaN(parseFloat(res.data.makingChargesPerGram)) ? parseFloat(res.data.makingChargesPerGram) : FALLBACK_MAKING_PER_GRAM;
+      setRates((prev) => ({ ...prev, goldByKarat, silverPerGram, makingPerGram }));
+    }).catch(() => {});
+    axios.get(`${API_URL}/rates/rate?metal=DIAMOND`).then((res) => {
+      if (!cancelled && res.data?.ratePerCarat != null) setRates((prev) => ({ ...prev, diamondPerCarat: parseFloat(res.data.ratePerCarat) }));
+    }).catch(() => {});
+    axios.get(`${API_URL}/config/category-making`).then((res) => {
+      if (!cancelled && Array.isArray(res.data)) setCategoryMakingConfigs(res.data);
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
+
+  const getMakingPerGramForItem = (item) => {
+    const category = (item.category || '').trim();
+    const material = (item.material || '').trim();
+    if (!category) return rates.makingPerGram;
+    const byCatMat = categoryMakingConfigs.find(
+      (c) => c.category && c.category.toLowerCase() === category.toLowerCase()
+        && c.material && c.material.toLowerCase() === material.toLowerCase()
+    );
+    if (byCatMat?.makingChargesPerGram != null) return parseFloat(byCatMat.makingChargesPerGram);
+    const byCat = categoryMakingConfigs.find(
+      (c) => c.category && c.category.toLowerCase() === category.toLowerCase() && !c.material
+    );
+    if (byCat?.makingChargesPerGram != null) return parseFloat(byCat.makingChargesPerGram);
+    return rates.makingPerGram;
+  };
+
   const persistCart = (nextCart) => {
     setCart(nextCart);
     localStorage.setItem('cart', JSON.stringify(nextCart));
@@ -53,6 +108,48 @@ function Checkout() {
     const unit = parseFloat(item.sellingPrice) || 0;
     return unit * qty;
   };
+
+  // Breakdown from rates (gold/silver/diamond) and config (making by category+material)
+  const getItemBreakdown = (item) => {
+    const qty = item.quantity || 1;
+    const w = parseFloat(item.weightGrams) || 0;
+    const carat = item.carat != null ? parseInt(item.carat, 10) : null;
+    const diamondCarat = item.diamondCarat != null ? parseFloat(item.diamondCarat) : 0;
+    const makingPerGram = getMakingPerGramForItem(item);
+    let gold = 0, silver = 0, diamond = 0, making = 0;
+    if (isGoldItem(item) && w > 0 && carat != null && rates.goldByKarat[carat] != null) {
+      gold = Math.round(rates.goldByKarat[carat] * w * 100) / 100;
+    }
+    if (isSilverItem(item) && w > 0 && rates.silverPerGram != null) {
+      silver = Math.round(rates.silverPerGram * w * 100) / 100;
+    }
+    if (hasDiamond(item) && rates.diamondPerCarat != null) {
+      diamond = Math.round(diamondCarat * rates.diamondPerCarat * 100) / 100;
+    }
+    if (hasWeight(item) && w > 0 && makingPerGram != null) {
+      making = Math.round(makingPerGram * w * 100) / 100;
+    }
+    return { gold, silver, diamond, making, qty };
+  };
+
+  const getBreakdownTotals = () => {
+    let totalGold = 0, totalSilver = 0, totalDiamond = 0, totalMaking = 0;
+    cart.forEach((item) => {
+      const b = getItemBreakdown(item);
+      totalGold += b.gold * b.qty;
+      totalSilver += b.silver * b.qty;
+      totalDiamond += b.diamond * b.qty;
+      totalMaking += b.making * b.qty;
+    });
+    return {
+      totalGold: Math.round(totalGold * 100) / 100,
+      totalSilver: Math.round(totalSilver * 100) / 100,
+      totalDiamond: Math.round(totalDiamond * 100) / 100,
+      totalMaking: Math.round(totalMaking * 100) / 100
+    };
+  };
+
+  const formatRs = (n) => `₹${Number(n).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   const removeFromCart = (itemId) => {
     const next = cart.filter((i) => i.id !== itemId);
@@ -263,39 +360,54 @@ function Checkout() {
           <div className="checkout-summary-card">
             <h3>Order Summary</h3>
             <div className="checkout-items">
-              {cart.map((item) => (
-                <div key={item.id} className="checkout-item-row">
-                  <div className="checkout-item-info">
-                    <h4 className="checkout-item-name">{item.articleName}</h4>
-                    <div className="checkout-item-controls">
-                      <label className="checkout-qty-wrap">
-                        <span className="checkout-qty-label">Qty</span>
-                        <span className="checkout-qty-btns">
-                          <button type="button" className="checkout-qty-btn" onClick={() => updateQuantity(item.id, -1)} aria-label="Decrease quantity">−</button>
-                          <span className="checkout-qty-value">{item.quantity || 1}</span>
-                          <button type="button" className="checkout-qty-btn" onClick={() => updateQuantity(item.id, 1)} aria-label="Increase quantity">+</button>
-                        </span>
-                      </label>
-                      <label className="checkout-price-wrap">
-                        <span className="checkout-price-label">Price (₹)</span>
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          className="checkout-price-input"
-                          value={item.sellingPrice === '' || item.sellingPrice == null ? '' : item.sellingPrice}
-                          onChange={(e) => updateItemField(item.id, e.target.value)}
-                          placeholder="0"
-                        />
-                      </label>
+              {cart.map((item) => {
+                const b = getItemBreakdown(item);
+                const hasBreakdown = b.gold > 0 || b.silver > 0 || b.diamond > 0 || b.making > 0;
+                return (
+                  <div key={item.id} className="checkout-item-row">
+                    <div className="checkout-item-info">
+                      <h4 className="checkout-item-name">{item.articleName}</h4>
+                      {item.material && (
+                        <p className="checkout-item-meta">{item.weightGrams}g{item.carat != null ? ` · ${item.carat}K` : ''}{item.diamondCarat != null ? ` · ${item.diamondCarat} ct D` : ''} · {item.material}</p>
+                      )}
+                      <div className="checkout-item-controls">
+                        <label className="checkout-qty-wrap">
+                          <span className="checkout-qty-label">Qty</span>
+                          <span className="checkout-qty-btns">
+                            <button type="button" className="checkout-qty-btn" onClick={() => updateQuantity(item.id, -1)} aria-label="Decrease quantity">−</button>
+                            <span className="checkout-qty-value">{item.quantity || 1}</span>
+                            <button type="button" className="checkout-qty-btn" onClick={() => updateQuantity(item.id, 1)} aria-label="Increase quantity">+</button>
+                          </span>
+                        </label>
+                        <label className="checkout-price-wrap">
+                          <span className="checkout-price-label">Price (₹)</span>
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            className="checkout-price-input"
+                            value={item.sellingPrice === '' || item.sellingPrice == null ? '' : item.sellingPrice}
+                            onChange={(e) => updateItemField(item.id, e.target.value)}
+                            placeholder="0"
+                          />
+                        </label>
+                      </div>
+                      {hasBreakdown && (
+                        <div className="checkout-item-breakdown">
+                          {b.gold > 0 && <span>Gold: {formatRs(b.gold * b.qty)}</span>}
+                          {b.silver > 0 && <span>Silver: {formatRs(b.silver * b.qty)}</span>}
+                          {b.diamond > 0 && <span>Diamond: {formatRs(b.diamond * b.qty)}</span>}
+                          {b.making > 0 && <span>Making: {formatRs(b.making * b.qty)}</span>}
+                        </div>
+                      )}
+                    </div>
+                    <div className="checkout-item-right">
+                      <span className="checkout-item-total">₹{getLineTotal(item).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                      <button type="button" className="checkout-item-remove" onClick={() => removeFromCart(item.id)} title="Remove from cart" aria-label="Remove from cart">🗑️ Remove</button>
                     </div>
                   </div>
-                  <div className="checkout-item-right">
-                    <span className="checkout-item-total">₹{getLineTotal(item).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
-                    <button type="button" className="checkout-item-remove" onClick={() => removeFromCart(item.id)} title="Remove from cart" aria-label="Remove from cart">🗑️ Remove</button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
             <div className="checkout-add-more">
               <Link to="/products" className="checkout-add-more-link">+ Add more items</Link>
@@ -304,8 +416,23 @@ function Checkout() {
             <div className="checkout-totals">
               <div className="checkout-totals-row">
                 <span className="label">Subtotal (incl. GST)</span>
-                <span className="value">₹{getSubtotal().toLocaleString('en-IN')}</span>
+                <span className="value">₹{getSubtotal().toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
               </div>
+
+              {(() => {
+                const { totalGold, totalSilver, totalDiamond, totalMaking } = getBreakdownTotals();
+                const showBreakdown = totalGold > 0 || totalSilver > 0 || totalDiamond > 0 || totalMaking > 0;
+                if (!showBreakdown) return null;
+                return (
+                  <div className="checkout-totals-breakdown">
+                    <p className="checkout-totals-breakdown-title">Price breakdown (at current rates)</p>
+                    {totalGold > 0 && <div className="row"><span>Gold</span><span>{formatRs(totalGold)}</span></div>}
+                    {totalSilver > 0 && <div className="row"><span>Silver</span><span>{formatRs(totalSilver)}</span></div>}
+                    {totalDiamond > 0 && <div className="row"><span>Diamond</span><span>{formatRs(totalDiamond)}</span></div>}
+                    {totalMaking > 0 && <div className="row"><span>Making charges</span><span>{formatRs(totalMaking)}</span></div>}
+                  </div>
+                );
+              })()}
 
               {cart.length > 0 && (() => {
                 const { cgst, sgst, gstTotal } = getTaxBreakdown();
@@ -335,7 +462,7 @@ function Checkout() {
 
               <div className="checkout-totals-final">
                 <span className="label">Total</span>
-                <span className="value">₹{calculateTotal().toLocaleString('en-IN')}</span>
+                <span className="value">₹{calculateTotal().toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
               </div>
             </div>
           </div>

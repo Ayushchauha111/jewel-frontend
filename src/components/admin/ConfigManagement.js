@@ -10,11 +10,12 @@ import './PriceManagement.css';
 const API_URL = '/api';
 const CONFIG_API = `${API_URL}/config/category-making`;
 
-// Same predetermined categories as Stock / Billing
+// Same categories as Billing / Stock (from API + fallback)
 const PREDEFINED_CATEGORIES = [
   'Rings', 'Necklace', 'Earrings', 'Bracelet', 'Bangle', 'Chain', 'Pendant',
   'Anklet', 'Mangalsutra', 'Kamarband', 'Tikka', 'Other'
 ];
+const MATERIAL_OPTIONS = ['', 'Gold', 'Silver', 'Diamond', 'Gold + Diamond', 'Silver + Diamond', 'Gemstone', 'Other'];
 
 function ConfigManagement() {
   const navigate = useNavigate();
@@ -24,7 +25,7 @@ function ConfigManagement() {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [editingId, setEditingId] = useState(null);
-  const [formData, setFormData] = useState({ category: '', makingChargesPerGram: '' });
+  const [formData, setFormData] = useState({ category: '', material: '', makingChargesPerGram: '' });
 
   useEffect(() => {
     fetchConfigs();
@@ -58,7 +59,7 @@ function ConfigManagement() {
   };
 
   const resetForm = () => {
-    setFormData({ category: '', makingChargesPerGram: '' });
+    setFormData({ category: '', material: '', makingChargesPerGram: '' });
     setEditingId(null);
   };
 
@@ -68,6 +69,7 @@ function ConfigManagement() {
     setError(null);
     setSuccess(null);
     const category = (formData.category || '').trim();
+    const material = (formData.material || '').trim() || null;
     const making = formData.makingChargesPerGram !== '' && formData.makingChargesPerGram != null
       ? parseFloat(formData.makingChargesPerGram) : null;
     if (!category) {
@@ -82,10 +84,10 @@ function ConfigManagement() {
     }
     try {
       if (editingId) {
-        await axios.put(`${CONFIG_API}/${editingId}`, { category, makingChargesPerGram: making }, { headers: getAuthHeaders() });
+        await axios.put(`${CONFIG_API}/${editingId}`, { category, material, makingChargesPerGram: making }, { headers: getAuthHeaders() });
         setSuccess('Updated successfully');
       } else {
-        await axios.post(CONFIG_API, { category, makingChargesPerGram: making }, { headers: getAuthHeaders() });
+        await axios.post(CONFIG_API, { category, material, makingChargesPerGram: making }, { headers: getAuthHeaders() });
         setSuccess('Added successfully');
       }
       fetchConfigs();
@@ -102,6 +104,7 @@ function ConfigManagement() {
   const handleEdit = (row) => {
     setFormData({
       category: row.category || '',
+      material: row.material || '',
       makingChargesPerGram: row.makingChargesPerGram != null ? String(row.makingChargesPerGram) : ''
     });
     setEditingId(row.id);
@@ -131,12 +134,12 @@ function ConfigManagement() {
       <AdminNav title="Jewelry Shop Admin" onLogout={handleLogout} />
       <div className="price-management" style={{ margin: '0 2rem' }}>
         <div className="price-header">
-          <h1>Config — Category Making Charges</h1>
-          <p>Set making charges per gram (₹/g) by category. Used in price calculation: <strong>Gold rate + Making (here) + GST 3% (CGST 1.5% + SGST 1.5%)</strong>.</p>
+          <h1>Config — Category + Material Making Charges</h1>
+          <p>Set making charges per gram (₹/g) by <strong>category + material</strong>. Used in price calculation: <strong>Gold/Silver rate + Making (here) + GST 3%</strong>. Leave material empty for category default.</p>
         </div>
 
         <div className="price-form-card">
-          <h3>{editingId ? '✏️ Edit' : '➕ Add'} Category Making</h3>
+          <h3>{editingId ? '✏️ Edit' : '➕ Add'} Category + Material Making</h3>
           {error && <div className="price-error" style={{ marginBottom: '1rem', color: '#e74c3c' }}>{error}</div>}
           {success && <div className="price-success" style={{ marginBottom: '1rem', color: '#27ae60' }}>{success}</div>}
           <form onSubmit={handleSubmit}>
@@ -152,6 +155,18 @@ function ConfigManagement() {
                   <option value="">Select Category</option>
                   {categories.map((cat) => (
                     <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="price-form-group">
+                <label>Material (optional — default for category if empty)</label>
+                <select
+                  value={formData.material}
+                  onChange={(e) => setFormData({ ...formData, material: e.target.value })}
+                  style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--adm-border-gold)', background: 'var(--adm-bg-elevated)', color: 'var(--adm-text)' }}
+                >
+                  {MATERIAL_OPTIONS.map((m) => (
+                    <option key={m || 'all'} value={m}>{m || '— All (category default)'}</option>
                   ))}
                 </select>
               </div>
@@ -182,13 +197,14 @@ function ConfigManagement() {
         </div>
 
         <div className="price-table-container">
-          <h3 className="price-table-title">Category → Making (₹/g)</h3>
+          <h3 className="price-table-title">Category + Material → Making (₹/g)</h3>
           {configs.length > 0 ? (
             <div className="price-table-scroll">
               <table className="price-table">
                 <thead>
                   <tr>
                     <th>Category</th>
+                    <th>Material</th>
                     <th>Making (₹/g)</th>
                     <th>Actions</th>
                   </tr>
@@ -197,6 +213,7 @@ function ConfigManagement() {
                   {configs.map((row) => (
                     <tr key={row.id}>
                       <td style={{ fontWeight: '600' }}>{row.category}</td>
+                      <td>{row.material || '—'}</td>
                       <td>{formatCurrency(row.makingChargesPerGram)}</td>
                       <td>
                         <button type="button" onClick={() => handleEdit(row)} className="stock-btn-edit" style={{ marginRight: '0.5rem' }}>✏️ Edit</button>
