@@ -75,6 +75,7 @@ function ProductCatalog() {
         try {
           const params = new URLSearchParams({ weightGrams: String(p.weightGrams), carat: String(p.carat) });
           if (p.makingChargesPerGram != null && p.makingChargesPerGram > 0) params.set('makingChargesPerGram', String(p.makingChargesPerGram));
+          if (p.category) params.set('category', p.category);
           const res = await axios.get(`${API_URL}/stock/estimate-price?${params}`);
           const total = res.data?.totalPrice != null ? parseFloat(res.data.totalPrice) : null;
           return { key: priceKey(p.weightGrams, p.carat, p.makingChargesPerGram), total };

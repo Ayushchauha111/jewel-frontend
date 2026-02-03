@@ -373,52 +373,72 @@ function IncomeExpenseManagement() {
               <div className="price-table-container">
                 <h3 style={{ marginBottom: '1.5rem' }}>📋 All Transactions ({transactions.length})</h3>
                 {transactions.length > 0 ? (
-                  <table className="price-table">
-                    <thead>
-                      <tr>
-                        <th>Date</th>
-                        <th>Type</th>
-                        <th>Category</th>
-                        <th>Amount</th>
-                        <th>Payment Method</th>
-                        <th>Description</th>
-                        <th>Reference</th>
-                        <th>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
+                  <>
+                    <div className="price-table-scroll">
+                      <table className="price-table">
+                        <thead>
+                          <tr>
+                            <th>Date</th>
+                            <th>Type</th>
+                            <th>Category</th>
+                            <th>Amount</th>
+                            <th>Payment Method</th>
+                            <th>Description</th>
+                            <th>Reference</th>
+                            <th>Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {transactions.map((transaction) => (
+                            <tr key={transaction.id}>
+                              <td>{formatDate(transaction.transactionDate)}</td>
+                              <td>
+                                <span className={`status-badge ${transaction.transactionType === 'INCOME' ? 'status-paid' : 'status-pending'}`}>
+                                  {transaction.transactionType}
+                                </span>
+                              </td>
+                              <td>{formatCategory(transaction.category)}</td>
+                              <td style={{
+                                fontWeight: 'bold',
+                                color: transaction.transactionType === 'INCOME' ? '#27ae60' : '#e74c3c',
+                                fontSize: '1.1rem'
+                              }}>
+                                {transaction.transactionType === 'INCOME' ? '+' : '-'}{formatCurrency(transaction.amount)}
+                              </td>
+                              <td>{formatCategory(transaction.paymentMethod) || '-'}</td>
+                              <td>{transaction.description || '-'}</td>
+                              <td>{transaction.referenceNumber || '-'}</td>
+                              <td>
+                                <button
+                                  onClick={() => handleDeleteTransaction(transaction.id)}
+                                  className="stock-btn-delete"
+                                  style={{ fontSize: '0.75rem', padding: '0.5rem 1rem' }}
+                                >
+                                  🗑️ Delete
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    <div className="admin-list-cards">
                       {transactions.map((transaction) => (
-                        <tr key={transaction.id}>
-                          <td>{formatDate(transaction.transactionDate)}</td>
-                          <td>
-                            <span className={`status-badge ${transaction.transactionType === 'INCOME' ? 'status-paid' : 'status-pending'}`}>
-                              {transaction.transactionType}
-                            </span>
-                          </td>
-                          <td>{formatCategory(transaction.category)}</td>
-                          <td style={{
-                            fontWeight: 'bold',
-                            color: transaction.transactionType === 'INCOME' ? '#27ae60' : '#e74c3c',
-                            fontSize: '1.1rem'
-                          }}>
-                            {transaction.transactionType === 'INCOME' ? '+' : '-'}{formatCurrency(transaction.amount)}
-                          </td>
-                          <td>{formatCategory(transaction.paymentMethod) || '-'}</td>
-                          <td>{transaction.description || '-'}</td>
-                          <td>{transaction.referenceNumber || '-'}</td>
-                          <td>
-                            <button
-                              onClick={() => handleDeleteTransaction(transaction.id)}
-                              className="stock-btn-delete"
-                              style={{ fontSize: '0.75rem', padding: '0.5rem 1rem' }}
-                            >
-                              🗑️ Delete
-                            </button>
-                          </td>
-                        </tr>
+                        <div key={transaction.id} className="admin-list-card">
+                          <div className="admin-list-card-main">
+                            <div className="admin-list-card-title">{formatDate(transaction.transactionDate)} · {formatCategory(transaction.category)}</div>
+                            <div className="admin-list-card-meta" style={{ color: transaction.transactionType === 'INCOME' ? '#27ae60' : '#e74c3c' }}>
+                              {transaction.transactionType === 'INCOME' ? '+' : '-'}{formatCurrency(transaction.amount)} · {formatCategory(transaction.paymentMethod) || '-'}
+                            </div>
+                            <span className={`status-badge ${transaction.transactionType === 'INCOME' ? 'status-paid' : 'status-pending'}`}>{transaction.transactionType}</span>
+                          </div>
+                          <div className="admin-list-card-actions">
+                            <button onClick={() => handleDeleteTransaction(transaction.id)} className="stock-btn-delete" style={{ fontSize: '0.75rem', padding: '0.5rem 1rem' }}>🗑️ Delete</button>
+                          </div>
+                        </div>
                       ))}
-                    </tbody>
-                  </table>
+                    </div>
+                  </>
                 ) : (
                   <div className="price-empty-state">
                     <div className="price-empty-state-icon">📋</div>

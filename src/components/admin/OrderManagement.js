@@ -200,46 +200,88 @@ function OrderManagement() {
         <div className="price-table-container">
           <h3 style={{ marginBottom: '1.5rem', color: '#2c3e50' }}>📋 Orders ({filteredOrders.length})</h3>
           {filteredOrders.length > 0 ? (
-            <table className="price-table">
-              <thead>
-                <tr>
-                  <th>Order Number</th>
-                  <th>Customer</th>
-                  <th>Amount</th>
-                  <th>Shipping</th>
-                  <th>Total</th>
-                  <th>Payment Status</th>
-                  <th>Order Status</th>
-                  <th>Date</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
+            <>
+              <div className="price-table-scroll">
+                <table className="price-table">
+                  <thead>
+                    <tr>
+                      <th>Order Number</th>
+                      <th>Customer</th>
+                      <th>Amount</th>
+                      <th>Shipping</th>
+                      <th>Total</th>
+                      <th>Payment Status</th>
+                      <th>Order Status</th>
+                      <th>Date</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredOrders.map((order) => (
+                      <tr key={order.id}>
+                        <td style={{ fontWeight: 'bold', color: '#667eea' }}>{order.orderNumber}</td>
+                        <td style={{ fontWeight: '600' }}>{order.customer?.name || '-'}</td>
+                        <td>{formatCurrency(order.totalAmount)}</td>
+                        <td>{formatCurrency(order.shippingCharge)}</td>
+                        <td style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>{formatCurrency(order.finalAmount)}</td>
+                        <td>
+                          <span className={`status-badge status-${order.paymentStatus?.toLowerCase()}`}>
+                            {order.paymentStatus}
+                          </span>
+                        </td>
+                        <td>
+                          <select
+                            value={order.orderStatus}
+                            onChange={(e) => updateOrderStatus(order.id, e.target.value)}
+                            disabled={loading}
+                            style={{
+                              padding: '0.5rem',
+                              border: '2px solid #ecf0f1',
+                              borderRadius: '8px',
+                              fontSize: '0.875rem',
+                              fontWeight: '600',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            <option value="PENDING">Pending</option>
+                            <option value="CONFIRMED">Confirmed</option>
+                            <option value="PROCESSING">Processing</option>
+                            <option value="SHIPPED">Shipped</option>
+                            <option value="DELIVERED">Delivered</option>
+                            <option value="CANCELLED">Cancelled</option>
+                          </select>
+                        </td>
+                        <td>{formatDate(order.createdAt)}</td>
+                        <td>
+                          <Link
+                            to={`/order/${order.id}`}
+                            className="stock-btn-edit"
+                            style={{ textDecoration: 'none', display: 'inline-block' }}
+                          >
+                            👁️ View
+                          </Link>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="admin-list-cards">
                 {filteredOrders.map((order) => (
-                  <tr key={order.id}>
-                    <td style={{ fontWeight: 'bold', color: '#667eea' }}>{order.orderNumber}</td>
-                    <td style={{ fontWeight: '600' }}>{order.customer?.name || '-'}</td>
-                    <td>{formatCurrency(order.totalAmount)}</td>
-                    <td>{formatCurrency(order.shippingCharge)}</td>
-                    <td style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>{formatCurrency(order.finalAmount)}</td>
-                    <td>
-                      <span className={`status-badge status-${order.paymentStatus?.toLowerCase()}`}>
-                        {order.paymentStatus}
-                      </span>
-                    </td>
-                    <td>
+                  <div key={order.id} className="admin-list-card">
+                    <div className="admin-list-card-main">
+                      <div className="admin-list-card-title" style={{ color: '#667eea' }}>#{order.orderNumber}</div>
+                      <div className="admin-list-card-meta">
+                        {order.customer?.name || '-'} · {formatCurrency(order.finalAmount)} · {formatDate(order.createdAt)}
+                      </div>
+                      <span className={`status-badge status-${order.paymentStatus?.toLowerCase()}`}>{order.paymentStatus}</span>
+                    </div>
+                    <div className="admin-list-card-actions">
                       <select
                         value={order.orderStatus}
                         onChange={(e) => updateOrderStatus(order.id, e.target.value)}
                         disabled={loading}
-                        style={{
-                          padding: '0.5rem',
-                          border: '2px solid #ecf0f1',
-                          borderRadius: '8px',
-                          fontSize: '0.875rem',
-                          fontWeight: '600',
-                          cursor: 'pointer'
-                        }}
+                        style={{ padding: '0.5rem', border: '2px solid var(--adm-border-gold)', borderRadius: '8px', fontSize: '0.875rem', fontWeight: '600', cursor: 'pointer', background: 'var(--adm-bg-elevated)', color: 'var(--adm-text)' }}
                       >
                         <option value="PENDING">Pending</option>
                         <option value="CONFIRMED">Confirmed</option>
@@ -248,21 +290,12 @@ function OrderManagement() {
                         <option value="DELIVERED">Delivered</option>
                         <option value="CANCELLED">Cancelled</option>
                       </select>
-                    </td>
-                    <td>{formatDate(order.createdAt)}</td>
-                    <td>
-                      <Link
-                        to={`/order/${order.id}`}
-                        className="stock-btn-edit"
-                        style={{ textDecoration: 'none', display: 'inline-block' }}
-                      >
-                        👁️ View
-                      </Link>
-                    </td>
-                  </tr>
+                      <Link to={`/order/${order.id}`} className="stock-btn-edit" style={{ textDecoration: 'none' }}>👁️ View</Link>
+                    </div>
+                  </div>
                 ))}
-              </tbody>
-            </table>
+              </div>
+            </>
           ) : (
             <div className="price-empty-state">
               <div className="price-empty-state-icon">🛒</div>

@@ -132,6 +132,17 @@ function CustomerNav({ cartCount = 0 }) {
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
           </div>
+          <form className="nav-drawer-search" onSubmit={handleSearch}>
+            <input
+              type="search"
+              placeholder="Search jewellery…"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="nav-drawer-search-input"
+              aria-label="Search"
+            />
+            <button type="submit" className="nav-drawer-search-btn" aria-label="Search">Search</button>
+          </form>
           <nav className="nav-drawer-links">
             {CUSTOMER_LINKS.map(({ to, label }) => (
               <Link key={to} to={to} className={`nav-drawer-link ${location.pathname === to ? 'nav-drawer-link--active' : ''}`} onClick={closeMenu}>

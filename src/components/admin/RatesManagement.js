@@ -317,37 +317,57 @@ function RatesManagement() {
         <div className="price-table-container">
           <h3 className="price-table-title">📜 Rate History</h3>
           {rates.length > 0 ? (
-            <div className="rates-table-wrap">
-              <table className="price-table">
-                <thead>
-                  <tr>
-                    <th>Date</th>
-                    {GOLD_CARATS.map(c => (<th key={c}>{c}K</th>))}
-                    <th>Silver/g</th>
-                    <th>Diamond/ct</th>
-                    <th>Making ₹/g</th>
-                    <th>Notes</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rates.map((r) => (
-                    <tr key={r.id}>
-                      <td>
+            <>
+              <div className="price-table-scroll">
+                <div className="rates-table-wrap">
+                  <table className="price-table">
+                    <thead>
+                      <tr>
+                        <th>Date</th>
+                        {GOLD_CARATS.map(c => (<th key={c}>{c}K</th>))}
+                        <th>Silver/g</th>
+                        <th>Diamond/ct</th>
+                        <th>Making ₹/g</th>
+                        <th>Notes</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rates.map((r) => (
+                        <tr key={r.id}>
+                          <td>
+                            {formatDate(r.priceDate)}
+                            {isToday(r.priceDate) && <span className="price-badge today" style={{ marginLeft: '0.5rem' }}>Today</span>}
+                          </td>
+                          {GOLD_CARATS.map(c => (
+                            <td key={c}>{goldValue(r, c) != null ? formatCurrency(goldValue(r, c)) : '—'}</td>
+                          ))}
+                          <td>{r.silverPerGram != null ? formatCurrency(r.silverPerGram) : '—'}</td>
+                          <td>{r.diamondPerCarat != null ? formatCurrency(r.diamondPerCarat) : '—'}</td>
+                          <td>{r.makingChargesPerGram != null ? formatCurrency(r.makingChargesPerGram) : '—'}</td>
+                          <td>{r.notes || '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <div className="admin-list-cards">
+                {rates.map((r) => (
+                  <div key={r.id} className="admin-list-card">
+                    <div className="admin-list-card-main">
+                      <div className="admin-list-card-title">
                         {formatDate(r.priceDate)}
                         {isToday(r.priceDate) && <span className="price-badge today" style={{ marginLeft: '0.5rem' }}>Today</span>}
-                      </td>
-                      {GOLD_CARATS.map(c => (
-                        <td key={c}>{goldValue(r, c) != null ? formatCurrency(goldValue(r, c)) : '—'}</td>
-                      ))}
-                      <td>{r.silverPerGram != null ? formatCurrency(r.silverPerGram) : '—'}</td>
-                      <td>{r.diamondPerCarat != null ? formatCurrency(r.diamondPerCarat) : '—'}</td>
-                      <td>{r.makingChargesPerGram != null ? formatCurrency(r.makingChargesPerGram) : '—'}</td>
-                      <td>{r.notes || '—'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                      </div>
+                      <div className="admin-list-card-meta">
+                        24K: {goldValue(r, 24) != null ? formatCurrency(goldValue(r, 24)) : '—'} · Silver: {r.silverPerGram != null ? formatCurrency(r.silverPerGram) : '—'} · Making: {r.makingChargesPerGram != null ? formatCurrency(r.makingChargesPerGram) : '—'}
+                        {r.notes ? ` · ${r.notes}` : ''}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
           ) : (
             <div className="price-empty-state">
               <div className="price-empty-state-icon">📊</div>

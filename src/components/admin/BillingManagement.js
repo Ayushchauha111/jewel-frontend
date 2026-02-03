@@ -145,6 +145,7 @@ function BillingManagement() {
       goldMetalItems.map(async (s) => {
         const params = new URLSearchParams({ weightGrams: String(s.weightGrams), carat: String(s.carat) });
         if (s.makingChargesPerGram != null && s.makingChargesPerGram > 0) params.set('makingChargesPerGram', String(s.makingChargesPerGram));
+        if (s.category) params.set('category', s.category);
         const res = await axios.get(`${API_URL}/stock/calculate-price?${params.toString()}`, { headers: getAuthHeaders() });
         return {
           id: s.id,
@@ -703,6 +704,7 @@ function BillingManagement() {
         carat: String(stockItem.carat)
       });
       if (stockItem.makingChargesPerGram != null && stockItem.makingChargesPerGram > 0) params.set('makingChargesPerGram', String(stockItem.makingChargesPerGram));
+      if (stockItem.category) params.set('category', stockItem.category);
       const response = await axios.get(`${API_URL}/stock/calculate-price?${params.toString()}`, {
         headers: getAuthHeaders()
       });
@@ -1386,62 +1388,93 @@ function BillingManagement() {
         <div className="price-table-container">
           <h3 style={{ marginBottom: '1.5rem', color: '#2c3e50' }}>📋 Bills</h3>
           {filteredBills.length > 0 ? (
-            <table className="price-table">
-              <thead>
-                <tr>
-                  <th>Bill Number</th>
-                  <th>Customer</th>
-                  <th>Amount</th>
-                  <th>Payment Method</th>
-                  <th>Status</th>
-                  <th>Date</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
+            <>
+              <div className="price-table-scroll">
+                <table className="price-table">
+                  <thead>
+                    <tr>
+                      <th>Bill Number</th>
+                      <th>Customer</th>
+                      <th>Amount</th>
+                      <th>Payment Method</th>
+                      <th>Status</th>
+                      <th>Date</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredBills.map((bill) => (
+                      <tr
+                        key={bill.id}
+                        onClick={() => openBillDetail(bill.id)}
+                        style={{ cursor: 'pointer' }}
+                        title="Click to view bill details"
+                      >
+                        <td style={{ fontWeight: 'bold', color: '#667eea' }}>{bill.billNumber}</td>
+                        <td>{bill.customer?.name || '-'}</td>
+                        <td style={{ fontWeight: 'bold' }}>{formatCurrency(bill.finalAmount)}</td>
+                        <td>{bill.paymentMethod || '-'}</td>
+                        <td>
+                          <span className={`status-badge status-${bill.paymentStatus?.toLowerCase()}`}>
+                            {bill.paymentStatus}
+                          </span>
+                        </td>
+                        <td>{formatDate(bill.createdAt)}</td>
+                        <td onClick={(e) => e.stopPropagation()}>
+                          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); sendEmail(bill.id); }}
+                              disabled={bill.emailSent}
+                              className="stock-btn-edit"
+                              style={{ fontSize: '0.75rem', padding: '0.5rem 0.75rem' }}
+                            >
+                              {bill.emailSent ? '✅ Email' : '📧 Email'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); sendWhatsApp(bill.id); }}
+                              disabled={bill.whatsappSent}
+                              className="stock-btn-edit"
+                              style={{ fontSize: '0.75rem', padding: '0.5rem 0.75rem' }}
+                            >
+                              {bill.whatsappSent ? '✅ WhatsApp' : '💬 WhatsApp'}
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="admin-list-cards">
                 {filteredBills.map((bill) => (
-                  <tr
+                  <div
                     key={bill.id}
+                    className="admin-list-card"
                     onClick={() => openBillDetail(bill.id)}
                     style={{ cursor: 'pointer' }}
-                    title="Click to view bill details"
+                    title="Tap to view bill details"
                   >
-                    <td style={{ fontWeight: 'bold', color: '#667eea' }}>{bill.billNumber}</td>
-                    <td>{bill.customer?.name || '-'}</td>
-                    <td style={{ fontWeight: 'bold' }}>{formatCurrency(bill.finalAmount)}</td>
-                    <td>{bill.paymentMethod || '-'}</td>
-                    <td>
-                      <span className={`status-badge status-${bill.paymentStatus?.toLowerCase()}`}>
-                        {bill.paymentStatus}
-                      </span>
-                    </td>
-                    <td>{formatDate(bill.createdAt)}</td>
-                    <td onClick={(e) => e.stopPropagation()}>
-                      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                        <button
-                          type="button"
-                          onClick={(e) => { e.stopPropagation(); sendEmail(bill.id); }}
-                          disabled={bill.emailSent}
-                          className="stock-btn-edit"
-                          style={{ fontSize: '0.75rem', padding: '0.5rem 0.75rem' }}
-                        >
-                          {bill.emailSent ? '✅ Email' : '📧 Email'}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={(e) => { e.stopPropagation(); sendWhatsApp(bill.id); }}
-                          disabled={bill.whatsappSent}
-                          className="stock-btn-edit"
-                          style={{ fontSize: '0.75rem', padding: '0.5rem 0.75rem' }}
-                        >
-                          {bill.whatsappSent ? '✅ WhatsApp' : '💬 WhatsApp'}
-                        </button>
+                    <div className="admin-list-card-main">
+                      <div className="admin-list-card-title" style={{ color: '#667eea' }}>#{bill.billNumber}</div>
+                      <div className="admin-list-card-meta">
+                        {bill.customer?.name || '-'} · {formatCurrency(bill.finalAmount)} · {bill.paymentMethod || '-'} · {formatDate(bill.createdAt)}
                       </div>
-                    </td>
-                  </tr>
+                      <span className={`status-badge status-${bill.paymentStatus?.toLowerCase()}`}>{bill.paymentStatus}</span>
+                    </div>
+                    <div className="admin-list-card-actions" onClick={(e) => e.stopPropagation()}>
+                      <button type="button" onClick={(e) => { e.stopPropagation(); sendEmail(bill.id); }} disabled={bill.emailSent} className="stock-btn-edit" style={{ fontSize: '0.75rem', padding: '0.5rem 0.75rem' }}>
+                        {bill.emailSent ? '✅ Email' : '📧 Email'}
+                      </button>
+                      <button type="button" onClick={(e) => { e.stopPropagation(); sendWhatsApp(bill.id); }} disabled={bill.whatsappSent} className="stock-btn-edit" style={{ fontSize: '0.75rem', padding: '0.5rem 0.75rem' }}>
+                        {bill.whatsappSent ? '✅ WhatsApp' : '💬 WhatsApp'}
+                      </button>
+                    </div>
+                  </div>
                 ))}
-              </tbody>
-            </table>
+              </div>
+            </>
           ) : (
             <div className="price-empty-state">
               <div className="price-empty-state-icon">🧾</div>

@@ -1,0 +1,75 @@
+/* Mobile-app base – safe-area, touch targets, app-like layout (Android/iOS) */
+
+/* Safe-area insets for notch and home indicator (iOS/Android) */
+:root {
+  --safe-area-top: env(safe-area-inset-top, 0px);
+  --safe-area-right: env(safe-area-inset-right, 0px);
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-left: env(safe-area-inset-left, 0px);
+  --app-min-height: 100vh;
+  --app-min-height-dynamic: 100dvh; /* dynamic viewport height for mobile browsers */
+}
+
+/* App shell: use dynamic viewport on mobile so address bar doesn't cut content */
+@supports (min-height: 100dvh) {
+  :root {
+    --app-min-height: 100dvh;
+  }
+}
+
+html {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  touch-action: manipulation;
+}
+
+/* Prevent zoom on input focus (iOS) when font-size >= 16px – keep inputs 16px on mobile */
+@media (max-width: 768px) {
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input[type="search"],
+  input[type="tel"],
+  input[type="date"],
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* Touch-friendly minimum sizes (44x44px) */
+@media (max-width: 768px) {
+  button:not(.nav-search-btn):not(.nav-burger span):not(.admin-nav-hamburger-bar),
+  a[role="button"],
+  .price-action-btn,
+  .nav-link,
+  .nav-drawer-link,
+  .nav-btn,
+  .nav-cart,
+  .admin-nav .nav-links a,
+  .logout-btn {
+    min-height: 44px;
+    min-width: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.75rem 1rem;
+    box-sizing: border-box;
+  }
+
+  .nav-link,
+  .nav-drawer-link {
+    display: flex;
+  }
+}
+
+/* Content areas: add horizontal safe padding on small screens */
+@media (max-width: 600px) {
+  .price-management,
+  .admin-dashboard {
+    padding-left: max(1rem, env(safe-area-inset-left, 0px));
+    padding-right: max(1rem, env(safe-area-inset-right, 0px));
+    padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
+  }
+}

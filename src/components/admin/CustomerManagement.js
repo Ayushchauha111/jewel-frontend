@@ -266,37 +266,56 @@ function CustomerManagement() {
         <div className="price-table-container">
           <h3 style={{ marginBottom: '1.5rem', color: '#2c3e50' }}>📋 Customers ({filteredCustomers.length})</h3>
           {filteredCustomers.length > 0 ? (
-            <table className="price-table">
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Phone</th>
-                  <th>Email</th>
-                  <th>WhatsApp</th>
-                  <th>Address</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
+            <>
+              <div className="price-table-scroll">
+                <table className="price-table">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Phone</th>
+                      <th>Email</th>
+                      <th>WhatsApp</th>
+                      <th>Address</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredCustomers.map((customer) => (
+                      <tr key={customer.id}>
+                        <td style={{ fontWeight: '600' }}>{customer.name}</td>
+                        <td>{customer.phone || '-'}</td>
+                        <td>{customer.email || '-'}</td>
+                        <td>{customer.whatsappNumber || '-'}</td>
+                        <td>{customer.address || '-'}</td>
+                        <td>
+                          <button onClick={() => handleEdit(customer)} className="stock-btn-edit">
+                            ✏️ Edit
+                          </button>
+                          <button onClick={() => handleDelete(customer.id)} className="stock-btn-delete">
+                            🗑️ Delete
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="admin-list-cards">
                 {filteredCustomers.map((customer) => (
-                  <tr key={customer.id}>
-                    <td style={{ fontWeight: '600' }}>{customer.name}</td>
-                    <td>{customer.phone || '-'}</td>
-                    <td>{customer.email || '-'}</td>
-                    <td>{customer.whatsappNumber || '-'}</td>
-                    <td>{customer.address || '-'}</td>
-                    <td>
-                      <button onClick={() => handleEdit(customer)} className="stock-btn-edit">
-                        ✏️ Edit
-                      </button>
-                      <button onClick={() => handleDelete(customer.id)} className="stock-btn-delete">
-                        🗑️ Delete
-                      </button>
-                    </td>
-                  </tr>
+                  <div key={customer.id} className="admin-list-card">
+                    <div className="admin-list-card-main">
+                      <div className="admin-list-card-title">{customer.name}</div>
+                      <div className="admin-list-card-meta">{customer.phone || '-'} · {customer.email || '-'}</div>
+                      {customer.address ? <div className="admin-list-card-meta">{customer.address}</div> : null}
+                    </div>
+                    <div className="admin-list-card-actions">
+                      <button onClick={() => handleEdit(customer)} className="stock-btn-edit">✏️ Edit</button>
+                      <button onClick={() => handleDelete(customer.id)} className="stock-btn-delete">🗑️ Delete</button>
+                    </div>
+                  </div>
                 ))}
-              </tbody>
-            </table>
+              </div>
+            </>
           ) : (
             <div className="price-empty-state">
               <div className="price-empty-state-icon">👥</div>

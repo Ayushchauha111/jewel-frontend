@@ -331,6 +331,7 @@ function StockManagement() {
     try {
       const params = new URLSearchParams({ weightGrams: weight, carat });
       if (formData.makingChargesPerGram?.trim()) params.set('makingChargesPerGram', formData.makingChargesPerGram.trim());
+      if (formData.category?.trim()) params.set('category', formData.category.trim());
       const response = await axios.get(`${API_URL}/stock/calculate-price?${params.toString()}`, {
         headers: getAuthHeaders()
       });
@@ -925,68 +926,108 @@ function StockManagement() {
           <h3 style={{ marginBottom: '1.5rem', color: '#2c3e50' }}>📦 Stock Items {filteredStock.length !== stock.length && `(${filteredStock.length} of ${stock.length})`}</h3>
           {filteredStock.length > 0 ? (
             <>
-              <table className="stock-table">
-                <thead>
-                  <tr>
-                    <th>Image</th>
-                    <th>Article Name</th>
-                    <th>Category</th>
-                    <th>Material</th>
-                    <th>Size</th>
-                    <th>Code</th>
-                    <th>Weight (g)</th>
-                    <th>Carat</th>
-                    <th>Diamond Ct</th>
-                    <th>Purity %</th>
-                    <th>Quantity</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredStock.map((item) => (
-                    <tr key={item.id}>
-                      <td>
+              {/* Desktop: table with sticky Image + Article Name columns; horizontal scroll for the rest */}
+              <div className="stock-table-scroll">
+                <table className="stock-table">
+                  <thead>
+                    <tr>
+                      <th>Image</th>
+                      <th>Article Name</th>
+                      <th>Category</th>
+                      <th>Material</th>
+                      <th>Size</th>
+                      <th>Code</th>
+                      <th>Weight (g)</th>
+                      <th>Carat</th>
+                      <th>Diamond Ct</th>
+                      <th>Purity %</th>
+                      <th>Quantity</th>
+                      <th>Status</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredStock.map((item) => (
+                      <tr key={item.id}>
+                        <td>
+                          {item.imageUrl ? (
+                            <img
+                              src={item.imageUrl.startsWith('http') ? item.imageUrl : `${window.location.protocol}//${window.location.hostname}:8000${item.imageUrl}`}
+                              alt={item.articleName}
+                              className="stock-item-image"
+                              onError={(e) => { 
+                                console.error('Image load error:', item.imageUrl);
+                                e.target.style.display = 'none'; 
+                              }}
+                            />
+                          ) : (
+                            <div className="stock-item-image" style={{ background: '#ecf0f1', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#95a5a6', fontSize: '1.5rem' }}>
+                              📦
+                            </div>
+                          )}
+                        </td>
+                        <td className="stock-item-name">{item.articleName}</td>
+                        <td>{item.category || '-'}</td>
+                        <td>{item.material || '-'}</td>
+                        <td>{item.size || '–'}</td>
+                        <td>{item.articleCode || '-'}</td>
+                        <td>{item.weightGrams || '-'}</td>
+                        <td>{item.carat ?? '-'}</td>
+                        <td>{item.diamondCarat != null ? String(item.diamondCarat) : '-'}</td>
+                        <td>{item.purityPercentage ? `${item.purityPercentage}%` : '-'}</td>
+                        <td>{item.quantity || 1}</td>
+                        <td>
+                          <span className={`status-badge status-${item.status?.toLowerCase()}`}>
+                            {item.status}
+                          </span>
+                        </td>
+                        <td>
+                          <button onClick={() => openSalesHistory(item)} className="stock-btn-edit" style={{ marginRight: '0.25rem' }} title="Sold to bills">📋 History</button>
+                          <button onClick={() => handleEdit(item)} className="stock-btn-edit">✏️ Edit</button>
+                          <button onClick={() => handleDelete(item.id)} className="stock-btn-delete">🗑️ Delete</button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {/* Narrow screens: card list (no horizontal scroll) */}
+              <div className="stock-cards-list">
+                {filteredStock.map((item) => (
+                  <div key={item.id} className="stock-card">
+                    <div className="stock-card-main">
+                      <div className="stock-card-image-wrap">
                         {item.imageUrl ? (
                           <img
                             src={item.imageUrl.startsWith('http') ? item.imageUrl : `${window.location.protocol}//${window.location.hostname}:8000${item.imageUrl}`}
                             alt={item.articleName}
-                            className="stock-item-image"
-                            onError={(e) => { 
-                              console.error('Image load error:', item.imageUrl);
-                              e.target.style.display = 'none'; 
-                            }}
+                            className="stock-card-image"
+                            onError={(e) => { e.target.style.display = 'none'; }}
                           />
                         ) : (
-                          <div className="stock-item-image" style={{ background: '#ecf0f1', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#95a5a6', fontSize: '1.5rem' }}>
-                            📦
-                          </div>
+                          <div className="stock-card-image stock-card-image-placeholder">📦</div>
                         )}
-                      </td>
-                      <td className="stock-item-name">{item.articleName}</td>
-                      <td>{item.category || '-'}</td>
-                      <td>{item.material || '-'}</td>
-                      <td>{item.size || '–'}</td>
-                      <td>{item.articleCode || '-'}</td>
-                      <td>{item.weightGrams || '-'}</td>
-                      <td>{item.carat ?? '-'}</td>
-                      <td>{item.diamondCarat != null ? String(item.diamondCarat) : '-'}</td>
-                      <td>{item.purityPercentage ? `${item.purityPercentage}%` : '-'}</td>
-                      <td>{item.quantity || 1}</td>
-                      <td>
-                        <span className={`status-badge status-${item.status?.toLowerCase()}`}>
-                          {item.status}
-                        </span>
-                      </td>
-                      <td>
-                        <button onClick={() => openSalesHistory(item)} className="stock-btn-edit" style={{ marginRight: '0.25rem' }} title="Sold to bills">📋 History</button>
-                        <button onClick={() => handleEdit(item)} className="stock-btn-edit">✏️ Edit</button>
-                        <button onClick={() => handleDelete(item.id)} className="stock-btn-delete">🗑️ Delete</button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                      </div>
+                      <div className="stock-card-details">
+                        <div className="stock-card-name">{item.articleName}</div>
+                        <div className="stock-card-meta">
+                          {item.category || '-'} · {item.material || '-'}
+                          {item.size ? ` · Size ${item.size}` : ''} · {item.articleCode || '-'}
+                        </div>
+                        <div className="stock-card-specs">
+                          Wt: {item.weightGrams ?? '-'}g · Carat: {item.carat ?? '-'} · Qty: {item.quantity || 1}
+                        </div>
+                        <span className={`status-badge status-${item.status?.toLowerCase()}`}>{item.status}</span>
+                      </div>
+                    </div>
+                    <div className="stock-card-actions">
+                      <button onClick={() => openSalesHistory(item)} className="stock-btn-edit" title="Sold to bills">📋</button>
+                      <button onClick={() => handleEdit(item)} className="stock-btn-edit">✏️ Edit</button>
+                      <button onClick={() => handleDelete(item.id)} className="stock-btn-delete">🗑️</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
 
               {(salesHistoryItem || loadingSalesHistory) && (
                 <div className="stock-modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }} onClick={() => { setSalesHistoryItem(null); setSalesHistory([]); }}>

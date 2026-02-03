@@ -34,7 +34,7 @@
   z-index: 0;
 }
 
-/* Admin taskbar – light cream theme (matches CustomerNav / GangaJewellers) */
+/* Admin taskbar – light cream theme (matches CustomerNav / GangaJewellers), safe-area for notch */
 .admin-nav {
   --nav-bg: #faf9f6;
   --nav-border: rgba(179, 147, 89, 0.2);
@@ -50,6 +50,9 @@
   border-bottom: 1px solid var(--nav-border);
   box-shadow: 0 1px 0 rgba(0, 0, 0, 0.06);
   padding: 0.875rem 1.5rem 0.875rem clamp(1rem, 4vw, 2rem);
+  padding-top: max(0.875rem, env(safe-area-inset-top));
+  padding-left: max(clamp(1rem, 4vw, 2rem), env(safe-area-inset-left));
+  padding-right: max(clamp(1rem, 4vw, 2rem), env(safe-area-inset-right));
   display: flex;
   flex-direction: row;
   flex-wrap: nowrap;
@@ -231,8 +234,8 @@
   background: var(--nav-gold-hover);
 }
 
-/* Mobile: show burger; center becomes drawer (links + logout) */
-@media (max-width: 992px) {
+/* Small/medium screens: show burger; center becomes drawer (links + logout) – breakpoint raised so nav doesn't overflow */
+@media (max-width: 1100px) {
   .admin-nav-hamburger {
     display: flex;
   }
@@ -245,9 +248,11 @@
     position: fixed;
     top: 0;
     right: 0;
-    width: min(320px, 88vw);
+    width: min(320px, 92vw);
     height: 100vh;
+    height: 100dvh;
     max-height: 100vh;
+    max-height: 100dvh;
     background: var(--nav-bg);
     border-left: 1px solid var(--nav-border);
     box-shadow: -4px 0 24px rgba(0, 0, 0, 0.12);
@@ -255,10 +260,14 @@
     align-items: stretch;
     justify-content: flex-start;
     padding: 1.5rem;
+    padding-top: max(1.5rem, env(safe-area-inset-top));
+    padding-right: max(1.5rem, env(safe-area-inset-right));
+    padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
     gap: 0.25rem;
     transform: translateX(100%);
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
     z-index: 1001;
     pointer-events: auto;
   }
@@ -298,13 +307,71 @@
   }
 }
 
+@media (max-width: 600px) {
+  .admin-nav-title {
+    font-size: 1rem;
+    max-width: 160px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
 @media (max-width: 480px) {
   .admin-nav {
     padding: 0.75rem 1rem;
+    padding-top: max(0.75rem, env(safe-area-inset-top));
+    padding-left: max(1rem, env(safe-area-inset-left));
+    padding-right: max(1rem, env(safe-area-inset-right));
   }
 
   .admin-nav-title {
-    font-size: 1.15rem;
+    font-size: 0.95rem;
+    max-width: 120px;
+  }
+
+  .admin-nav-center {
+    width: 100%;
+    max-width: 100%;
+  }
+}
+
+/* Shared admin content wrapper – responsive margins for small screens */
+.admin-content {
+  margin-left: 2rem;
+  margin-right: 2rem;
+}
+
+@media (max-width: 768px) {
+  .admin-content {
+    margin-left: 1rem;
+    margin-right: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .admin-content {
+    margin-left: max(1rem, env(safe-area-inset-left));
+    margin-right: max(1rem, env(safe-area-inset-right));
+  }
+}
+
+/* Override inline margins on admin content wrappers for small screens */
+@media (max-width: 768px) {
+  .admin-dashboard > div[style*="margin"],
+  .price-management > div[style*="margin"],
+  .stock-management > div[style*="margin"] {
+    margin-left: 1rem !important;
+    margin-right: 1rem !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .admin-dashboard > div[style*="margin"],
+  .price-management > div[style*="margin"],
+  .stock-management > div[style*="margin"] {
+    margin-left: max(1rem, env(safe-area-inset-left)) !important;
+    margin-right: max(1rem, env(safe-area-inset-right)) !important;
   }
 }
 
@@ -313,6 +380,8 @@
   position: relative;
   z-index: 1;
   padding: 2rem clamp(1rem, 4vw, 2rem);
+  padding-left: max(clamp(1rem, 4vw, 2rem), env(safe-area-inset-left));
+  padding-right: max(clamp(1rem, 4vw, 2rem), env(safe-area-inset-right));
   max-width: 1400px;
   margin: 0 auto;
 }
@@ -729,6 +798,9 @@
 @media (max-width: 768px) {
   .dashboard-wrapper {
     padding: 1rem;
+    padding-left: max(1rem, env(safe-area-inset-left));
+    padding-right: max(1rem, env(safe-area-inset-right));
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
   }
 
   .dashboard-header {

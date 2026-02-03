@@ -30,9 +30,52 @@ function Checkout() {
     setIsLoggedIn(!!AuthService.getCurrentUser());
     const savedCart = localStorage.getItem('cart');
     if (savedCart) {
-      setCart(JSON.parse(savedCart));
+      try {
+        const parsed = JSON.parse(savedCart);
+        const normalized = (Array.isArray(parsed) ? parsed : []).map((item) => ({
+          ...item,
+          makingCharges: item.makingCharges != null ? Number(item.makingCharges) : 0
+        }));
+        setCart(normalized);
+      } catch (_) {
+        setCart([]);
+      }
     }
   }, []);
+
+  const persistCart = (nextCart) => {
+    setCart(nextCart);
+    localStorage.setItem('cart', JSON.stringify(nextCart));
+  };
+
+  const getLineTotal = (item) => {
+    const qty = item.quantity || 1;
+    const unit = parseFloat(item.sellingPrice) || 0;
+    return unit * qty;
+  };
+
+  const removeFromCart = (itemId) => {
+    const next = cart.filter((i) => i.id !== itemId);
+    persistCart(next);
+  };
+
+  const updateQuantity = (itemId, delta) => {
+    const next = cart.map((i) => {
+      if (i.id !== itemId) return i;
+      const qty = Math.max(0, (i.quantity || 1) + delta);
+      if (qty <= 0) return null;
+      return { ...i, quantity: qty };
+    }).filter(Boolean);
+    persistCart(next);
+  };
+
+  const updateItemField = (itemId, value) => {
+    const next = cart.map((i) => {
+      if (i.id !== itemId) return i;
+      return { ...i, sellingPrice: value === '' ? '' : value };
+    });
+    persistCart(next);
+  };
 
   const handleLogout = () => {
     AuthService.logout();
@@ -40,7 +83,7 @@ function Checkout() {
     navigate('/');
   };
 
-  const getSubtotal = () => cart.reduce((sum, item) => sum + ((parseFloat(item.sellingPrice) || 0) * (item.quantity || 1)), 0);
+  const getSubtotal = () => cart.reduce((sum, item) => sum + getLineTotal(item), 0);
 
   const calculateTotal = () => getSubtotal() + SHIPPING_CHARGE;
 
@@ -90,12 +133,12 @@ function Checkout() {
         }
       }
 
-      // Create order
+      // Create order (line total = unitPrice * quantity + makingCharges)
       const orderItems = cart.map(item => ({
         itemName: item.articleName,
         quantity: item.quantity || 1,
         unitPrice: parseFloat(item.sellingPrice) || 0,
-        totalPrice: (parseFloat(item.sellingPrice) || 0) * (item.quantity || 1)
+        totalPrice: getLineTotal(item)
       }));
 
       const orderData = {
@@ -222,22 +265,45 @@ function Checkout() {
             <div className="checkout-items">
               {cart.map((item) => (
                 <div key={item.id} className="checkout-item-row">
-                  <div>
+                  <div className="checkout-item-info">
                     <h4 className="checkout-item-name">{item.articleName}</h4>
-                    <p className="checkout-item-meta">
-                      Qty {item.quantity} × ₹{Number(item.sellingPrice).toLocaleString('en-IN')}
-                    </p>
+                    <div className="checkout-item-controls">
+                      <label className="checkout-qty-wrap">
+                        <span className="checkout-qty-label">Qty</span>
+                        <span className="checkout-qty-btns">
+                          <button type="button" className="checkout-qty-btn" onClick={() => updateQuantity(item.id, -1)} aria-label="Decrease quantity">−</button>
+                          <span className="checkout-qty-value">{item.quantity || 1}</span>
+                          <button type="button" className="checkout-qty-btn" onClick={() => updateQuantity(item.id, 1)} aria-label="Increase quantity">+</button>
+                        </span>
+                      </label>
+                      <label className="checkout-price-wrap">
+                        <span className="checkout-price-label">Price (₹)</span>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          className="checkout-price-input"
+                          value={item.sellingPrice === '' || item.sellingPrice == null ? '' : item.sellingPrice}
+                          onChange={(e) => updateItemField(item.id, e.target.value)}
+                          placeholder="0"
+                        />
+                      </label>
+                    </div>
                   </div>
-                  <span className="checkout-item-total">
-                    ₹{(item.sellingPrice * item.quantity).toLocaleString('en-IN')}
-                  </span>
+                  <div className="checkout-item-right">
+                    <span className="checkout-item-total">₹{getLineTotal(item).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                    <button type="button" className="checkout-item-remove" onClick={() => removeFromCart(item.id)} title="Remove from cart" aria-label="Remove from cart">🗑️ Remove</button>
+                  </div>
                 </div>
               ))}
+            </div>
+            <div className="checkout-add-more">
+              <Link to="/products" className="checkout-add-more-link">+ Add more items</Link>
             </div>
 
             <div className="checkout-totals">
               <div className="checkout-totals-row">
-                <span className="label">Subtotal (incl. GST & making charges)</span>
+                <span className="label">Subtotal (incl. GST)</span>
                 <span className="value">₹{getSubtotal().toLocaleString('en-IN')}</span>
               </div>
 
@@ -257,11 +323,7 @@ function Checkout() {
                       <span>GST (3%)</span>
                       <span>₹{gstTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                     </div>
-                    <div className="row">
-                      <span>Making charges (₹{MAKING_CHARGES_PER_GM}/gm)</span>
-                      <span>incl. above</span>
-                    </div>
-                    <p className="checkout-totals-note">Tax & making charges are included in the subtotal.</p>
+                    <p className="checkout-totals-note">GST is included in the subtotal.</p>
                   </div>
                 );
               })()}

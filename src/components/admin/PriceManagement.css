@@ -1,8 +1,12 @@
 /* Price / Billing / Analytics – Gold & Silver Bullion Theme */
 .price-management {
   min-height: 100vh;
+  min-height: 100dvh;
   background: var(--adm-bg, #1a1814);
   padding-bottom: 2rem;
+  padding-bottom: max(2rem, env(safe-area-inset-bottom));
+  padding-left: 0;
+  padding-right: 0;
   position: relative;
   z-index: 1;
 }
@@ -543,6 +547,90 @@
   margin: 0 2rem;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.03);
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-right: 2rem;
+  scrollbar-gutter: stable;
+}
+
+/* Wrapper for table (desktop: sticky first column; narrow: hidden, cards shown) */
+.price-table-scroll {
+  display: block;
+}
+
+/* Sticky first column so key (e.g. Bill #, Order #) stays visible when scrolling */
+.price-table-scroll .price-table thead th:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 3;
+  background: linear-gradient(90deg, rgba(36, 32, 25, 0.98) 0%, rgba(36, 32, 25, 0.98) 100%);
+  border-right: 1px solid var(--adm-border-gold);
+  min-width: 0;
+  box-shadow: 2px 0 4px rgba(0, 0, 0, 0.2);
+}
+
+.price-table-scroll .price-table tbody td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--adm-bg-card, #242019);
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: 2px 0 4px rgba(0, 0, 0, 0.15);
+}
+
+.price-table-scroll .price-table tbody tr:hover td:first-child {
+  background: rgba(201, 162, 39, 0.06);
+}
+
+.price-table-scroll .price-table tbody tr.row-selected td:first-child {
+  background: rgba(201, 162, 39, 0.22);
+}
+
+/* Card list (narrow screens – no horizontal scroll) */
+.admin-list-cards {
+  display: none;
+}
+
+.admin-list-card {
+  background: var(--adm-bg-elevated, #2c251c);
+  border: 1px solid var(--adm-border-gold, rgba(201, 162, 39, 0.35));
+  border-radius: 12px;
+  padding: 1rem;
+  margin-bottom: 0.75rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.admin-list-card-main {
+  min-width: 0;
+  flex: 1 1 200px;
+}
+
+.admin-list-card-title {
+  font-weight: 600;
+  color: var(--adm-text);
+  font-size: 1rem;
+  margin-bottom: 0.25rem;
+}
+
+.admin-list-card-meta {
+  font-size: 0.8rem;
+  color: var(--adm-text-muted);
+  margin-bottom: 0.25rem;
+}
+
+.admin-list-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.admin-list-card.row-selected {
+  background: rgba(201, 162, 39, 0.22);
+  border-color: var(--adm-gold);
 }
 
 .price-table {
@@ -589,6 +677,21 @@
 .price-table tbody td {
   padding: 1rem;
   color: var(--adm-text);
+}
+
+/* Udhari history table – ensure text is visible on dark card */
+.udhari-history-table.price-table-container {
+  background: var(--adm-bg-card, #242019);
+}
+.udhari-history-table .price-table thead th {
+  color: var(--adm-gold, #c9a227) !important;
+}
+.udhari-history-table .price-table tbody td {
+  color: var(--adm-text, #f5f0e8) !important;
+}
+.udhari-history-table .price-empty-state h3,
+.udhari-history-table .price-empty-state p {
+  color: var(--adm-text, #f5f0e8);
 }
 
 .price-badge {
@@ -771,7 +874,9 @@
 
 @media (max-width: 768px) {
   .price-management {
-    padding-bottom: 1rem;
+    padding-left: max(1rem, env(safe-area-inset-left));
+    padding-right: max(1rem, env(safe-area-inset-right));
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
   }
 
   .price-header {
@@ -780,7 +885,7 @@
   }
 
   .price-search-card {
-    margin: 0 1rem 1rem;
+    margin: 0 0 1rem;
     padding: 1rem;
   }
 
@@ -790,13 +895,13 @@
 
   .price-cards {
     grid-template-columns: 1fr;
-    padding: 0 1rem;
+    padding: 0;
     margin-bottom: 1rem;
   }
 
   .price-form-card,
   .price-table-container {
-    margin: 0 1rem 1rem;
+    margin: 0 0 1rem;
   }
 
   .price-form-grid {
@@ -804,12 +909,31 @@
   }
 
   .price-table-container {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
+    padding: 1rem;
+  }
+
+  /* Hide table on narrow screens; show card list (no horizontal scroll) */
+  .price-table-scroll {
+    display: none;
+  }
+
+  .admin-list-cards {
+    display: block;
+  }
+
+  .price-table-scroll .price-table {
+    font-size: 0.875rem;
+    min-width: 600px;
+  }
+
+  .price-table thead th,
+  .price-table tbody td {
+    padding: 0.75rem 0.5rem;
   }
 
   .price-action-btn {
-    padding: 0.65rem 1.25rem;
+    padding: 0.75rem 1.25rem;
+    min-height: 44px;
     font-size: 0.9rem;
   }
 }
@@ -817,5 +941,15 @@
 @media (max-width: 480px) {
   .price-header h1 {
     font-size: 1.25rem;
+  }
+
+  .price-table {
+    font-size: 0.8125rem;
+    min-width: 520px;
+  }
+
+  .price-table thead th,
+  .price-table tbody td {
+    padding: 0.6rem 0.4rem;
   }
 }

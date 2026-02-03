@@ -266,69 +266,94 @@ function QRCodePrint() {
         <div className="price-table-container">
           <h3 style={{ marginBottom: '1.5rem', color: '#2c3e50' }}>📋 Stock Items ({totalElements})</h3>
           {paginatedStock.length > 0 ? (
-            <table className="price-table">
-              <thead>
-                <tr>
-                  <th style={{ width: '50px' }}>Select</th>
-                  <th>Article Code</th>
-                  <th>Article Name</th>
-                  <th>Weight (g)</th>
-                  <th>Carat</th>
-                  <th>Purity %</th>
-                  <th>Price</th>
-                  <th>Status</th>
-                  <th>QR Code</th>
-                </tr>
-              </thead>
-              <tbody>
+            <>
+              <div className="price-table-scroll">
+                <table className="price-table">
+                  <thead>
+                    <tr>
+                      <th style={{ width: '50px' }}>Select</th>
+                      <th>Article Code</th>
+                      <th>Article Name</th>
+                      <th>Weight (g)</th>
+                      <th>Carat</th>
+                      <th>Purity %</th>
+                      <th>Price</th>
+                      <th>Status</th>
+                      <th>QR Code</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {paginatedStock.map(item => (
+                      <tr key={item.id} className={selectedItems.has(item.id) ? 'row-selected' : ''}>
+                        <td>
+                          <input
+                            type="checkbox"
+                            checked={selectedItems.has(item.id)}
+                            onChange={() => toggleSelection(item.id)}
+                            style={{
+                              width: '20px',
+                              height: '20px',
+                              cursor: 'pointer',
+                              accentColor: '#667eea'
+                            }}
+                          />
+                        </td>
+                        <td style={{ fontWeight: 'bold', color: '#667eea' }}>{item.articleCode || 'N/A'}</td>
+                        <td style={{ fontWeight: '600' }}>{item.articleName}</td>
+                        <td>{item.weightGrams || 'N/A'}</td>
+                        <td>{item.carat || 'N/A'}</td>
+                        <td>{item.purityPercentage ? `${item.purityPercentage}%` : '-'}</td>
+                        <td style={{ fontWeight: 'bold' }}>{formatCurrency(item.sellingPrice)}</td>
+                        <td>
+                          <span className={`status-badge status-${item.status?.toLowerCase()}`}>
+                            {item.status}
+                          </span>
+                        </td>
+                        <td>
+                          {item.qrCode ? (
+                            <img
+                              src={getQRCodeImageUrl(item)}
+                              alt="QR Code"
+                              style={{
+                                width: '60px',
+                                height: '60px',
+                                border: '2px solid #ecf0f1',
+                                borderRadius: '8px',
+                                padding: '4px',
+                                background: '#fff'
+                              }}
+                            />
+                          ) : (
+                            <span style={{ color: '#e74c3c', fontWeight: '600' }}>❌ No QR Code</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="admin-list-cards">
                 {paginatedStock.map(item => (
-                  <tr key={item.id} className={selectedItems.has(item.id) ? 'row-selected' : ''}>
-                    <td>
-                      <input
-                        type="checkbox"
-                        checked={selectedItems.has(item.id)}
-                        onChange={() => toggleSelection(item.id)}
-                        style={{
-                          width: '20px',
-                          height: '20px',
-                          cursor: 'pointer',
-                          accentColor: '#667eea'
-                        }}
-                      />
-                    </td>
-                    <td style={{ fontWeight: 'bold', color: '#667eea' }}>{item.articleCode || 'N/A'}</td>
-                    <td style={{ fontWeight: '600' }}>{item.articleName}</td>
-                    <td>{item.weightGrams || 'N/A'}</td>
-                    <td>{item.carat || 'N/A'}</td>
-                    <td>{item.purityPercentage ? `${item.purityPercentage}%` : '-'}</td>
-                    <td style={{ fontWeight: 'bold' }}>{formatCurrency(item.sellingPrice)}</td>
-                    <td>
-                      <span className={`status-badge status-${item.status?.toLowerCase()}`}>
-                        {item.status}
-                      </span>
-                    </td>
-                    <td>
+                  <div key={item.id} className={`admin-list-card ${selectedItems.has(item.id) ? 'row-selected' : ''}`} style={{ borderColor: selectedItems.has(item.id) ? 'var(--adm-gold)' : undefined }}>
+                    <div className="admin-list-card-main">
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', marginBottom: '0.25rem' }}>
+                        <input type="checkbox" checked={selectedItems.has(item.id)} onChange={() => toggleSelection(item.id)} style={{ width: '20px', height: '20px', accentColor: '#667eea' }} />
+                        <span className="admin-list-card-title" style={{ color: '#667eea' }}>{item.articleCode || 'N/A'}</span>
+                      </label>
+                      <div className="admin-list-card-meta">{item.articleName} · {item.weightGrams || 'N/A'}g · {item.purityPercentage ? `${item.purityPercentage}%` : '-'} · {formatCurrency(item.sellingPrice)}</div>
+                      <span className={`status-badge status-${item.status?.toLowerCase()}`}>{item.status}</span>
+                    </div>
+                    <div className="admin-list-card-actions">
                       {item.qrCode ? (
-                        <img
-                          src={getQRCodeImageUrl(item)}
-                          alt="QR Code"
-                          style={{
-                            width: '60px',
-                            height: '60px',
-                            border: '2px solid #ecf0f1',
-                            borderRadius: '8px',
-                            padding: '4px',
-                            background: '#fff'
-                          }}
-                        />
+                        <img src={getQRCodeImageUrl(item)} alt="QR" style={{ width: '48px', height: '48px', border: '2px solid var(--adm-border-gold)', borderRadius: '8px', background: '#fff' }} />
                       ) : (
-                        <span style={{ color: '#e74c3c', fontWeight: '600' }}>❌ No QR Code</span>
+                        <span style={{ color: '#e74c3c', fontSize: '0.8rem' }}>❌ No QR</span>
                       )}
-                    </td>
-                  </tr>
+                    </div>
+                  </div>
                 ))}
-              </tbody>
-            </table>
+              </div>
+            </>
           ) : (
             <div className="price-empty-state">
               <div className="price-empty-state-icon">📱</div>

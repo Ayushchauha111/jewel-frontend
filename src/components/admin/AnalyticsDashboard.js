@@ -277,26 +277,38 @@ function AnalyticsDashboard() {
                 {analytics.soldStocks && analytics.soldStocks.length > 0 && (
                   <div className="price-table-container">
                     <h3 style={{ marginBottom: '1.5rem', color: '#fff' }}>📦 Sold Stock Items</h3>
-                    <table className="price-table">
-                      <thead>
-                        <tr>
-                          <th>Article Name</th>
-                          <th>Article Code</th>
-                          <th>Selling Price</th>
-                          <th>Sold Date</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {analytics.soldStocks.map((stock) => (
-                          <tr key={stock.id}>
-                            <td>{stock.articleName}</td>
-                            <td>{stock.articleCode || '-'}</td>
-                            <td>{formatCurrency(stock.sellingPrice)}</td>
-                            <td>{formatDate(stock.soldDate)}</td>
+                    <div className="price-table-scroll">
+                      <table className="price-table">
+                        <thead>
+                          <tr>
+                            <th>Article Name</th>
+                            <th>Article Code</th>
+                            <th>Selling Price</th>
+                            <th>Sold Date</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody>
+                          {analytics.soldStocks.map((stock) => (
+                            <tr key={stock.id}>
+                              <td>{stock.articleName}</td>
+                              <td>{stock.articleCode || '-'}</td>
+                              <td>{formatCurrency(stock.sellingPrice)}</td>
+                              <td>{formatDate(stock.soldDate)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    <div className="admin-list-cards">
+                      {analytics.soldStocks.map((stock) => (
+                        <div key={stock.id} className="admin-list-card">
+                          <div className="admin-list-card-main">
+                            <div className="admin-list-card-title">{stock.articleName}</div>
+                            <div className="admin-list-card-meta">{stock.articleCode || '-'} · {formatCurrency(stock.sellingPrice)} · {formatDate(stock.soldDate)}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
@@ -418,34 +430,48 @@ function AnalyticsDashboard() {
               <div className="price-table-container">
                 <h3 style={{ marginBottom: '1.5rem', color: '#fff' }}>✅ Completed Stock</h3>
                 {completedStock.length > 0 ? (
-                  <table className="price-table">
-                    <thead>
-                      <tr>
-                        <th>Article Name</th>
-                        <th>Article Code</th>
-                        <th>Weight (g)</th>
-                        <th>Carat</th>
-                        <th>Purity %</th>
-                        <th>Selling Price</th>
-                        <th>Quantity</th>
-                        <th>Sold Date</th>
-                      </tr>
-                    </thead>
-                    <tbody>
+                  <>
+                    <div className="price-table-scroll">
+                      <table className="price-table">
+                        <thead>
+                          <tr>
+                            <th>Article Name</th>
+                            <th>Article Code</th>
+                            <th>Weight (g)</th>
+                            <th>Carat</th>
+                            <th>Purity %</th>
+                            <th>Selling Price</th>
+                            <th>Quantity</th>
+                            <th>Sold Date</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {completedStock.map((stock) => (
+                            <tr key={stock.id}>
+                              <td>{stock.articleName}</td>
+                              <td>{stock.articleCode || '-'}</td>
+                              <td>{stock.weightGrams || '-'}</td>
+                              <td>{stock.carat || '-'}</td>
+                              <td>{stock.purityPercentage ? `${stock.purityPercentage}%` : '-'}</td>
+                              <td>{formatCurrency(stock.sellingPrice)}</td>
+                              <td>{stock.quantity || 1}</td>
+                              <td>{formatDate(stock.soldDate)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    <div className="admin-list-cards">
                       {completedStock.map((stock) => (
-                        <tr key={stock.id}>
-                          <td>{stock.articleName}</td>
-                          <td>{stock.articleCode || '-'}</td>
-                          <td>{stock.weightGrams || '-'}</td>
-                          <td>{stock.carat || '-'}</td>
-                          <td>{stock.purityPercentage ? `${stock.purityPercentage}%` : '-'}</td>
-                          <td>{formatCurrency(stock.sellingPrice)}</td>
-                          <td>{stock.quantity || 1}</td>
-                          <td>{formatDate(stock.soldDate)}</td>
-                        </tr>
+                        <div key={stock.id} className="admin-list-card">
+                          <div className="admin-list-card-main">
+                            <div className="admin-list-card-title">{stock.articleName}</div>
+                            <div className="admin-list-card-meta">{stock.articleCode || '-'} · {stock.weightGrams || '-'}g · {formatCurrency(stock.sellingPrice)} · {formatDate(stock.soldDate)}</div>
+                          </div>
+                        </div>
                       ))}
-                    </tbody>
-                  </table>
+                    </div>
+                  </>
                 ) : (
                   <div className="price-empty-state">
                     <div className="price-empty-state-icon">📦</div>
@@ -462,7 +488,7 @@ function AnalyticsDashboard() {
           <div style={{ margin: '0 2rem' }}>
             <div style={{ marginBottom: '1.5rem', display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
               <div>
-                <label style={{ marginRight: '0.5rem', fontWeight: '600', color: '#fff' }}>Start Date:</label>
+                <label style={{ marginRight: '0.5rem', fontWeight: '600', color: '#f5f0e8' }}>Start Date:</label>
                 <input
                   type="date"
                   value={startDate}
@@ -470,15 +496,15 @@ function AnalyticsDashboard() {
                   style={{
                     padding: '0.75rem',
                     borderRadius: '8px',
-                    border: '2px solid rgba(255,255,255,0.3)',
-                    background: 'rgba(255,255,255,0.1)',
-                    color: '#fff',
+                    border: '2px solid rgba(201, 162, 39, 0.35)',
+                    background: 'rgba(36, 32, 25, 0.9)',
+                    color: '#f5f0e8',
                     fontSize: '1rem'
                   }}
                 />
               </div>
               <div>
-                <label style={{ marginRight: '0.5rem', fontWeight: '600', color: '#fff' }}>End Date:</label>
+                <label style={{ marginRight: '0.5rem', fontWeight: '600', color: '#f5f0e8' }}>End Date:</label>
                 <input
                   type="date"
                   value={endDate}
@@ -486,9 +512,9 @@ function AnalyticsDashboard() {
                   style={{
                     padding: '0.75rem',
                     borderRadius: '8px',
-                    border: '2px solid rgba(255,255,255,0.3)',
-                    background: 'rgba(255,255,255,0.1)',
-                    color: '#fff',
+                    border: '2px solid rgba(201, 162, 39, 0.35)',
+                    background: 'rgba(36, 32, 25, 0.9)',
+                    color: '#f5f0e8',
                     fontSize: '1rem'
                   }}
                 />
@@ -496,27 +522,29 @@ function AnalyticsDashboard() {
             </div>
 
             {loading ? (
-              <div style={{ textAlign: 'center', padding: '3rem', color: '#fff' }}>⏳ Loading udhari history...</div>
+              <div style={{ textAlign: 'center', padding: '3rem', color: '#f5f0e8' }}>⏳ Loading udhari history...</div>
             ) : (
-              <div className="price-table-container">
-                <h3 style={{ marginBottom: '1.5rem', color: '#fff' }}>💳 Udhari History</h3>
+              <div className="price-table-container udhari-history-table">
+                <h3 style={{ marginBottom: '1.5rem', color: '#f5f0e8' }}>💳 Udhari History</h3>
                 {creditHistory.length > 0 ? (
-                  <table className="price-table">
-                    <thead>
-                      <tr>
-                        <th>Customer Name</th>
-                        <th>Udhari Amount</th>
-                        <th>Paid Amount</th>
-                        <th>Remaining Amount</th>
-                        <th>Status</th>
-                        <th>Description</th>
-                        <th>Created Date</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {creditHistory.map((credit) => (
-                        <tr key={credit.id}>
-                          <td>{credit.customerName}</td>
+                  <>
+                    <div className="price-table-scroll">
+                      <table className="price-table">
+                        <thead>
+                          <tr>
+                            <th>Customer Name</th>
+                            <th>Udhari Amount</th>
+                            <th>Paid Amount</th>
+                            <th>Remaining Amount</th>
+                            <th>Status</th>
+                            <th>Description</th>
+                            <th>Created Date</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {creditHistory.map((credit) => (
+                            <tr key={credit.id}>
+                              <td>{credit.customerName}</td>
                           <td>{formatCurrency(credit.creditAmount)}</td>
                           <td>{formatCurrency(credit.paidAmount)}</td>
                           <td>{formatCurrency(credit.remainingAmount)}</td>
@@ -531,6 +559,19 @@ function AnalyticsDashboard() {
                       ))}
                     </tbody>
                   </table>
+                    </div>
+                    <div className="admin-list-cards">
+                      {creditHistory.map((credit) => (
+                        <div key={credit.id} className="admin-list-card">
+                          <div className="admin-list-card-main">
+                            <div className="admin-list-card-title">{credit.customerName}</div>
+                            <div className="admin-list-card-meta">{formatCurrency(credit.creditAmount)} · Paid: {formatCurrency(credit.paidAmount)} · Remaining: {formatCurrency(credit.remainingAmount)} · {formatDate(credit.createdAt)}</div>
+                            <span className={`status-badge status-${credit.status?.toLowerCase()}`}>{credit.status}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
                 ) : (
                   <div className="price-empty-state">
                     <div className="price-empty-state-icon">💳</div>

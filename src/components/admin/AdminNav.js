@@ -13,6 +13,7 @@ const NAV_LINKS = [
   { to: '/admin/analytics', label: 'Analytics' },
   { to: '/admin/income-expense', label: 'Income/Expense' },
   { to: '/admin/rates', label: 'Rates (Gold/Silver/Diamond)' },
+  { to: '/admin/config', label: 'Config (Category Making)' },
   { to: '/admin/rate-limit', label: 'Rate Limits' },
   { to: '/', label: 'Home' },
 ];

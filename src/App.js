@@ -2,6 +2,7 @@ import React from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { HelmetProvider } from 'react-helmet-async';
 import "bootstrap/dist/css/bootstrap.min.css";
+import "./style/mobile-app.css";
 import "./App.css";
 
 // Admin Components
@@ -12,6 +13,7 @@ import CustomerManagement from "./components/admin/CustomerManagement";
 import OrderManagement from "./components/admin/OrderManagement";
 import CreditManagement from "./components/admin/CreditManagement";
 import RatesManagement from "./components/admin/RatesManagement";
+import ConfigManagement from "./components/admin/ConfigManagement";
 import AnalyticsDashboard from "./components/admin/AnalyticsDashboard";
 import IncomeExpenseManagement from "./components/admin/IncomeExpenseManagement";
 import RateLimitManagement from "./components/admin/RateLimitManagement";
@@ -61,6 +63,7 @@ function App() {
           <Route path="/admin/analytics" element={<AnalyticsDashboard />} />
           <Route path="/admin/income-expense" element={<IncomeExpenseManagement />} />
           <Route path="/admin/rates" element={<RatesManagement />} />
+          <Route path="/admin/config" element={<ConfigManagement />} />
           <Route path="/admin/rate-limit" element={<RateLimitManagement />} />
           </Routes>
       </BrowserRouter>

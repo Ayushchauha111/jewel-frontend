@@ -263,31 +263,45 @@ function SilverPriceManagement() {
         <div className="price-table-container">
           <h3 style={{ marginBottom: '1.5rem', color: '#2c3e50' }}>📜 Price History</h3>
           {silverPrices.length > 0 ? (
-            <table className="price-table">
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Price per Gram</th>
-                  <th>Price per Kilogram</th>
-                  <th>Notes</th>
-                </tr>
-              </thead>
-              <tbody>
+            <>
+              <div className="price-table-scroll">
+                <table className="price-table">
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Price per Gram</th>
+                      <th>Price per Kilogram</th>
+                      <th>Notes</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {silverPrices.map((price) => (
+                      <tr key={price.id}>
+                        <td>
+                          {formatDate(price.priceDate)}
+                          {isToday(price.priceDate) && (
+                            <span className="price-badge today" style={{ marginLeft: '0.5rem' }}>Today</span>
+                          )}
+                        </td>
+                        <td style={{ fontWeight: 'bold', color: '#8b8b8b' }}>{formatCurrency(price.pricePerGram)}</td>
+                        <td>{price.pricePerKg ? formatCurrency(price.pricePerKg) : '-'}</td>
+                        <td>{price.notes || '-'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="admin-list-cards">
                 {silverPrices.map((price) => (
-                  <tr key={price.id}>
-                    <td>
-                      {formatDate(price.priceDate)}
-                      {isToday(price.priceDate) && (
-                        <span className="price-badge today" style={{ marginLeft: '0.5rem' }}>Today</span>
-                      )}
-                    </td>
-                    <td style={{ fontWeight: 'bold', color: '#8b8b8b' }}>{formatCurrency(price.pricePerGram)}</td>
-                    <td>{price.pricePerKg ? formatCurrency(price.pricePerKg) : '-'}</td>
-                    <td>{price.notes || '-'}</td>
-                  </tr>
+                  <div key={price.id} className="admin-list-card">
+                    <div className="admin-list-card-main">
+                      <div className="admin-list-card-title">{formatDate(price.priceDate)}{isToday(price.priceDate) && <span className="price-badge today" style={{ marginLeft: '0.5rem' }}>Today</span>}</div>
+                      <div className="admin-list-card-meta" style={{ color: '#8b8b8b' }}>{formatCurrency(price.pricePerGram)}/g · {price.pricePerKg ? formatCurrency(price.pricePerKg) : '-'}/kg{price.notes ? ` · ${price.notes}` : ''}</div>
+                    </div>
+                  </div>
                 ))}
-              </tbody>
-            </table>
+              </div>
+            </>
           ) : (
             <div className="price-empty-state">
               <div className="price-empty-state-icon">📊</div>

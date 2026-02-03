@@ -422,96 +422,98 @@ function CreditManagement() {
             </div>
           )}
           {credits.length > 0 ? (
-            <table className="price-table">
-              <thead>
-                <tr>
-                  <th>Customer</th>
-                  <th>Udhari Amount</th>
-                  <th>Paid Amount</th>
-                  <th>Remaining</th>
-                  <th>Status</th>
-                  <th>Description</th>
-                  <th>Date</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {credits.map((credit) => (
-                  <React.Fragment key={credit.id}>
+            <>
+              <div className="price-table-scroll">
+                <table className="price-table">
+                  <thead>
                     <tr>
-                      <td style={{ fontWeight: '600' }}>{credit.customer?.name || '-'}</td>
-                      <td style={{ fontWeight: 'bold', color: '#667eea' }}>{formatCurrency(credit.creditAmount)}</td>
-                      <td style={{ color: '#27ae60' }}>{formatCurrency(credit.paidAmount)}</td>
-                      <td style={{ fontWeight: 'bold', color: '#e74c3c' }}>{formatCurrency(credit.remainingAmount)}</td>
-                      <td>
-                        <span className={`status-badge status-${credit.status?.toLowerCase()}`}>
-                          {credit.status}
-                        </span>
-                      </td>
-                      <td>{credit.description || '-'}</td>
-                      <td>{formatDate(credit.createdAt)}</td>
-                      <td>
-                        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                          {showPaymentForm === credit.id ? (
-                            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                              <input
-                                type="number"
-                                step="0.01"
-                                placeholder="Amount"
-                                value={paymentAmount}
-                                onChange={(e) => setPaymentAmount(e.target.value)}
-                                style={{ width: '120px', padding: '0.5rem', border: '2px solid #ecf0f1', borderRadius: '8px' }}
-                              />
-                              <button
-                                onClick={() => handlePayment(credit.id)}
-                                disabled={loading}
-                                className="stock-btn-edit"
-                                style={{ fontSize: '0.75rem', padding: '0.5rem 1rem' }}
-                              >
-                                {loading ? '⏳' : '✅ Pay'}
-                              </button>
-                              <button
-                                onClick={() => {
-                                  setShowPaymentForm(null);
-                                  setPaymentAmount('');
-                                }}
-                                className="stock-btn-delete"
-                                style={{ fontSize: '0.75rem', padding: '0.5rem 1rem' }}
-                              >
-                                ✕
-                              </button>
-                            </div>
-                          ) : (
-                            <>
-                              <button
-                                onClick={() => setShowPaymentForm(credit.id)}
-                                className="stock-btn-edit"
-                                style={{ fontSize: '0.75rem', padding: '0.5rem 1rem' }}
-                              >
-                                💰 Add Payment
-                              </button>
-                              <button
-                                onClick={() => togglePaymentHistory(credit.id)}
-                                className="stock-btn-edit"
-                                style={{ fontSize: '0.75rem', padding: '0.5rem 1rem', background: '#667eea', color: '#fff' }}
-                              >
-                                {showPaymentHistory === credit.id ? '📋 Hide History' : '📋 View History'}
-                              </button>
-                              <button
-                                onClick={() => handleDelete(credit.id)}
-                                disabled={loading}
-                                className="stock-btn-delete"
-                                style={{ fontSize: '0.75rem', padding: '0.5rem 1rem' }}
-                                title="Delete this udhari record"
-                              >
-                                🗑️ Delete
-                              </button>
-                            </>
-                          )}
-                        </div>
-                      </td>
+                      <th>Customer</th>
+                      <th>Udhari Amount</th>
+                      <th>Paid Amount</th>
+                      <th>Remaining</th>
+                      <th>Status</th>
+                      <th>Description</th>
+                      <th>Date</th>
+                      <th>Actions</th>
                     </tr>
-                    {showPaymentHistory === credit.id && paymentHistory[credit.id] && (
+                  </thead>
+                  <tbody>
+                    {credits.map((credit) => (
+                      <React.Fragment key={credit.id}>
+                        <tr>
+                          <td style={{ fontWeight: '600' }}>{credit.customer?.name || '-'}</td>
+                          <td style={{ fontWeight: 'bold', color: '#667eea' }}>{formatCurrency(credit.creditAmount)}</td>
+                          <td style={{ color: '#27ae60' }}>{formatCurrency(credit.paidAmount)}</td>
+                          <td style={{ fontWeight: 'bold', color: '#e74c3c' }}>{formatCurrency(credit.remainingAmount)}</td>
+                          <td>
+                            <span className={`status-badge status-${credit.status?.toLowerCase()}`}>
+                              {credit.status}
+                            </span>
+                          </td>
+                          <td>{credit.description || '-'}</td>
+                          <td>{formatDate(credit.createdAt)}</td>
+                          <td>
+                            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                              {showPaymentForm === credit.id ? (
+                                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                  <input
+                                    type="number"
+                                    step="0.01"
+                                    placeholder="Amount"
+                                    value={paymentAmount}
+                                    onChange={(e) => setPaymentAmount(e.target.value)}
+                                    style={{ width: '120px', padding: '0.5rem', border: '2px solid #ecf0f1', borderRadius: '8px' }}
+                                  />
+                                  <button
+                                    onClick={() => handlePayment(credit.id)}
+                                    disabled={loading}
+                                    className="stock-btn-edit"
+                                    style={{ fontSize: '0.75rem', padding: '0.5rem 1rem' }}
+                                  >
+                                    {loading ? '⏳' : '✅ Pay'}
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      setShowPaymentForm(null);
+                                      setPaymentAmount('');
+                                    }}
+                                    className="stock-btn-delete"
+                                    style={{ fontSize: '0.75rem', padding: '0.5rem 1rem' }}
+                                  >
+                                    ✕
+                                  </button>
+                                </div>
+                              ) : (
+                                <>
+                                  <button
+                                    onClick={() => setShowPaymentForm(credit.id)}
+                                    className="stock-btn-edit"
+                                    style={{ fontSize: '0.75rem', padding: '0.5rem 1rem' }}
+                                  >
+                                    💰 Add Payment
+                                  </button>
+                                  <button
+                                    onClick={() => togglePaymentHistory(credit.id)}
+                                    className="stock-btn-edit"
+                                    style={{ fontSize: '0.75rem', padding: '0.5rem 1rem', background: '#667eea', color: '#fff' }}
+                                  >
+                                    {showPaymentHistory === credit.id ? '📋 Hide History' : '📋 View History'}
+                                  </button>
+                                  <button
+                                    onClick={() => handleDelete(credit.id)}
+                                    disabled={loading}
+                                    className="stock-btn-delete"
+                                    style={{ fontSize: '0.75rem', padding: '0.5rem 1rem' }}
+                                    title="Delete this udhari record"
+                                  >
+                                    🗑️ Delete
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                        {showPaymentHistory === credit.id && paymentHistory[credit.id] && (
                       <tr>
                         <td colSpan="8" style={{ background: '#f8f9fa', padding: '1rem' }}>
                           <div style={{ marginLeft: '2rem' }}>
@@ -552,6 +554,46 @@ function CreditManagement() {
                 ))}
               </tbody>
             </table>
+              </div>
+              <div className="admin-list-cards">
+                {credits.map((credit) => (
+                  <div key={credit.id} className="admin-list-card">
+                    <div className="admin-list-card-main">
+                      <div className="admin-list-card-title">{credit.customer?.name || '-'}</div>
+                      <div className="admin-list-card-meta">
+                        Udhari: {formatCurrency(credit.creditAmount)} · Paid: {formatCurrency(credit.paidAmount)} · Remaining: {formatCurrency(credit.remainingAmount)} · {formatDate(credit.createdAt)}
+                      </div>
+                      <span className={`status-badge status-${credit.status?.toLowerCase()}`}>{credit.status}</span>
+                    </div>
+                    <div className="admin-list-card-actions">
+                      {showPaymentForm === credit.id ? (
+                        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                          <input type="number" step="0.01" placeholder="Amount" value={paymentAmount} onChange={(e) => setPaymentAmount(e.target.value)} style={{ width: '100px', padding: '0.5rem', border: '2px solid var(--adm-border-gold)', borderRadius: '8px', background: 'var(--adm-bg-elevated)', color: 'var(--adm-text)' }} />
+                          <button onClick={() => handlePayment(credit.id)} disabled={loading} className="stock-btn-edit" style={{ fontSize: '0.75rem', padding: '0.5rem 1rem' }}>{loading ? '⏳' : '✅ Pay'}</button>
+                          <button onClick={() => { setShowPaymentForm(null); setPaymentAmount(''); }} className="stock-btn-delete" style={{ fontSize: '0.75rem', padding: '0.5rem 1rem' }}>✕</button>
+                        </div>
+                      ) : (
+                        <>
+                          <button onClick={() => setShowPaymentForm(credit.id)} className="stock-btn-edit" style={{ fontSize: '0.75rem', padding: '0.5rem 1rem' }}>💰 Add Payment</button>
+                          <button onClick={() => togglePaymentHistory(credit.id)} className="stock-btn-edit" style={{ fontSize: '0.75rem', padding: '0.5rem 1rem', background: '#667eea', color: '#fff' }}>{showPaymentHistory === credit.id ? '📋 Hide' : '📋 History'}</button>
+                          <button onClick={() => handleDelete(credit.id)} disabled={loading} className="stock-btn-delete" style={{ fontSize: '0.75rem', padding: '0.5rem 1rem' }}>🗑️ Delete</button>
+                        </>
+                      )}
+                    </div>
+                    {showPaymentHistory === credit.id && paymentHistory[credit.id] && paymentHistory[credit.id].length > 0 && (
+                      <div style={{ width: '100%', marginTop: '0.75rem', padding: '0.75rem', background: 'rgba(0,0,0,0.2)', borderRadius: '8px', fontSize: '0.85rem' }}>
+                        <strong>💳 Payment History</strong>
+                        <ul style={{ margin: '0.5rem 0 0', paddingLeft: '1.25rem' }}>
+                          {paymentHistory[credit.id].map((p) => (
+                            <li key={p.id}>{formatDateTime(p.paymentDate)} — {formatCurrency(p.paymentAmount)}{p.notes ? ` · ${p.notes}` : ''}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </>
           ) : (
             <div className="price-empty-state">
               <div className="price-empty-state-icon">💳</div>
