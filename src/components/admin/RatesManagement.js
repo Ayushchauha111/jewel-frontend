@@ -24,6 +24,7 @@ function RatesManagement() {
     ...Object.fromEntries(GOLD_CARATS.map(c => [`gold${c}K`, ''])),
     silverPerGram: '',
     diamondPerCarat: '',
+    makingChargesPerGram: '',
     notes: ''
   });
 
@@ -75,6 +76,7 @@ function RatesManagement() {
         gold24K: formData.gold24K ? parseFloat(formData.gold24K) : null,
         silverPerGram: formData.silverPerGram ? parseFloat(formData.silverPerGram) : null,
         diamondPerCarat: formData.diamondPerCarat ? parseFloat(formData.diamondPerCarat) : null,
+        makingChargesPerGram: formData.makingChargesPerGram ? parseFloat(formData.makingChargesPerGram) : null,
         notes: formData.notes?.trim() || null
       };
       await axios.post(`${API_URL}/rates`, payload, { headers: getAuthHeaders() });
@@ -98,6 +100,7 @@ function RatesManagement() {
       ...Object.fromEntries(GOLD_CARATS.map(c => [`gold${c}K`, ''])),
       silverPerGram: '',
       diamondPerCarat: '',
+      makingChargesPerGram: '',
       notes: ''
     });
     setShowForm(false);
@@ -125,6 +128,7 @@ function RatesManagement() {
       ...Object.fromEntries(GOLD_CARATS.map(c => [`gold${c}K`, r[`gold${c}K`] != null ? String(r[`gold${c}K`]) : ''])),
       silverPerGram: r.silverPerGram != null ? String(r.silverPerGram) : '',
       diamondPerCarat: r.diamondPerCarat != null ? String(r.diamondPerCarat) : '',
+      makingChargesPerGram: r.makingChargesPerGram != null ? String(r.makingChargesPerGram) : '',
       notes: r.notes?.trim() ?? ''
     };
   };
@@ -191,6 +195,15 @@ function RatesManagement() {
                 </div>
                 <div className="price-label">Per carat</div>
                 <p className="price-value">{formatCurrency(todayRate.diamondPerCarat)}</p>
+                <div className="price-date">{formatDate(todayRate.priceDate)}</div>
+              </div>
+              <div className="price-card price-card--info">
+                <div className="price-card-header">
+                  <div className="price-icon">⚙️</div>
+                  <span className="price-badge today">Today – Making (₹/g)</span>
+                </div>
+                <div className="price-label">Default for billing</div>
+                <p className="price-value">{todayRate.makingChargesPerGram != null ? formatCurrency(todayRate.makingChargesPerGram) : '—'}</p>
                 <div className="price-date">{formatDate(todayRate.priceDate)}</div>
               </div>
             </>
@@ -273,6 +286,17 @@ function RatesManagement() {
                     placeholder="e.g. 150000"
                   />
                 </div>
+                <div className="price-form-group">
+                  <label>Making Charges – default ₹/g (for billing)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={formData.makingChargesPerGram}
+                    onChange={(e) => setFormData({ ...formData, makingChargesPerGram: e.target.value })}
+                    placeholder="e.g. 1150"
+                  />
+                </div>
               </div>
               <div className="price-form-group">
                 <label>Notes</label>
@@ -301,6 +325,7 @@ function RatesManagement() {
                     {GOLD_CARATS.map(c => (<th key={c}>{c}K</th>))}
                     <th>Silver/g</th>
                     <th>Diamond/ct</th>
+                    <th>Making ₹/g</th>
                     <th>Notes</th>
                   </tr>
                 </thead>
@@ -316,6 +341,7 @@ function RatesManagement() {
                       ))}
                       <td>{r.silverPerGram != null ? formatCurrency(r.silverPerGram) : '—'}</td>
                       <td>{r.diamondPerCarat != null ? formatCurrency(r.diamondPerCarat) : '—'}</td>
+                      <td>{r.makingChargesPerGram != null ? formatCurrency(r.makingChargesPerGram) : '—'}</td>
                       <td>{r.notes || '—'}</td>
                     </tr>
                   ))}

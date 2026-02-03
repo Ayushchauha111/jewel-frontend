@@ -459,6 +459,36 @@
   box-shadow: 0 0 12px var(--adm-gold-shadow);
 }
 
+/* External item (sold from friend) – no stock, manual name & price */
+.price-external-item {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  padding: 1rem;
+  background: var(--adm-bg-elevated, #2c281f);
+  border: 1px solid var(--adm-border-gold);
+  border-radius: 8px;
+}
+.price-external-item-label {
+  font-weight: 600;
+  color: var(--adm-gold-light);
+  width: 100%;
+  margin-bottom: 0.25rem;
+}
+.price-external-field-label {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--adm-text-muted, #64748b);
+  margin-bottom: 0.25rem;
+}
+.price-external-rate,
+.price-external-total {
+  padding: 0.75rem 0;
+  color: var(--adm-gold-light);
+  font-size: 0.95rem;
+}
+
 /* Bill detail modal – prevent breaking; scrollable table and summary */
 .bill-detail-modal-content {
   display: flex;

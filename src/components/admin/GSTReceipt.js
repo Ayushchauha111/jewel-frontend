@@ -212,23 +212,24 @@ function GSTReceipt({ bill, companyName, companyAddress, companyPhone, companyEm
 
         <div className="gst-receipt-footer-flex">
           <div className="gst-receipt-words-section">
-            <p><strong>Amount in Words:</strong></p>
-            <p className="words-text">{amountInWords(grandTotal + roundOff)}</p>
+            <p className="gst-receipt-words-label">Amount in Words:</p>
+            <p className="gst-receipt-words-text">{amountInWords(grandTotal + roundOff)}</p>
           </div>
-          
-          <div className="gst-receipt-summary-table">
-            <table>
+
+          <div className="gst-receipt-summary-card">
+            <table className="gst-receipt-summary-table">
               <tbody>
                 <tr><td>Subtotal</td><td>{formatCurrency(totalAmount)}</td></tr>
                 <tr><td>Discount</td><td>-{formatCurrency(discountAmount)}</td></tr>
                 <tr><td>Making Charges</td><td>{formatCurrency(makingCharges)}</td></tr>
-                <tr className="tax-row"><td>Taxable Value</td><td>{formatCurrency(taxableAmount)}</td></tr>
+                <tr className="gst-receipt-summary-taxable"><td>Taxable Value</td><td>{formatCurrency(taxableAmount)}</td></tr>
                 <tr><td>CGST (1.5%)</td><td>{formatCurrency(cgstAmount)}</td></tr>
                 <tr><td>SGST (1.5%)</td><td>{formatCurrency(sgstAmount)}</td></tr>
+                <tr className="gst-receipt-summary-gst3"><td>GST (3%)</td><td>{formatCurrency(totalGst)}</td></tr>
                 <tr><td>Round Off</td><td>{formatCurrency(roundOff)}</td></tr>
-                <tr className="grand-total-row">
-                  <td><strong>Grand Total</strong></td>
-                  <td><strong>{formatCurrency(grandTotal + roundOff)}</strong></td>
+                <tr className="gst-receipt-summary-grand">
+                  <td>Grand Total</td>
+                  <td>{formatCurrency(grandTotal + roundOff)}</td>
                 </tr>
               </tbody>
             </table>

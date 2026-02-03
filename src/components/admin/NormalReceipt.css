@@ -66,49 +66,16 @@
 .normal-receipt-header {
   text-align: center;
   margin-bottom: 1rem;
-  padding-bottom: 1rem;
-  border-bottom: 2px solid #c9a227;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #e2e8f0;
 }
 
-.normal-receipt-logo {
-  max-width: 100px;
-  max-height: 70px;
-  object-fit: contain;
-  margin: 0 auto 0.5rem;
-  display: block;
-}
-
-.normal-receipt-shop-name {
-  margin: 0 0 0.35em;
-  font-family: 'Playfair Display', Georgia, serif;
-  font-size: 1.5rem;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  color: #1a1a1a;
-}
-
-.normal-receipt-email {
-  margin: 0.2em 0;
-  color: #374151;
-  font-size: 0.9rem;
-}
-
-.normal-receipt-address,
-.normal-receipt-phone {
-  margin: 0.2em 0;
-  color: #374151;
-  font-size: 0.9rem;
-  word-break: break-word;
-  overflow-wrap: break-word;
-}
-
-.normal-receipt-title {
-  margin: 0 0 0.75rem;
-  font-family: 'Playfair Display', Georgia, serif;
+.normal-receipt-rough-title {
+  margin: 0;
+  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
   font-size: 1.25rem;
   font-weight: 600;
   letter-spacing: 0.02em;
-  text-align: center;
   color: #1a1a1a;
 }
 

@@ -2,11 +2,6 @@ import React, { useRef } from 'react';
 import { useReactToPrint } from 'react-to-print';
 import './NormalReceipt.css';
 
-const SHOP_NAME = process.env.REACT_APP_SHOP_NAME || 'Jewelry Shop';
-const SHOP_ADDRESS = process.env.REACT_APP_SHOP_ADDRESS || '';
-const SHOP_PHONE = process.env.REACT_APP_SHOP_PHONE || '';
-const SHOP_EMAIL = process.env.REACT_APP_SHOP_EMAIL || '';
-const SHOP_LOGO = process.env.REACT_APP_SHOP_LOGO || '/logo-gj.png';
 
 // --- Helpers ---
 function formatCurrency(amount) {
@@ -30,20 +25,13 @@ function formatDate(dateString) {
 }
 
 // --- Component ---
-function NormalReceipt({ bill, companyName, companyAddress, companyPhone, companyEmail, logoUrl, onClose, showPrintButton = true }) {
+function NormalReceipt({ bill, onClose, showPrintButton = true }) {
   const contentRef = useRef(null);
 
-  // Hook for high-quality printing
   const handlePrint = useReactToPrint({
     contentRef,
-    documentTitle: `Receipt_${bill?.billNumber || 'Order'}`,
+    documentTitle: `Rough_Estimate_${bill?.billNumber || 'Order'}`,
   });
-
-  const name = companyName || SHOP_NAME;
-  const address = companyAddress || SHOP_ADDRESS;
-  const phone = companyPhone || SHOP_PHONE;
-  const email = companyEmail || SHOP_EMAIL;
-  const logo = logoUrl || SHOP_LOGO;
 
   const items = bill?.items || [];
   const customer = bill?.customer || {};
@@ -67,14 +55,8 @@ function NormalReceipt({ bill, companyName, companyAddress, companyPhone, compan
       {/* Printable Area */}
       <div className="normal-receipt" ref={contentRef}>
         <header className="normal-receipt-header">
-          {logo && <img src={logo} alt={name} className="normal-receipt-logo" />}
-          <h1 className="normal-receipt-shop-name">{name}</h1>
-          {address && <p className="normal-receipt-address">{address}</p>}
-          {phone && <p className="normal-receipt-phone">Phone: {phone}</p>}
-          {email && <p className="normal-receipt-email">Email: {email}</p>}
+          <h1 className="normal-receipt-rough-title">Rough Estimate</h1>
         </header>
-
-        <h2 className="normal-receipt-title">Receipt</h2>
 
         <div className="normal-receipt-meta">
           <p><strong>Bill No:</strong> {bill?.billNumber || '—'}</p>
