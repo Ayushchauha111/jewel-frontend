@@ -1,13 +1,58 @@
 const webpack = require('webpack');
+const path = require('path');
 
 module.exports = function override(config, env) {
-  // Add fallback for 'crypto'
+  // Suppress source-map parsing warnings (e.g. html5-qrcode ships broken .ts source map refs)
+  config.ignoreWarnings = [
+    ...(config.ignoreWarnings || []),
+    /Failed to parse source map/,
+  ];
+
+  // Exclude html5-qrcode from source-map-loader so it doesn't try to parse broken maps
+  const html5QrcodeExclude = /node_modules[\\/]html5-qrcode/;
+  const addExclude = (rule) => {
+    if (!rule) return;
+    const prev = rule.exclude;
+    if (prev) {
+      rule.exclude = [
+        ...(Array.isArray(prev) ? prev : [prev]),
+        html5QrcodeExclude,
+      ];
+    } else {
+      rule.exclude = html5QrcodeExclude;
+    }
+  };
+  const checkRule = (r) =>
+    r.enforce === 'pre' &&
+    r.use &&
+    r.use.some((u) => (typeof u === 'string' ? u.includes('source-map-loader') : u.loader && u.loader.includes('source-map-loader')));
+  const walkRules = (rules) => {
+    if (!rules) return;
+    for (const r of rules) {
+      if (checkRule(r)) addExclude(r);
+      if (r.oneOf) walkRules(r.oneOf);
+    }
+  };
+  walkRules(config.module.rules);
+
+  // Node polyfills for webpack 5 (CRA5 drops them; needed by styled-components, axios, etc.)
+  const processPkg = path.dirname(require.resolve('process/package.json'));
+  const processBrowserFile = path.join(processPkg, 'browser.js');
+  config.resolve.alias = {
+    ...config.resolve.alias,
+    'process/browser': processBrowserFile,
+  };
   config.resolve.fallback = {
     ...config.resolve.fallback,
     crypto: require.resolve('crypto-browserify'),
+    process: processBrowserFile,
+    buffer: require.resolve('buffer/'),
+    stream: false,
+    util: false,
   };
+  // Allow ESM packages (e.g. axios) to resolve 'process/browser' without .js extension
+  config.resolve.fullySpecified = false;
 
-  // Add plugins for 'process' and 'Buffer' (if needed)
   config.plugins.push(
     new webpack.ProvidePlugin({
       process: 'process/browser',
@@ -65,11 +110,7 @@ module.exports = function override(config, env) {
       },
     };
 
-    // Optimize module resolution for tree-shaking
-    config.resolve = {
-      ...config.resolve,
-      mainFields: ['browser', 'module', 'main'],
-    };
+    config.resolve.mainFields = ['browser', 'module', 'main'];
   }
 
   return config;

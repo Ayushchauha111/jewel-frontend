@@ -84,6 +84,8 @@ function BillingManagement() {
   const [qrTorchOn, setQrTorchOn] = useState(false);
   const [qrZoomSupported, setQrZoomSupported] = useState(false);
   const [qrTorchSupported, setQrTorchSupported] = useState(false);
+  const [pendingScannedCode, setPendingScannedCode] = useState(null);
+  const [qrScanFeedback, setQrScanFeedback] = useState(null);
   const qrScannerRef = useRef(null);
   const qrGalleryInputRef = useRef(null);
   const QR_ZOOM_OPTIONS = [1, 2, 5];
@@ -552,6 +554,20 @@ function BillingManagement() {
     setFormData({ ...formData, items: newItems });
   };
 
+  // Normalize decoded value from camera (decodedText, decodedResult) or file scan (string or object)
+  const getDecodedString = (decodedText, decodedResult) => {
+    if (typeof decodedText === 'string' && decodedText.trim()) return decodedText.trim();
+    if (decodedText && typeof decodedText === 'object' && decodedText !== null) {
+      const s = decodedText.decodedText ?? decodedText.rawValue ?? decodedText.text ?? '';
+      if (typeof s === 'string' && s.trim()) return s.trim();
+    }
+    if (decodedResult && typeof decodedResult === 'object') {
+      const s = decodedResult.decodedText ?? decodedResult.rawValue ?? decodedResult.text ?? '';
+      if (typeof s === 'string' && s.trim()) return s.trim();
+    }
+    return '';
+  };
+
   // Shared logic: resolve raw string (manual input or scanned QR JSON) to stock and add to bill
   const addItemFromScannedData = (raw) => {
     const trimmed = (raw || '').trim();
@@ -605,9 +621,28 @@ function BillingManagement() {
 
   const addItemByQR = () => addItemFromScannedData(qrAddInput);
 
+  // Process pending scanned code with current stock/formData (avoids stale closure in camera callback)
+  useEffect(() => {
+    if (pendingScannedCode == null || pendingScannedCode === '') return;
+    const code = String(pendingScannedCode).trim();
+    setPendingScannedCode('');
+    setQrScanFeedback(null);
+    if (!code) return;
+    const added = addItemFromScannedData(code);
+    if (added && qrScannerRef.current) {
+      qrScannerRef.current.stop().catch(() => {}).finally(() => {
+        qrScannerRef.current = null;
+      });
+    } else {
+      setTimeout(() => setQrScanFeedback(null), 2500);
+    }
+  }, [pendingScannedCode]);
+
   // Start/stop camera scanner when "Scan with camera" is active (delay so DOM element is mounted)
   useEffect(() => {
     if (!showQRAddModal || !qrScanning) return;
+    setPendingScannedCode(null);
+    setQrScanFeedback(null);
     setQrZoomSupported(false);
     setQrTorchSupported(false);
     setQrTorchOn(false);
@@ -615,13 +650,14 @@ function BillingManagement() {
     const timer = setTimeout(() => {
       const el = document.getElementById('billing-qr-reader');
       if (cancelled || !el) return;
-      const scanner = new Html5Qrcode('billing-qr-reader', { useBarCodeDetectorIfSupported: true });
+      const scanner = new Html5Qrcode('billing-qr-reader', { useBarCodeDetectorIfSupported: false });
       qrScannerRef.current = scanner;
       const scanConfig = {
-        fps: 30,
+        fps: 20,
         qrbox: (viewfinderWidth, viewfinderHeight) => {
-          const size = Math.min(viewfinderWidth, viewfinderHeight, 260);
-          return { width: Math.max(180, size), height: Math.max(180, size) };
+          const minDim = Math.min(viewfinderWidth, viewfinderHeight);
+          const size = Math.floor(minDim * 0.85);
+          return { width: Math.max(200, size), height: Math.max(200, size) };
         },
         aspectRatio: 1,
         disableFlip: false
@@ -629,11 +665,11 @@ function BillingManagement() {
       scanner.start(
         { facingMode: 'environment' },
         scanConfig,
-        (decodedText) => {
-          if (!addItemFromScannedData(decodedText)) return;
-          scanner.stop().catch(() => {}).finally(() => {
-            qrScannerRef.current = null;
-          });
+        (decodedText, decodedResult) => {
+          const trimmed = getDecodedString(decodedText, decodedResult);
+          if (!trimmed) return;
+          setQrScanFeedback(trimmed);
+          setPendingScannedCode(trimmed);
         },
         () => {}
       ).then(() => {
@@ -700,20 +736,52 @@ function BillingManagement() {
     e.target.value = '';
     if (!file) return;
     const sc = qrScannerRef.current;
-    (sc ? sc.scanFile(file, false) : Promise.reject(new Error('Scanner not ready')))
-      .then((decodedText) => {
-        if (decodedText && addItemFromScannedData(decodedText)) {
-          setShowQRAddModal(false);
-          setQrAddInput('');
-          setQrScanning(false);
-          sc?.stop().catch(() => {});
-          qrScannerRef.current = null;
-        }
-      })
-      .catch(() => {
-        setError('No QR code found in image');
+    const runFileScan = () => {
+      const elementId = sc ? 'billing-qr-reader' : 'billing-qr-reader-file';
+      const el = document.getElementById(elementId);
+      if (!el) {
+        setError('Scan area not ready. Click "Scan with camera" first, then choose a photo.');
         setTimeout(() => setError(null), 3000);
+        setQrScanning(false);
+        return;
+      }
+      const fileScanner = new Html5Qrcode(elementId, { useBarCodeDetectorIfSupported: false });
+      fileScanner.scanFile(file, false)
+        .then((decodedText) => {
+          const text = getDecodedString(decodedText, null);
+          if (text && addItemFromScannedData(text)) {
+            setShowQRAddModal(false);
+            setQrAddInput('');
+            setQrScanning(false);
+            qrScannerRef.current = null;
+          } else if (text) {
+            setError('No stock found for: ' + (text.length > 30 ? text.slice(0, 30) + '…' : text));
+            setTimeout(() => setError(null), 3000);
+          }
+        })
+        .catch((err) => {
+          const msg = err?.message || '';
+          setError(
+            msg.includes('detect the code') || msg.includes('NotFoundException')
+              ? 'No QR code could be detected in this image. Use a clear, well-lit photo with the full QR code visible.'
+              : 'No QR code found in image'
+          );
+          setTimeout(() => setError(null), 5000);
+        })
+        .finally(() => {
+          setQrScanning(false);
+          qrScannerRef.current = null;
+        });
+    };
+
+    if (sc) {
+      sc.stop().catch(() => {}).then(() => {
+        qrScannerRef.current = null;
+        runFileScan();
       });
+    } else {
+      runFileScan();
+    }
   };
 
   const removeItem = (index) => {
@@ -1469,10 +1537,18 @@ function BillingManagement() {
                 <div className="stock-modal-overlay" style={{ zIndex: 10002 }} onClick={() => { setShowQRAddModal(false); setQrAddInput(''); setQrScanning(false); }}>
                   <div className="stock-modal-content" style={{ maxWidth: qrScanning ? '360px' : '400px' }} onClick={(e) => e.stopPropagation()}>
                     <div className="stock-form-card">
+                      <div id="billing-qr-reader-file" style={{ position: 'absolute', left: -9999, width: 1, height: 1, overflow: 'hidden' }} aria-hidden="true" />
                       <div className="stock-form-header" style={{ marginBottom: '1rem' }}>
                         <h3>Add item by QR</h3>
                         <button type="button" className="stock-modal-close" onClick={() => { setShowQRAddModal(false); setQrAddInput(''); setQrScanning(false); }} aria-label="Close">✕</button>
                       </div>
+                      <input
+                        ref={qrGalleryInputRef}
+                        type="file"
+                        accept="image/*"
+                        style={{ display: 'none' }}
+                        onChange={scanQrFromGallery}
+                      />
                       {qrScanning ? (
                         <>
                           <p style={{ fontSize: '0.9rem', color: '#64748b', marginBottom: '0.75rem' }}>Point the camera at the article&apos;s QR code.</p>
@@ -1480,6 +1556,11 @@ function BillingManagement() {
                             <div id="billing-qr-reader" className="billing-qr-reader" />
                             <div className="billing-qr-scan-line" aria-hidden="true" />
                           </div>
+                          {qrScanFeedback && (
+                            <p style={{ fontSize: '0.9rem', color: 'var(--adm-gold)', marginTop: '0.5rem', marginBottom: 0, fontWeight: 600 }}>
+                              ✓ Detected: {qrScanFeedback.length > 24 ? qrScanFeedback.slice(0, 24) + '…' : qrScanFeedback} — Adding…
+                            </p>
+                          )}
                           <div className="billing-qr-controls">
                             {qrTorchSupported && (
                               <button
@@ -1501,13 +1582,6 @@ function BillingManagement() {
                             >
                               <PhotoIcon className="billing-qr-icon" />
                             </button>
-                            <input
-                              ref={qrGalleryInputRef}
-                              type="file"
-                              accept="image/*"
-                              style={{ display: 'none' }}
-                              onChange={scanQrFromGallery}
-                            />
                             {qrZoomSupported && (
                               <button
                                 type="button"
@@ -1527,9 +1601,12 @@ function BillingManagement() {
                       ) : (
                         <>
                           <p style={{ fontSize: '0.9rem', color: '#64748b', marginBottom: '1rem' }}>
-                            <strong>Scan with camera</strong> or enter <strong>Article code</strong> / <strong>Stock ID</strong> below.
+                            <strong>Scan with camera</strong>, <strong>upload an image</strong>, or enter <strong>Article code</strong> / <strong>Stock ID</strong> below.
                           </p>
-                          <button type="button" onClick={() => setQrScanning(true)} className="price-action-btn" style={{ width: '100%', marginBottom: '1rem' }}>📷 Scan with camera</button>
+                          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+                            <button type="button" onClick={() => setQrScanning(true)} className="price-action-btn" style={{ flex: 1, minWidth: 120 }}>📷 Scan with camera</button>
+                            <button type="button" onClick={() => qrGalleryInputRef.current?.click()} className="price-action-btn secondary" style={{ flex: 1, minWidth: 120 }}>🖼️ Upload image</button>
+                          </div>
                           <input
                             type="text"
                             value={qrAddInput}
