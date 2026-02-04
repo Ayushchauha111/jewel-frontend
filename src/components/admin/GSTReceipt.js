@@ -95,7 +95,7 @@ function GSTReceipt({ bill, companyName, companyAddress, companyPhone, companyEm
   const makingCharges = parseFloat(bill?.makingCharges) || 0;
 
   const hallmarkChargesPerItem = 100;
-  const hallmarkCharges = (items.length || 0) * hallmarkChargesPerItem;
+  const hallmarkCharges = (items || []).reduce((sum, item) => sum + (item.hallmark ? hallmarkChargesPerItem : 0), 0);
   const taxableAmount = finalAmount + hallmarkCharges;
   const gstRate = 0.015; // 1.5% each for CGST/SGST
   const cgstAmount = taxableAmount * gstRate;
@@ -232,7 +232,9 @@ function GSTReceipt({ bill, companyName, companyAddress, companyPhone, companyEm
                 <tr><td>Subtotal</td><td>{formatCurrency(totalAmount)}</td></tr>
                 <tr><td>Discount</td><td>-{formatCurrency(discountAmount)}</td></tr>
                 <tr><td>Making Charges</td><td>{formatCurrency(makingCharges)}</td></tr>
-                <tr><td>Hallmark Charges (₹100/item)</td><td>{formatCurrency(hallmarkCharges)}</td></tr>
+                {hallmarkCharges > 0 && (
+                  <tr><td>Hallmark Charges (₹100/item)</td><td>{formatCurrency(hallmarkCharges)}</td></tr>
+                )}
                 <tr className="gst-receipt-summary-taxable"><td>Taxable Value</td><td>{formatCurrency(taxableAmount)}</td></tr>
                 <tr><td>CGST (1.5%)</td><td>{formatCurrency(cgstAmount)}</td></tr>
                 <tr><td>SGST (1.5%)</td><td>{formatCurrency(sgstAmount)}</td></tr>

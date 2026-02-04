@@ -49,7 +49,7 @@ function BillingManagement() {
   const [totalElements, setTotalElements] = useState(0);
   const [formData, setFormData] = useState({
     customerId: '',
-    items: [{ stockId: '', quantity: 1, makingChargesPerGram: '' }],
+    items: [{ stockId: '', quantity: 1, makingChargesPerGram: '', hallmark: false }],
     discountAmount: 0,
     payments: [{ method: 'CASH', amount: '' }],  // split payment: e.g. cash + UPI
     notes: ''
@@ -400,7 +400,8 @@ function BillingManagement() {
             carat: item.carat != null && item.carat !== '' ? parseFloat(item.carat) : null,
             quantity: qty,
             unitPrice: up,
-            totalPrice: total
+            totalPrice: total,
+            hallmark: !!item.hallmark
           };
         }
         if (!item.stockId) return null;
@@ -421,7 +422,8 @@ function BillingManagement() {
           diamondAmount: diamondAmt > 0 ? Math.round(diamondAmt * 100) / 100 : null,
           quantity: qty,
           unitPrice,
-          totalPrice: Math.round(unitPrice * qty * 100) / 100
+          totalPrice: Math.round(unitPrice * qty * 100) / 100,
+          hallmark: !!item.hallmark
         };
       }).filter(Boolean);
 
@@ -512,7 +514,7 @@ function BillingManagement() {
   const resetForm = () => {
     setFormData({
       customerId: '',
-      items: [{ stockId: '', quantity: 1, makingChargesPerGram: '' }],
+      items: [{ stockId: '', quantity: 1, makingChargesPerGram: '', hallmark: false }],
       discountAmount: 0,
       payments: [{ method: 'CASH', amount: '' }],
       notes: ''
@@ -529,7 +531,7 @@ function BillingManagement() {
   const addItem = () => {
     setFormData({
       ...formData,
-      items: [...formData.items, { stockId: '', quantity: 1, overrideRatePerGram: '', makingChargesPerGram: '' }]
+      items: [...formData.items, { stockId: '', quantity: 1, overrideRatePerGram: '', makingChargesPerGram: '', hallmark: false }]
     });
   };
 
@@ -542,6 +544,12 @@ function BillingManagement() {
   const handleItemMakingChange = (index, value) => {
     const newItems = [...formData.items];
     newItems[index] = { ...newItems[index], makingChargesPerGram: value };
+    setFormData({ ...formData, items: newItems });
+  };
+
+  const handleItemHallmarkChange = (index, checked) => {
+    const newItems = [...formData.items];
+    newItems[index] = { ...newItems[index], hallmark: !!checked };
     setFormData({ ...formData, items: newItems });
   };
 
@@ -584,7 +592,7 @@ function BillingManagement() {
     externalCodeRef.current += 1;
     setFormData({
       ...formData,
-      items: [...formData.items, { isExternalItem: true, itemName: '', articleCode: code, quantity: 1, unitPrice: '', weightGrams: '', carat: '', makingChargesPerGram: '' }]
+      items: [...formData.items, { isExternalItem: true, itemName: '', articleCode: code, quantity: 1, unitPrice: '', weightGrams: '', carat: '', makingChargesPerGram: '', hallmark: false }]
     });
   };
 
@@ -662,7 +670,7 @@ function BillingManagement() {
     setQrScanResultMessage(null);
     setFormData(prev => ({
       ...prev,
-      items: [...prev.items, { stockId: String(found.id), quantity: 1, overrideRatePerGram: '', makingChargesPerGram: '' }]
+      items: [...prev.items, { stockId: String(found.id), quantity: 1, overrideRatePerGram: '', makingChargesPerGram: '', hallmark: false }]
     }));
     if ((isGoldMetalItem(found) || isSilverMetalItem(found)) && itemPrices[found.id] == null) {
       fetchCalculatedPriceForStock(found);
@@ -998,7 +1006,7 @@ function BillingManagement() {
 
   const handleItemSelect = (index, stockId) => {
     const newItems = [...formData.items];
-    newItems[index] = { ...newItems[index], stockId, isBuyBack: false, overrideRatePerGram: '', makingChargesPerGram: '' };
+    newItems[index] = { ...newItems[index], stockId, isBuyBack: false, overrideRatePerGram: '', makingChargesPerGram: '', hallmark: newItems[index].hallmark === true };
     setFormData({ ...formData, items: newItems });
     if (stockId) {
       const s = stock.find(x => x.id === parseInt(stockId, 10));
@@ -1599,6 +1607,17 @@ function BillingManagement() {
                             />
                           </div>
                         )}
+                        <div style={{ flex: '0 1 100px', display: 'flex', alignItems: 'flex-end', paddingBottom: '0.25rem' }}>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.75rem', cursor: 'pointer', margin: 0 }}>
+                            <input
+                              type="checkbox"
+                              checked={!!item.hallmark}
+                              onChange={(e) => handleExternalItemChange(index, 'hallmark', e.target.checked)}
+                              style={{ width: '0.9rem', height: '0.9rem' }}
+                            />
+                            <span>Hallmark (₹100)</span>
+                          </label>
+                        </div>
                         <div style={{ flex: '0 1 95px' }}>
                           <label className="price-external-field-label">Total</label>
                           <div className="price-external-total" style={{ fontWeight: 600 }}>
@@ -1713,7 +1732,27 @@ function BillingManagement() {
                                     step="0.01"
                                     style={{ width: '100%', padding: '0.5rem 0.75rem', border: '2px solid #ecf0f1', borderRadius: '8px', boxSizing: 'border-box' }}
                                   />
+                                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.35rem', fontSize: '0.8rem', cursor: 'pointer' }}>
+                                    <input
+                                      type="checkbox"
+                                      checked={!!item.hallmark}
+                                      onChange={(e) => handleItemHallmarkChange(index, e.target.checked)}
+                                      style={{ width: '1rem', height: '1rem' }}
+                                    />
+                                    <span>Hallmark (₹100/item)</span>
+                                  </label>
                                 </>
+                              )}
+                              {!hasWeight && (
+                                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.25rem', fontSize: '0.8rem', cursor: 'pointer' }}>
+                                  <input
+                                    type="checkbox"
+                                    checked={!!item.hallmark}
+                                    onChange={(e) => handleItemHallmarkChange(index, e.target.checked)}
+                                    style={{ width: '1rem', height: '1rem' }}
+                                  />
+                                  <span>Hallmark (₹100/item)</span>
+                                </label>
                               )}
                               <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '0.25rem' }}>
                                 {sel && (hasWeight ? `₹${effUnit > 0 ? (effUnit / parseFloat(sel.weightGrams)).toLocaleString('en-IN', { maximumFractionDigits: 0 }) : '—'}/g × ${parseFloat(sel.weightGrams)}g × ${qty} = ${formatCurrency(effUnit * qty)}` : formatCurrency(effUnit * qty))}
