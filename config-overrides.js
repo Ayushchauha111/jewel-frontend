@@ -2,6 +2,17 @@ const webpack = require('webpack');
 const path = require('path');
 
 module.exports = function override(config, env) {
+  // Allow camera for QR scanner: send Permissions-Policy so browser allows camera (self).
+  // Required when the page is in a context that blocks camera; meta tag in index.html may not suffice.
+  // For production, ensure your server (nginx/Apache/Node) also sends: Permissions-Policy: camera=(self)
+  if (config.devServer) {
+    config.devServer.headers = {
+      ...(config.devServer.headers || {}),
+      'Permissions-Policy': 'camera=(self)',
+      'Feature-Policy': "camera 'self'",
+    };
+  }
+
   // Suppress source-map parsing warnings (e.g. html5-qrcode ships broken .ts source map refs)
   config.ignoreWarnings = [
     ...(config.ignoreWarnings || []),

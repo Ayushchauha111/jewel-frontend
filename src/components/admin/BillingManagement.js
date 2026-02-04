@@ -736,8 +736,13 @@ function BillingManagement() {
         } catch (_) {}
       }).catch((err) => {
         if (cancelled) return;
-        setError('Camera access failed: ' + (err?.message || 'Permission denied. Use HTTPS or localhost.'));
-        setTimeout(() => setError(null), 5000);
+        const msg = err?.message || '';
+        const isPolicy = /permissions?\s*policy|feature\s*policy|not\s*allowed|blocked/i.test(msg) || /camera/i.test(msg);
+        const hint = isPolicy
+          ? ' Open this app in a new browser tab (same URL), use HTTPS, and ensure the server sends Permissions-Policy: camera=(self).'
+          : ' Use HTTPS or localhost and allow camera when prompted.';
+        setError('Camera access failed: ' + (msg || 'Permission denied') + hint);
+        setTimeout(() => setError(null), 8000);
         setQrScanning(false);
         qrScannerRef.current = null;
       });
@@ -1334,8 +1339,8 @@ function BillingManagement() {
                           <option value="CREDIT">Udhari</option>
                         </select>
                       </div>
-                      <div className="billing-payment-amount" style={{ flex: '1 1 100px', minWidth: 0 }}>
-                        <label style={{ fontSize: '0.75rem', color: 'var(--adm-text-muted)', marginBottom: '0.25rem', display: 'block' }}>
+                      <div className="billing-payment-amount" style={{ flex: '1 1 100px', minWidth: 0, maxWidth: '100%' }}>
+                        <label className="billing-payment-amount-label" style={{ fontSize: '0.75rem', color: 'var(--adm-text-muted)', marginBottom: '0.25rem', display: 'block' }}>
                           Amount (₹) {row.method === 'CASH' && idx === 0 && <span style={{ color: 'var(--adm-text-muted)' }}>— empty = full</span>}
                         </label>
                         <input
@@ -1345,7 +1350,8 @@ function BillingManagement() {
                           value={row.amount ?? ''}
                           onChange={(e) => updatePaymentRow(idx, 'amount', e.target.value)}
                           placeholder={row.method === 'CREDIT' ? 'Full udhari' : '0'}
-                          style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--adm-border-gold)', background: 'var(--adm-bg-elevated)', color: 'var(--adm-text)' }}
+                          className="billing-payment-amount-input"
+                          style={{ width: '100%', maxWidth: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--adm-border-gold)', background: 'var(--adm-bg-elevated)', color: 'var(--adm-text)', boxSizing: 'border-box' }}
                         />
                       </div>
                       {(formData.payments || []).length > 1 && (
@@ -1604,8 +1610,8 @@ function BillingManagement() {
                         <button type="button" onClick={() => removeItem(index)} className="stock-btn-delete" style={{ padding: '0.75rem 1rem', alignSelf: 'flex-end' }}>🗑️</button>
                       </div>
                     ) : (
-                      <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start', flexWrap: 'wrap' }}>
-                        <div style={{ flex: '2 1 200px' }}>
+                      <div className="billing-item-row" style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                        <div className="billing-item-select-wrap" style={{ flex: '2 1 200px', minWidth: 0 }}>
                           <select
                             value={item.stockId || ''}
                             onChange={(e) => handleItemSelect(index, e.target.value)}
@@ -1637,7 +1643,7 @@ function BillingManagement() {
                             })}
                           </select>
                         </div>
-                        <div style={{ flex: '0 1 100px', minWidth: '80px' }}>
+                        <div className="billing-item-qty-wrap" style={{ flex: '0 1 100px', minWidth: 0 }}>
                           {(() => {
                             const sel = stock.find(s => s.id === parseInt(item.stockId, 10));
                             const available = sel?.quantity != null ? parseInt(sel.quantity, 10) : 999;
@@ -1684,7 +1690,7 @@ function BillingManagement() {
                           const qty = parseInt(item.quantity, 10) || 1;
                           const makingPlaceholder = (sel?.makingChargesPerGram != null && sel.makingChargesPerGram > 0) ? String(sel.makingChargesPerGram) : (defaultMakingPerGram != null ? String(defaultMakingPerGram) : 'e.g. 1150');
                           return (
-                            <div style={{ flex: '1 1 220px', minWidth: '140px', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                            <div className="billing-item-rate-block" style={{ flex: '1 1 220px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                               {hasWeight && (
                                 <>
                                   <label className="price-external-field-label" style={{ fontSize: '0.75rem' }}>Rate (₹/g) – optional</label>
@@ -1720,7 +1726,7 @@ function BillingManagement() {
                     )}
                   </div>
                 ))}
-                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
+                <div className="billing-add-buttons" style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
                   <button type="button" onClick={addItem} className="price-action-btn secondary">+ Add Item</button>
                   <button type="button" onClick={() => { setShowQRAddModal(true); setQrScanResultMessage(null); }} className="price-action-btn secondary">📱 Add item using QR code</button>
                   <button type="button" onClick={addExternalItem} className="price-action-btn secondary">🤝 Sell item from friend (external)</button>
@@ -1731,7 +1737,7 @@ function BillingManagement() {
 
               {showQRAddModal && (
                 <div className="stock-modal-overlay" style={{ zIndex: 10002 }} onClick={() => { setShowQRAddModal(false); setQrAddInput(''); setQrScanning(false); setQrScanResultMessage(null); }}>
-                  <div className="stock-modal-content" style={{ maxWidth: qrScanning ? '360px' : '400px' }} onClick={(e) => e.stopPropagation()}>
+                  <div className="stock-modal-content billing-qr-modal-content" style={{ maxWidth: qrScanning ? '360px' : '400px' }} onClick={(e) => e.stopPropagation()}>
                     <div className="stock-form-card">
                       <div className="stock-form-header" style={{ marginBottom: '1rem' }}>
                         <h3>Add item by QR</h3>

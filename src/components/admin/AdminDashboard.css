@@ -26,6 +26,7 @@
   -webkit-font-smoothing: antialiased;
   position: relative;
   box-sizing: border-box;
+  overflow-x: hidden;
 }
 
 .admin-dashboard::before {
