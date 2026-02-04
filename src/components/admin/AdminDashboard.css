@@ -18,11 +18,14 @@
   --adm-danger: #c95c4a;
   --adm-info: #7ba3c4;
   min-height: 100vh;
+  width: 100%;
+  max-width: 100%;
   background: var(--adm-bg);
   color: var(--adm-text);
   font-family: 'Playfair Display', Georgia, serif;
   -webkit-font-smoothing: antialiased;
   position: relative;
+  box-sizing: border-box;
 }
 
 .admin-dashboard::before {
@@ -486,6 +489,9 @@
 
 /* Override inline margins on admin content wrappers for small screens */
 @media (max-width: 768px) {
+  .admin-dashboard {
+    overflow-x: hidden;
+  }
   .admin-dashboard > div[style*="margin"],
   .price-management > div[style*="margin"],
   .stock-management > div[style*="margin"] {

@@ -30,10 +30,10 @@ function QRCodePrint() {
       @page { size: A4; margin: 10mm; }
       body { -webkit-print-color-adjust: exact; print-color-adjust: exact; margin: 0; padding: 0; }
       .qr-print-sheet { position: static !important; left: auto !important; visibility: visible !important; width: 100% !important; max-width: 100% !important; box-sizing: border-box !important; background: #fff; color: #000; }
-      .qr-print-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; padding: 10px; page-break-inside: auto; width: 100%; box-sizing: border-box; }
-      .qr-print-label { border: 1px solid #000; padding: 6px 4px; text-align: center; font-size: 10px; page-break-inside: avoid; break-inside: avoid; min-height: 0; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; background: #fff; }
-      .qr-print-qr { width: 48px; height: 48px; display: block; margin: 0 auto 4px; border: none; }
-      .qr-print-no-qr { width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; margin: 0 auto 4px; background: #f0f0f0; color: #666; font-size: 8px; }
+      .qr-print-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; padding: 10px; page-break-inside: auto; width: 100%; box-sizing: border-box; }
+      .qr-print-label { border: 1px solid #000; padding: 8px 6px; text-align: center; font-size: 10px; page-break-inside: avoid; break-inside: avoid; min-height: 0; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; background: #fff; }
+      .qr-print-qr { width: 24mm !important; height: 24mm !important; min-width: 24mm !important; min-height: 24mm !important; display: block; margin: 0 auto 6px; border: none; object-fit: contain; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges; }
+      .qr-print-no-qr { width: 24mm !important; height: 24mm !important; display: flex; align-items: center; justify-content: center; margin: 0 auto 6px; background: #f0f0f0; color: #666; font-size: 8px; }
       .qr-print-code { font-weight: bold; font-size: 9px; margin-bottom: 2px; word-break: break-all; }
       .qr-print-name { font-size: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
     `,

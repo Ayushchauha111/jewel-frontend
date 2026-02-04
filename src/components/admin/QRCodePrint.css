@@ -23,8 +23,8 @@
 
 .qr-print-grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
   padding: 10px;
   page-break-inside: auto;
   width: 100%;
@@ -33,7 +33,7 @@
 
 .qr-print-label {
   border: 1px solid #000;
-  padding: 6px 4px;
+  padding: 8px 6px;
   text-align: center;
   font-size: 10px;
   page-break-inside: avoid;
@@ -47,21 +47,41 @@
   background: #fff;
 }
 
+/* On-screen (hidden sheet): small preview size */
 .qr-print-qr {
-  width: 48px;
-  height: 48px;
+  width: 80px;
+  height: 80px;
+  min-width: 80px;
+  min-height: 80px;
   display: block;
-  margin: 0 auto 4px;
+  margin: 0 auto 6px;
   border: none;
+  object-fit: contain;
+}
+
+/* Print: larger physical size so 400px backend image stays sharp and scannable on paper */
+@media print {
+  .qr-print-qr {
+    width: 24mm !important;
+    height: 24mm !important;
+    min-width: 24mm !important;
+    min-height: 24mm !important;
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+  }
+  .qr-print-no-qr {
+    width: 24mm !important;
+    height: 24mm !important;
+  }
 }
 
 .qr-print-no-qr {
-  width: 48px;
-  height: 48px;
+  width: 80px;
+  height: 80px;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 0 auto 4px;
+  margin: 0 auto 6px;
   background: #f0f0f0;
   color: #666;
   font-size: 8px;
