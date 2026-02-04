@@ -36,6 +36,8 @@ function BillingManagement() {
   const [filteredBills, setFilteredBills] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [stock, setStock] = useState([]);
+  /** Full stock list (incl. SOLD) for QR lookup only; used to show "already sold" when scanning */
+  const [stockAllForLookup, setStockAllForLookup] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -50,8 +52,7 @@ function BillingManagement() {
     items: [{ stockId: '', quantity: 1 }],
     discountAmount: 0,
     makingCharges: '',  // empty = use default from Admin → Rates; enter value to override ₹/g
-    paymentMethod: 'CASH',
-    paidAmount: '',
+    payments: [{ method: 'CASH', amount: '' }],  // split payment: e.g. cash + UPI
     notes: ''
   });
   // Cache of calculated price from today's gold rate (stockId -> price); used for Gold items when weight+carat present
@@ -88,6 +89,8 @@ function BillingManagement() {
   const [qrTorchSupported, setQrTorchSupported] = useState(false);
   const [pendingScannedCode, setPendingScannedCode] = useState(null);
   const [qrScanFeedback, setQrScanFeedback] = useState(null);
+  /** Shown in QR modal when scan fails: { type: 'error', text } e.g. "Item already sold" / "Already in bill" */
+  const [qrScanResultMessage, setQrScanResultMessage] = useState(null);
   const qrScannerRef = useRef(null);
   const QR_ZOOM_OPTIONS = [1, 2, 5];
   const externalCodeRef = useRef(1);
@@ -304,6 +307,7 @@ function BillingManagement() {
       const data = response.data?.content ?? response.data;
       const list = Array.isArray(data) ? data : [];
       setStock(list.filter(s => s.status === 'AVAILABLE'));
+      setStockAllForLookup(list); // full list for QR lookup (to detect "already sold")
     } catch (error) {
       console.error('Error fetching stock:', error);
     }
@@ -454,16 +458,22 @@ function BillingManagement() {
         ? Math.round(submitRatePerGram * totalGramsForMakingSubmit * 100) / 100
         : 0;
 
+      const payRows = (formData.payments || []).filter(p => p.amount !== '' && p.amount != null && !isNaN(parseFloat(p.amount)) && parseFloat(p.amount) > 0);
+      const totalPaid = payRows.reduce((s, p) => s + parseFloat(p.amount), 0);
+      const primaryMethod = payRows.length === 1 ? payRows[0].method : (payRows.length > 1 ? 'MIXED' : (formData.payments?.[0]?.method || 'CASH'));
       const billingData = {
         customer: { id: parseInt(formData.customerId) },
         items: billingItems,
         totalDiamondAmount: totalDiamondAmount > 0 ? Math.round(totalDiamondAmount * 100) / 100 : undefined,
         discountAmount: parseFloat(formData.discountAmount) || 0,
         makingCharges: effectiveMakingCharges,
-        paymentMethod: formData.paymentMethod,
-        paidAmount: formData.paidAmount ? parseFloat(formData.paidAmount) : 0,
+        paymentMethod: primaryMethod,
+        paidAmount: Math.round(totalPaid * 100) / 100,
         notes: formData.notes
       };
+      if (payRows.length > 0) {
+        billingData.paymentBreakdown = JSON.stringify(payRows.map(p => ({ method: p.method, amount: parseFloat(p.amount) })));
+      }
 
       await axios.post(`${API_URL}/billing`, billingData, {
         headers: getAuthHeaders()
@@ -523,8 +533,7 @@ function BillingManagement() {
       items: [{ stockId: '', quantity: 1 }],
       discountAmount: 0,
       makingCharges: '',
-      paymentMethod: 'CASH',
-      paidAmount: '',
+      payments: [{ method: 'CASH', amount: '' }],
       notes: ''
     });
     setItemPrices({});
@@ -563,6 +572,26 @@ function BillingManagement() {
     });
   };
 
+  const addPaymentRow = () => {
+    setFormData({
+      ...formData,
+      payments: [...(formData.payments || [{ method: 'CASH', amount: '' }]), { method: 'UPI', amount: '' }]
+    });
+  };
+
+  const removePaymentRow = (index) => {
+    const next = (formData.payments || []).filter((_, i) => i !== index);
+    if (next.length === 0) next.push({ method: 'CASH', amount: '' });
+    setFormData({ ...formData, payments: next });
+  };
+
+  const updatePaymentRow = (index, field, value) => {
+    const next = [...(formData.payments || [])];
+    if (!next[index]) return;
+    next[index] = { ...next[index], [field]: value };
+    setFormData({ ...formData, payments: next });
+  };
+
   const addExternalItem = () => {
     const code = `EXT-${externalCodeRef.current}`;
     externalCodeRef.current += 1;
@@ -592,44 +621,58 @@ function BillingManagement() {
     return '';
   };
 
-  // Shared logic: resolve raw string (manual input or scanned QR JSON) to stock and add to bill
+  // Shared logic: resolve raw string (manual input or scanned QR JSON) to stock and add to bill.
+  // Uses stockAllForLookup so we can show "already sold" when the item is SOLD.
   const addItemFromScannedData = (raw) => {
     const trimmed = (raw || '').trim();
     if (!trimmed) {
+      setQrScanResultMessage({ type: 'error', text: 'Enter article code or stock ID.' });
       setError('Enter article code or stock ID');
-      setTimeout(() => setError(null), 3000);
+      setTimeout(() => { setError(null); setQrScanResultMessage(null); }, 4000);
       return false;
     }
+    const lookupList = stockAllForLookup.length > 0 ? stockAllForLookup : stock;
     let found = null;
     try {
       const parsed = JSON.parse(trimmed);
       if (parsed != null && (parsed.id != null || parsed.articleCode)) {
-        if (parsed.id != null) found = stock.find(s => s.id === parsed.id);
-        if (!found && parsed.articleCode) found = stock.find(s => (s.articleCode || '').toLowerCase() === String(parsed.articleCode).toLowerCase());
+        if (parsed.id != null) found = lookupList.find(s => s.id === parsed.id);
+        if (!found && parsed.articleCode) found = lookupList.find(s => (s.articleCode || '').toLowerCase() === String(parsed.articleCode).toLowerCase());
       }
     } catch (_) {
       // Not JSON: treat as article code or numeric ID
     }
     if (!found) {
       const idNum = parseInt(trimmed, 10);
-      if (!isNaN(idNum)) found = stock.find(s => s.id === idNum);
+      if (!isNaN(idNum)) found = lookupList.find(s => s.id === idNum);
     }
     if (!found) {
-      found = stock.find(s => (s.articleCode || '').toLowerCase() === trimmed.toLowerCase());
+      found = lookupList.find(s => (s.articleCode || '').toLowerCase() === trimmed.toLowerCase());
     }
     if (!found) {
-      setError('No stock found for: ' + trimmed);
-      setTimeout(() => setError(null), 3000);
+      setQrScanResultMessage({ type: 'error', text: 'No stock found for this QR code.' });
+      setError('No stock found for: ' + (trimmed.length > 30 ? trimmed.slice(0, 30) + '…' : trimmed));
+      setTimeout(() => { setError(null); setQrScanResultMessage(null); }, 4000);
+      return false;
+    }
+    if (found.status === 'SOLD') {
+      const label = (found.articleCode || found.articleName || 'Item') + ' — already sold';
+      setQrScanResultMessage({ type: 'error', text: 'This item is already sold. Cannot add to bill.' });
+      setError(label);
+      setTimeout(() => { setError(null); setQrScanResultMessage(null); }, 4000);
       return false;
     }
     const alreadyInBill = formData.items.some(
       (item) => item.stockId != null && String(item.stockId) === String(found.id)
     );
     if (alreadyInBill) {
-      setError('Item already in bill');
-      setTimeout(() => setError(null), 3000);
+      const label = (found.articleCode || found.articleName || 'Item') + ' — already in bill';
+      setQrScanResultMessage({ type: 'error', text: 'This item is already in the bill.' });
+      setError(label);
+      setTimeout(() => { setError(null); setQrScanResultMessage(null); }, 4000);
       return false;
     }
+    setQrScanResultMessage(null);
     setFormData(prev => ({
       ...prev,
       items: [...prev.items, { stockId: String(found.id), quantity: 1, overrideRatePerGram: '' }]
@@ -667,6 +710,7 @@ function BillingManagement() {
     if (!showQRAddModal || !qrScanning) return;
     setPendingScannedCode(null);
     setQrScanFeedback(null);
+    setQrScanResultMessage(null);
     setQrZoomSupported(false);
     setQrTorchSupported(false);
     setQrTorchOn(false);
@@ -1129,8 +1173,11 @@ function BillingManagement() {
     : 0;
 
   const finalAmount = calculateSubtotalExcludingMaking() - calculateBuyBackTotal() - (parseFloat(formData.discountAmount) || 0) + effectiveMakingCharges;
-  const paidAmount = parseFloat(formData.paidAmount) || 0;
+  // Paid amount from payment rows (split payment: cash + UPI etc.)
+  const paymentsWithAmount = (formData.payments || []).filter(p => p.amount !== '' && p.amount != null && !isNaN(parseFloat(p.amount)) && parseFloat(p.amount) > 0);
+  const paidAmount = paymentsWithAmount.reduce((sum, p) => sum + parseFloat(p.amount), 0);
   const remainingAmount = finalAmount - paidAmount;
+  const displayPaymentMethod = paymentsWithAmount.length > 1 ? 'MIXED' : (paymentsWithAmount.length === 1 ? paymentsWithAmount[0].method : (formData.payments?.[0]?.method || 'CASH'));
 
   return (
     <div className="admin-dashboard">
@@ -1213,18 +1260,48 @@ function BillingManagement() {
                   </select>
                 </div>
                 <div className="price-form-group">
-                  <label>Payment Method *</label>
-                  <select
-                    value={formData.paymentMethod}
-                    onChange={(e) => setFormData({...formData, paymentMethod: e.target.value})}
-                    required
-                  >
-                    <option value="CASH">Cash</option>
-                    <option value="CARD">Card</option>
-                    <option value="UPI">UPI</option>
-                    <option value="BANK_TRANSFER">Bank Transfer</option>
-                    <option value="CREDIT">Udhari</option>
-                  </select>
+                  <label>Payment *</label>
+                  <p style={{ margin: '0 0 0.5rem', fontSize: '0.8rem', color: 'var(--adm-text-muted)' }}>
+                    Add multiple rows for split payment (e.g. some cash + some UPI).
+                  </p>
+                  {(formData.payments || [{ method: 'CASH', amount: '' }]).map((row, idx) => (
+                    <div key={idx} style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-end', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
+                      <div style={{ flex: '1 1 120px', minWidth: '100px' }}>
+                        <label style={{ fontSize: '0.75rem', color: 'var(--adm-text-muted)', marginBottom: '0.25rem', display: 'block' }}>Method</label>
+                        <select
+                          value={row.method || 'CASH'}
+                          onChange={(e) => updatePaymentRow(idx, 'method', e.target.value)}
+                          style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--adm-border-gold)', background: 'var(--adm-bg-elevated)', color: 'var(--adm-text)' }}
+                        >
+                          <option value="CASH">Cash</option>
+                          <option value="CARD">Card</option>
+                          <option value="UPI">UPI</option>
+                          <option value="BANK_TRANSFER">Bank Transfer</option>
+                          <option value="CREDIT">Udhari</option>
+                        </select>
+                      </div>
+                      <div style={{ flex: '1 1 100px', minWidth: '80px' }}>
+                        <label style={{ fontSize: '0.75rem', color: 'var(--adm-text-muted)', marginBottom: '0.25rem', display: 'block' }}>
+                          Amount (₹) {row.method === 'CASH' && idx === 0 && <span style={{ color: 'var(--adm-text-muted)' }}>— empty = full</span>}
+                        </label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={row.amount ?? ''}
+                          onChange={(e) => updatePaymentRow(idx, 'amount', e.target.value)}
+                          placeholder={row.method === 'CREDIT' ? 'Full udhari' : '0'}
+                          style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--adm-border-gold)', background: 'var(--adm-bg-elevated)', color: 'var(--adm-text)' }}
+                        />
+                      </div>
+                      {(formData.payments || []).length > 1 && (
+                        <button type="button" onClick={() => removePaymentRow(idx)} className="stock-btn-delete" style={{ padding: '0.75rem', flexShrink: 0 }} title="Remove payment row">🗑️</button>
+                      )}
+                    </div>
+                  ))}
+                  <button type="button" onClick={addPaymentRow} className="price-action-btn secondary" style={{ marginTop: '0.5rem', fontSize: '0.875rem' }}>
+                    + Add payment (e.g. cash + UPI)
+                  </button>
                 </div>
                 <div className="price-form-group">
                   <label>Discount Amount (₹)</label>
@@ -1255,23 +1332,11 @@ function BillingManagement() {
                     </p>
                   )}
                 </div>
-                {(formData.paymentMethod === 'CASH' || formData.paymentMethod === 'CARD' || formData.paymentMethod === 'UPI' || formData.paymentMethod === 'BANK_TRANSFER') && (
-                  <div className="price-form-group">
-                    <label>Paid Amount (₹) {formData.paymentMethod === 'CASH' && <span style={{ color: '#e74c3c', fontSize: '0.85rem' }}>* Leave empty for full payment</span>}</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      max={finalAmount}
-                      value={formData.paidAmount}
-                      onChange={(e) => setFormData({...formData, paidAmount: e.target.value})}
-                      placeholder={formData.paymentMethod === 'CASH' ? "Leave empty for full payment" : "0.00"}
-                    />
-                    {formData.paidAmount && paidAmount < finalAmount && (
-                      <div style={{ marginTop: '0.5rem', padding: '0.5rem', background: '#fff3cd', borderRadius: '4px', fontSize: '0.9rem', color: '#856404' }}>
-                        ⚠️ Remaining amount (₹{remainingAmount.toFixed(2)}) will be added to udhari
-                      </div>
-                    )}
+                {paymentsWithAmount.length > 0 && paidAmount < finalAmount && (
+                  <div className="price-form-group" style={{ marginTop: '-0.5rem' }}>
+                    <div style={{ padding: '0.5rem', background: 'rgba(255, 243, 205, 0.3)', borderRadius: '8px', fontSize: '0.9rem', color: '#856404', border: '1px solid rgba(133, 100, 4, 0.3)' }}>
+                      ⚠️ Remaining amount (₹{remainingAmount.toFixed(2)}) will be added to udhari
+                    </div>
                   </div>
                 )}
               </div>
@@ -1597,7 +1662,7 @@ function BillingManagement() {
                 ))}
                 <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
                   <button type="button" onClick={addItem} className="price-action-btn secondary">+ Add Item</button>
-                  <button type="button" onClick={() => setShowQRAddModal(true)} className="price-action-btn secondary">📱 Add item using QR code</button>
+                  <button type="button" onClick={() => { setShowQRAddModal(true); setQrScanResultMessage(null); }} className="price-action-btn secondary">📱 Add item using QR code</button>
                   <button type="button" onClick={addExternalItem} className="price-action-btn secondary">🤝 Sell item from friend (external)</button>
                   <button type="button" onClick={addBuyBackItem} className="price-action-btn secondary buyback">🪙 Customer selling gold (buy-back)</button>
                   <button type="button" onClick={addSilverBuyBackItem} className="price-action-btn secondary buyback">🥈 Customer selling silver (buy-back)</button>
@@ -1605,12 +1670,12 @@ function BillingManagement() {
               </div>
 
               {showQRAddModal && (
-                <div className="stock-modal-overlay" style={{ zIndex: 10002 }} onClick={() => { setShowQRAddModal(false); setQrAddInput(''); setQrScanning(false); }}>
+                <div className="stock-modal-overlay" style={{ zIndex: 10002 }} onClick={() => { setShowQRAddModal(false); setQrAddInput(''); setQrScanning(false); setQrScanResultMessage(null); }}>
                   <div className="stock-modal-content" style={{ maxWidth: qrScanning ? '360px' : '400px' }} onClick={(e) => e.stopPropagation()}>
                     <div className="stock-form-card">
                       <div className="stock-form-header" style={{ marginBottom: '1rem' }}>
                         <h3>Add item by QR</h3>
-                        <button type="button" className="stock-modal-close" onClick={() => { setShowQRAddModal(false); setQrAddInput(''); setQrScanning(false); }} aria-label="Close">✕</button>
+                        <button type="button" className="stock-modal-close" onClick={() => { setShowQRAddModal(false); setQrAddInput(''); setQrScanning(false); setQrScanResultMessage(null); }} aria-label="Close">✕</button>
                       </div>
                       {qrScanning ? (
                         <>
@@ -1619,7 +1684,12 @@ function BillingManagement() {
                             <div id="billing-qr-reader" className="billing-qr-reader" />
                             <div className="billing-qr-scan-line" aria-hidden="true" />
                           </div>
-                          {qrScanFeedback && (
+                          {qrScanResultMessage && (
+                            <div role="alert" style={{ marginTop: '0.75rem', padding: '0.75rem', borderRadius: '8px', background: 'rgba(201, 92, 74, 0.15)', border: '1px solid rgba(201, 92, 74, 0.5)', color: '#e07c6e', fontSize: '0.9rem', fontWeight: 600 }}>
+                              ⚠ {qrScanResultMessage.text}
+                            </div>
+                          )}
+                          {qrScanFeedback && !qrScanResultMessage && (
                             <p style={{ fontSize: '0.9rem', color: 'var(--adm-gold)', marginTop: '0.5rem', marginBottom: 0, fontWeight: 600 }}>
                               ✓ Detected: {qrScanFeedback.length > 24 ? qrScanFeedback.slice(0, 24) + '…' : qrScanFeedback} — Adding…
                             </p>
@@ -1663,14 +1733,19 @@ function BillingManagement() {
                           <input
                             type="text"
                             value={qrAddInput}
-                            onChange={(e) => setQrAddInput(e.target.value)}
+                            onChange={(e) => { setQrAddInput(e.target.value); setQrScanResultMessage(null); }}
                             onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addItemByQR())}
                             placeholder="e.g. RIN-911940 or 123"
                             style={{ width: '100%', padding: '0.75rem', border: '2px solid #ecf0f1', borderRadius: '8px', marginBottom: '1rem', boxSizing: 'border-box' }}
                             autoFocus
                           />
+                          {qrScanResultMessage && (
+                            <div role="alert" style={{ marginBottom: '1rem', padding: '0.75rem', borderRadius: '8px', background: 'rgba(201, 92, 74, 0.15)', border: '1px solid rgba(201, 92, 74, 0.5)', color: '#e07c6e', fontSize: '0.9rem', fontWeight: 600 }}>
+                              ⚠ {qrScanResultMessage.text}
+                            </div>
+                          )}
                           <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-                            <button type="button" onClick={() => { setShowQRAddModal(false); setQrAddInput(''); }} className="price-action-btn secondary">Cancel</button>
+                            <button type="button" onClick={() => { setShowQRAddModal(false); setQrAddInput(''); setQrScanResultMessage(null); }} className="price-action-btn secondary">Cancel</button>
                             <button type="button" onClick={addItemByQR} className="price-action-btn">Add to bill</button>
                           </div>
                         </>
@@ -1727,7 +1802,7 @@ function BillingManagement() {
                   <span>Total:</span>
                   <span className="price-bill-total-value">{formatCurrency(finalAmount)}</span>
                 </div>
-                {(formData.paymentMethod === 'CASH' || formData.paymentMethod === 'CARD' || formData.paymentMethod === 'UPI' || formData.paymentMethod === 'BANK_TRANSFER') && paidAmount > 0 && (
+                {paidAmount > 0 && (
                   <>
                     <div className="price-bill-divider">
                       <span>Paid Amount:</span>
@@ -1944,7 +2019,19 @@ function BillingManagement() {
                         <strong>Customer:</strong> {selectedBill.customer?.name || '-'}<br />
                         {selectedBill.customer?.phone && <><strong>Phone:</strong> {selectedBill.customer.phone}<br /></>}
                         <strong>Date:</strong> {formatDate(selectedBill.createdAt)}<br />
-                        <strong>Payment:</strong> {selectedBill.paymentMethod || '-'} · <span className={`status-badge status-${selectedBill.paymentStatus?.toLowerCase()}`}>{selectedBill.paymentStatus}</span>
+                        <strong>Payment:</strong>{' '}
+                        {selectedBill.paymentBreakdown ? (() => {
+                          try {
+                            const arr = JSON.parse(selectedBill.paymentBreakdown);
+                            if (Array.isArray(arr) && arr.length > 0) {
+                              return arr.map((p, i) => (
+                                <span key={i}>{i > 0 ? ', ' : ''}{p.method || '?'}: {formatCurrency(p.amount)}</span>
+                              ));
+                            }
+                          } catch (_) {}
+                          return selectedBill.paymentMethod || '-';
+                        })() : (selectedBill.paymentMethod || '-')}
+                        {' · '}<span className={`status-badge status-${selectedBill.paymentStatus?.toLowerCase()}`}>{selectedBill.paymentStatus}</span>
                       </div>
                       <div className="bill-detail-table-wrap">
                         <table className="price-table bill-detail-table" style={{ fontSize: '0.85rem' }}>
