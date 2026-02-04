@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BoltIcon } from '@heroicons/react/24/outline';
+import { BoltIcon, PhotoIcon } from '@heroicons/react/24/outline';
 import { BoltIcon as BoltIconSolid } from '@heroicons/react/24/solid';
 import { Html5Qrcode } from 'html5-qrcode';
 import axios from 'axios';
@@ -49,9 +49,8 @@ function BillingManagement() {
   const [totalElements, setTotalElements] = useState(0);
   const [formData, setFormData] = useState({
     customerId: '',
-    items: [{ stockId: '', quantity: 1 }],
+    items: [{ stockId: '', quantity: 1, makingChargesPerGram: '' }],
     discountAmount: 0,
-    makingCharges: '',  // empty = use default from Admin → Rates; enter value to override ₹/g
     payments: [{ method: 'CASH', amount: '' }],  // split payment: e.g. cash + UPI
     notes: ''
   });
@@ -92,6 +91,7 @@ function BillingManagement() {
   /** Shown in QR modal when scan fails: { type: 'error', text } e.g. "Item already sold" / "Already in bill" */
   const [qrScanResultMessage, setQrScanResultMessage] = useState(null);
   const qrScannerRef = useRef(null);
+  const qrGalleryInputRef = useRef(null);
   const QR_ZOOM_OPTIONS = [1, 2, 5];
   const externalCodeRef = useRef(1);
 
@@ -438,25 +438,7 @@ function BillingManagement() {
         return sum + (getDiamondValue(selectedStock) * qty);
       }, 0);
 
-      const totalGramsForMakingSubmit = formData.items.reduce((sum, item) => {
-        if (item.isBuyBack) return sum;
-        if (item.isExternalItem) {
-          const w = parseFloat(item.weightGrams);
-          const qty = parseInt(item.quantity, 10) || 1;
-          return w > 0 ? sum + w * qty : sum;
-        }
-        if (!item.stockId) return sum;
-        const s = stock.find(x => x.id === parseInt(item.stockId, 10));
-        const w = parseFloat(s?.weightGrams);
-        const qty = parseInt(item.quantity, 10) || 1;
-        return (w > 0) ? sum + w * qty : sum;
-      }, 0);
-      const defaultRate = defaultMakingPerGram ?? FALLBACK_MAKING_PER_GRAM;
-      const submitRatePerGram = (formData.makingCharges !== '' && formData.makingCharges != null && !isNaN(parseFloat(formData.makingCharges)))
-        ? parseFloat(formData.makingCharges) : defaultRate;
-      const effectiveMakingCharges = totalGramsForMakingSubmit > 0
-        ? Math.round(submitRatePerGram * totalGramsForMakingSubmit * 100) / 100
-        : 0;
+      const effectiveMakingChargesSubmit = formData.items.reduce((sum, item, index) => sum + getMakingForItem(item, index), 0);
 
       const payRows = (formData.payments || []).filter(p => p.amount !== '' && p.amount != null && !isNaN(parseFloat(p.amount)) && parseFloat(p.amount) > 0);
       const totalPaid = payRows.reduce((s, p) => s + parseFloat(p.amount), 0);
@@ -466,7 +448,7 @@ function BillingManagement() {
         items: billingItems,
         totalDiamondAmount: totalDiamondAmount > 0 ? Math.round(totalDiamondAmount * 100) / 100 : undefined,
         discountAmount: parseFloat(formData.discountAmount) || 0,
-        makingCharges: effectiveMakingCharges,
+        makingCharges: effectiveMakingChargesSubmit,
         paymentMethod: primaryMethod,
         paidAmount: Math.round(totalPaid * 100) / 100,
         notes: formData.notes
@@ -530,9 +512,8 @@ function BillingManagement() {
   const resetForm = () => {
     setFormData({
       customerId: '',
-      items: [{ stockId: '', quantity: 1 }],
+      items: [{ stockId: '', quantity: 1, makingChargesPerGram: '' }],
       discountAmount: 0,
-      makingCharges: '',
       payments: [{ method: 'CASH', amount: '' }],
       notes: ''
     });
@@ -548,13 +529,19 @@ function BillingManagement() {
   const addItem = () => {
     setFormData({
       ...formData,
-      items: [...formData.items, { stockId: '', quantity: 1, overrideRatePerGram: '' }]
+      items: [...formData.items, { stockId: '', quantity: 1, overrideRatePerGram: '', makingChargesPerGram: '' }]
     });
   };
 
   const handleItemRateOverride = (index, value) => {
     const newItems = [...formData.items];
     newItems[index] = { ...newItems[index], overrideRatePerGram: value };
+    setFormData({ ...formData, items: newItems });
+  };
+
+  const handleItemMakingChange = (index, value) => {
+    const newItems = [...formData.items];
+    newItems[index] = { ...newItems[index], makingChargesPerGram: value };
     setFormData({ ...formData, items: newItems });
   };
 
@@ -597,7 +584,7 @@ function BillingManagement() {
     externalCodeRef.current += 1;
     setFormData({
       ...formData,
-      items: [...formData.items, { isExternalItem: true, itemName: '', articleCode: code, quantity: 1, unitPrice: '', weightGrams: '', carat: '' }]
+      items: [...formData.items, { isExternalItem: true, itemName: '', articleCode: code, quantity: 1, unitPrice: '', weightGrams: '', carat: '', makingChargesPerGram: '' }]
     });
   };
 
@@ -607,7 +594,7 @@ function BillingManagement() {
     setFormData({ ...formData, items: newItems });
   };
 
-  // Normalize decoded value from camera (decodedText, decodedResult) or file scan (string or object)
+  // Normalize decoded value from camera (decodedText, decodedResult) or manual input (string or object)
   const getDecodedString = (decodedText, decodedResult) => {
     if (typeof decodedText === 'string' && decodedText.trim()) return decodedText.trim();
     if (decodedText && typeof decodedText === 'object' && decodedText !== null) {
@@ -675,7 +662,7 @@ function BillingManagement() {
     setQrScanResultMessage(null);
     setFormData(prev => ({
       ...prev,
-      items: [...prev.items, { stockId: String(found.id), quantity: 1, overrideRatePerGram: '' }]
+      items: [...prev.items, { stockId: String(found.id), quantity: 1, overrideRatePerGram: '', makingChargesPerGram: '' }]
     }));
     if ((isGoldMetalItem(found) || isSilverMetalItem(found)) && itemPrices[found.id] == null) {
       fetchCalculatedPriceForStock(found);
@@ -797,6 +784,54 @@ function BillingManagement() {
     const next = QR_ZOOM_OPTIONS[(idx + 1) % QR_ZOOM_OPTIONS.length];
     setQrZoom(next);
     applyQrZoom(next);
+  };
+
+  const scanQrFromGallery = (e) => {
+    const file = e.target?.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    const runFileScan = () => {
+      const elementId = 'billing-qr-reader';
+      const el = document.getElementById(elementId);
+      if (!el) {
+        setQrScanResultMessage({ type: 'error', text: 'Scan area not ready. Try "Scan with camera" first, then choose an image.' });
+        setTimeout(() => setQrScanResultMessage(null), 4000);
+        return;
+      }
+      const fileScanner = new Html5Qrcode(elementId, { useBarCodeDetectorIfSupported: false });
+      fileScanner.scanFile(file, false)
+        .then((decodedText) => {
+          const text = getDecodedString(decodedText, null);
+          if (text && addItemFromScannedData(text)) {
+            setShowQRAddModal(false);
+            setQrAddInput('');
+            setQrScanning(false);
+            qrScannerRef.current = null;
+          } else if (text) {
+            setQrScanResultMessage({ type: 'error', text: 'No stock found for this QR code.' });
+            setTimeout(() => setQrScanResultMessage(null), 4000);
+          }
+        })
+        .catch((err) => {
+          const msg = err?.message || '';
+          setQrScanResultMessage({
+            type: 'error',
+            text: msg.includes('detect') || msg.includes('NotFoundException')
+              ? 'No QR code found in this image. Use a clear photo with the full QR code visible.'
+              : 'Could not read QR from image.'
+          });
+          setTimeout(() => setQrScanResultMessage(null), 5000);
+        });
+    };
+    const sc = qrScannerRef.current;
+    if (sc) {
+      sc.stop().catch(() => {}).then(() => {
+        qrScannerRef.current = null;
+        runFileScan();
+      });
+    } else {
+      runFileScan();
+    }
   };
 
   const removeItem = (index) => {
@@ -958,7 +993,7 @@ function BillingManagement() {
 
   const handleItemSelect = (index, stockId) => {
     const newItems = [...formData.items];
-    newItems[index] = { ...newItems[index], stockId, isBuyBack: false, overrideRatePerGram: '' };
+    newItems[index] = { ...newItems[index], stockId, isBuyBack: false, overrideRatePerGram: '', makingChargesPerGram: '' };
     setFormData({ ...formData, items: newItems });
     if (stockId) {
       const s = stock.find(x => x.id === parseInt(stockId, 10));
@@ -1149,28 +1184,47 @@ function BillingManagement() {
       return sum + unitExcludingMaking * qty;
     }, 0);
   };
-  // Total grams for making: sum of (weight × qty) for all items that have weight (stock + external)
-  const totalGramsForMaking = formData.items.reduce((sum, item) => {
-    if (item.isBuyBack) return sum;
+  // Grams for a single item (weight × qty). 0 for buy-back or no weight.
+  const getGramsForItem = (item, index) => {
+    if (item.isBuyBack) return 0;
     if (item.isExternalItem) {
       const w = parseFloat(item.weightGrams);
       const qty = parseInt(item.quantity, 10) || 1;
-      return w > 0 ? sum + w * qty : sum;
+      return w > 0 ? w * qty : 0;
     }
-    if (!item.stockId) return sum;
+    if (!item.stockId) return 0;
     const s = stock.find(x => x.id === parseInt(item.stockId, 10));
     const w = parseFloat(s?.weightGrams);
     const qty = parseInt(item.quantity, 10) || 1;
-    return (w > 0) ? sum + w * qty : sum;
-  }, 0);
+    return (w > 0) ? w * qty : 0;
+  };
 
-  // Making charges = (₹/g) × (g) — input is rate per gram; total = rate × total grams
-  const makingRatePerGram = defaultMakingPerGram ?? FALLBACK_MAKING_PER_GRAM;
-  const effectiveRatePerGram = (formData.makingCharges !== '' && formData.makingCharges != null && !isNaN(parseFloat(formData.makingCharges)))
-    ? parseFloat(formData.makingCharges) : makingRatePerGram;
-  const effectiveMakingCharges = totalGramsForMaking > 0
-    ? Math.round(effectiveRatePerGram * totalGramsForMaking * 100) / 100
-    : 0;
+  const totalGramsForMaking = formData.items.reduce((sum, item, idx) => sum + getGramsForItem(item, idx), 0);
+
+  // Effective making rate (₹/g) for this item: item override, else stock's, else default from Rates.
+  const getEffectiveMakingRatePerGram = (item, index) => {
+    const def = defaultMakingPerGram ?? FALLBACK_MAKING_PER_GRAM;
+    if (item.isBuyBack) return 0;
+    if (item.isExternalItem) {
+      const v = item.makingChargesPerGram;
+      return (v !== '' && v != null && !isNaN(parseFloat(v))) ? parseFloat(v) : def;
+    }
+    if (!item.stockId) return def;
+    const s = stock.find(x => x.id === parseInt(item.stockId, 10));
+    const v = item.makingChargesPerGram;
+    if (v !== '' && v != null && !isNaN(parseFloat(v))) return parseFloat(v);
+    return (s?.makingChargesPerGram != null && s.makingChargesPerGram > 0) ? parseFloat(s.makingChargesPerGram) : def;
+  };
+
+  // Making amount for this item: (₹/g) × g. Sum over items = total making.
+  const getMakingForItem = (item, index) => {
+    const grams = getGramsForItem(item, index);
+    if (grams <= 0) return 0;
+    const rate = getEffectiveMakingRatePerGram(item, index);
+    return Math.round(rate * grams * 100) / 100;
+  };
+
+  const effectiveMakingCharges = formData.items.reduce((sum, item, index) => sum + getMakingForItem(item, index), 0);
 
   const finalAmount = calculateSubtotalExcludingMaking() - calculateBuyBackTotal() - (parseFloat(formData.discountAmount) || 0) + effectiveMakingCharges;
   // Paid amount from payment rows (split payment: cash + UPI etc.)
@@ -1265,8 +1319,8 @@ function BillingManagement() {
                     Add multiple rows for split payment (e.g. some cash + some UPI).
                   </p>
                   {(formData.payments || [{ method: 'CASH', amount: '' }]).map((row, idx) => (
-                    <div key={idx} style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-end', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
-                      <div style={{ flex: '1 1 120px', minWidth: '100px' }}>
+                    <div key={idx} className="billing-payment-row" style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-end', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
+                      <div className="billing-payment-method" style={{ flex: '1 1 120px', minWidth: 0 }}>
                         <label style={{ fontSize: '0.75rem', color: 'var(--adm-text-muted)', marginBottom: '0.25rem', display: 'block' }}>Method</label>
                         <select
                           value={row.method || 'CASH'}
@@ -1280,7 +1334,7 @@ function BillingManagement() {
                           <option value="CREDIT">Udhari</option>
                         </select>
                       </div>
-                      <div style={{ flex: '1 1 100px', minWidth: '80px' }}>
+                      <div className="billing-payment-amount" style={{ flex: '1 1 100px', minWidth: 0 }}>
                         <label style={{ fontSize: '0.75rem', color: 'var(--adm-text-muted)', marginBottom: '0.25rem', display: 'block' }}>
                           Amount (₹) {row.method === 'CASH' && idx === 0 && <span style={{ color: 'var(--adm-text-muted)' }}>— empty = full</span>}
                         </label>
@@ -1312,25 +1366,6 @@ function BillingManagement() {
                     onChange={(e) => setFormData({...formData, discountAmount: e.target.value})}
                     placeholder="0.00"
                   />
-                </div>
-                <div className="price-form-group">
-                  <label>Making Charges (₹/g) — total: ₹/g × g</label>
-                  <p style={{ margin: '0 0 0.35rem', fontSize: '0.8rem', color: 'var(--text-muted, #888)' }}>
-                    Default from Admin → Rates. Override below if needed.
-                  </p>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={formData.makingCharges}
-                    onChange={(e) => setFormData({...formData, makingCharges: e.target.value})}
-                    placeholder={defaultMakingPerGram != null ? String(defaultMakingPerGram) : 'e.g. 1150'}
-                  />
-                  {totalGramsForMaking > 0 && (
-                    <p className="price-making-formula" style={{ margin: '0.5rem 0 0', fontSize: '0.85rem', color: 'var(--adm-gold-light, #c9a227)', fontWeight: 500 }}>
-                      ₹{effectiveRatePerGram}/g × {totalGramsForMaking} g = {formatCurrency(effectiveMakingCharges)}
-                    </p>
-                  )}
                 </div>
                 {paymentsWithAmount.length > 0 && paidAmount < finalAmount && (
                   <div className="price-form-group" style={{ marginTop: '-0.5rem' }}>
@@ -1544,6 +1579,20 @@ function BillingManagement() {
                               : '—'}
                           </div>
                         </div>
+                        {item.weightGrams && parseFloat(item.weightGrams) > 0 && (
+                          <div style={{ flex: '0 1 90px' }}>
+                            <label className="price-external-field-label">Making (₹/g)</label>
+                            <input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              placeholder={defaultMakingPerGram != null ? String(defaultMakingPerGram) : 'e.g. 1150'}
+                              value={item.makingChargesPerGram ?? ''}
+                              onChange={(e) => handleExternalItemChange(index, 'makingChargesPerGram', e.target.value)}
+                              style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '2px solid #ecf0f1', boxSizing: 'border-box' }}
+                            />
+                          </div>
+                        )}
                         <div style={{ flex: '0 1 95px' }}>
                           <label className="price-external-field-label">Total</label>
                           <div className="price-external-total" style={{ fontWeight: 600 }}>
@@ -1633,8 +1682,9 @@ function BillingManagement() {
                           const hasWeight = sel?.weightGrams != null && parseFloat(sel.weightGrams) > 0 && (isGoldMetalItem(sel) || isSilverMetalItem(sel));
                           const effUnit = sel ? getEffectiveUnitPriceForItem(item, sel) : 0;
                           const qty = parseInt(item.quantity, 10) || 1;
+                          const makingPlaceholder = (sel?.makingChargesPerGram != null && sel.makingChargesPerGram > 0) ? String(sel.makingChargesPerGram) : (defaultMakingPerGram != null ? String(defaultMakingPerGram) : 'e.g. 1150');
                           return (
-                            <div style={{ flex: '1 1 180px', minWidth: '140px', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                            <div style={{ flex: '1 1 220px', minWidth: '140px', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                               {hasWeight && (
                                 <>
                                   <label className="price-external-field-label" style={{ fontSize: '0.75rem' }}>Rate (₹/g) – optional</label>
@@ -1645,6 +1695,16 @@ function BillingManagement() {
                                     onChange={(e) => handleItemRateOverride(index, e.target.value)}
                                     min={0}
                                     step={1}
+                                    style={{ width: '100%', padding: '0.5rem 0.75rem', border: '2px solid #ecf0f1', borderRadius: '8px', boxSizing: 'border-box' }}
+                                  />
+                                  <label className="price-external-field-label" style={{ fontSize: '0.75rem' }}>Making (₹/g) – optional</label>
+                                  <input
+                                    type="number"
+                                    placeholder={makingPlaceholder}
+                                    value={item.makingChargesPerGram ?? ''}
+                                    onChange={(e) => handleItemMakingChange(index, e.target.value)}
+                                    min={0}
+                                    step="0.01"
                                     style={{ width: '100%', padding: '0.5rem 0.75rem', border: '2px solid #ecf0f1', borderRadius: '8px', boxSizing: 'border-box' }}
                                   />
                                 </>
@@ -1694,6 +1754,14 @@ function BillingManagement() {
                               ✓ Detected: {qrScanFeedback.length > 24 ? qrScanFeedback.slice(0, 24) + '…' : qrScanFeedback} — Adding…
                             </p>
                           )}
+                          <input
+                            type="file"
+                            accept="image/*"
+                            ref={qrGalleryInputRef}
+                            onChange={scanQrFromGallery}
+                            style={{ display: 'none' }}
+                            aria-hidden="true"
+                          />
                           <div className="billing-qr-controls">
                             {qrTorchSupported && (
                               <button
@@ -1706,6 +1774,15 @@ function BillingManagement() {
                                 {qrTorchOn ? <BoltIconSolid className="billing-qr-icon" /> : <BoltIcon className="billing-qr-icon" />}
                               </button>
                             )}
+                            <button
+                              type="button"
+                              className="billing-qr-control-btn"
+                              onClick={() => qrGalleryInputRef.current?.click()}
+                              title="Upload image to scan QR"
+                              aria-label="Upload image"
+                            >
+                              <PhotoIcon className="billing-qr-icon" />
+                            </button>
                             {qrZoomSupported && (
                               <button
                                 type="button"
@@ -1791,12 +1868,8 @@ function BillingManagement() {
                   <strong>-{formatCurrency(formData.discountAmount || 0)}</strong>
                 </div>
                 <div>
-                  <span>Making Charges:</span>
-                  <strong>
-                    {totalGramsForMaking > 0
-                      ? `₹${effectiveRatePerGram}/g × ${totalGramsForMaking} g = ${formatCurrency(effectiveMakingCharges)}`
-                      : formatCurrency(effectiveMakingCharges)}
-                  </strong>
+                  <span>Making Charges (per item ₹/g × g):</span>
+                  <strong>{formatCurrency(effectiveMakingCharges)}</strong>
                 </div>
                 <div className="price-bill-total-row">
                   <span>Total:</span>
@@ -2114,7 +2187,9 @@ function BillingManagement() {
                       )}
                       <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
                         <button type="button" onClick={() => setShowNormalReceipt(true)} className="stock-btn-edit">🧾 Print Normal Receipt</button>
+                        <a href={`${window.location.origin}/admin/print-receipt/${selectedBill.id}/normal`} target="_blank" rel="noopener noreferrer" className="stock-btn-edit" style={{ textDecoration: 'none', color: 'inherit' }}>📱 Open Normal in new tab</a>
                         <button type="button" onClick={() => setShowGstReceipt(true)} className="stock-btn-edit">📄 Print GST Receipt</button>
+                        <a href={`${window.location.origin}/admin/print-receipt/${selectedBill.id}/gst`} target="_blank" rel="noopener noreferrer" className="stock-btn-edit" style={{ textDecoration: 'none', color: 'inherit' }}>📱 Open GST in new tab</a>
                         {selectedBill.emailSent && <span className="status-badge status-paid" style={{ marginRight: '0.25rem' }}>✅ Email sent</span>}
                         <button type="button" onClick={() => sendEmail(selectedBill.id, 'NORMAL')} className="stock-btn-edit">📧 Email (Normal)</button>
                         <button type="button" onClick={() => sendEmail(selectedBill.id, 'GST')} className="stock-btn-edit">📧 Email (GST)</button>
@@ -2140,6 +2215,9 @@ function BillingManagement() {
                 onClick={(e) => e.stopPropagation()}
               >
                 <button type="button" className="receipt-modal-close no-print" onClick={() => setShowNormalReceipt(false)} aria-label="Close">✕</button>
+                <div className="no-print" style={{ padding: '0.5rem 1rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                  <a href={`${window.location.origin}/admin/print-receipt/${selectedBill.id}/normal`} target="_blank" rel="noopener noreferrer" className="stock-btn-edit" style={{ textDecoration: 'none', color: 'inherit' }}>📱 Open in new tab (for Print/PDF)</a>
+                </div>
                 <NormalReceipt bill={selectedBill} onClose={() => setShowNormalReceipt(false)} showPrintButton />
               </div>
             </div>
@@ -2156,6 +2234,9 @@ function BillingManagement() {
                 onClick={(e) => e.stopPropagation()}
               >
                 <button type="button" className="receipt-modal-close no-print" onClick={() => setShowGstReceipt(false)} aria-label="Close">✕</button>
+                <div className="no-print" style={{ padding: '0.5rem 1rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                  <a href={`${window.location.origin}/admin/print-receipt/${selectedBill.id}/gst`} target="_blank" rel="noopener noreferrer" className="stock-btn-edit" style={{ textDecoration: 'none', color: 'inherit' }}>📱 Open in new tab (for Print/PDF)</a>
+                </div>
                 <GSTReceipt bill={selectedBill} onClose={() => setShowGstReceipt(false)} showPrintButton />
               </div>
             </div>

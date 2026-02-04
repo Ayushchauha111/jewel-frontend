@@ -18,6 +18,7 @@ import AnalyticsDashboard from "./components/admin/AnalyticsDashboard";
 import IncomeExpenseManagement from "./components/admin/IncomeExpenseManagement";
 import RateLimitManagement from "./components/admin/RateLimitManagement";
 import QRCodePrint from "./components/admin/QRCodePrint";
+import ReceiptPrintPage from "./components/admin/ReceiptPrintPage";
 
 // Customer Website Components
 import CustomerHome from "./components/customer/CustomerHome";
@@ -56,6 +57,7 @@ function App() {
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/admin/stock" element={<StockManagement />} />
           <Route path="/admin/qr-print" element={<QRCodePrint />} />
+          <Route path="/admin/print-receipt/:billId/:type" element={<ReceiptPrintPage />} />
           <Route path="/admin/billing" element={<BillingManagement />} />
           <Route path="/admin/customers" element={<CustomerManagement />} />
           <Route path="/admin/orders" element={<OrderManagement />} />

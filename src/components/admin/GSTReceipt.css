@@ -395,12 +395,6 @@
   color: #1a1a1a;
 }
 
-.gst-receipt-summary-table .gst-receipt-summary-gst3 td {
-  background: rgba(201, 162, 39, 0.08);
-  font-weight: 600;
-  color: #1a1a1a;
-}
-
 .gst-receipt-summary-table .gst-receipt-summary-grand td {
   padding: 1rem 1rem;
   background: linear-gradient(180deg, rgba(201, 162, 39, 0.2) 0%, rgba(201, 162, 39, 0.12) 100%);

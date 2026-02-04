@@ -31,6 +31,14 @@ function NormalReceipt({ bill, onClose, showPrintButton = true }) {
   const handlePrint = useReactToPrint({
     contentRef,
     documentTitle: `Rough_Estimate_${bill?.billNumber || 'Order'}`,
+    pageStyle: `
+      @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; margin: 0; padding: 0; background: #fff; } }
+      .normal-receipt { visibility: visible !important; }
+    `,
+    onBeforeGetContent: () =>
+      new Promise((resolve) => {
+        requestAnimationFrame(() => setTimeout(resolve, 400));
+      }),
   });
 
   const items = bill?.items || [];

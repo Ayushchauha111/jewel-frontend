@@ -1009,6 +1009,68 @@
   }
 }
 
+/* Very narrow (e.g. 404px): stack payment rows, tighten padding, prevent horizontal scroll */
+@media (max-width: 420px) {
+  .price-management {
+    padding-left: max(0.5rem, env(safe-area-inset-left));
+    padding-right: max(0.5rem, env(safe-area-inset-right));
+  }
+
+  .price-header {
+    padding: 0.75rem 0.5rem;
+  }
+
+  .price-header h1 {
+    font-size: 1.1rem;
+  }
+
+  .price-search-card {
+    padding: 0.5rem;
+  }
+
+  .price-search-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .price-search-row form,
+  .price-search-row .price-action-btn {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .price-form-card {
+    padding: 0.75rem 0.5rem;
+  }
+
+  .price-form-header h3 {
+    font-size: 1.25rem;
+  }
+
+  /* Payment rows: stack Method and Amount vertically so they don't overflow */
+  .billing-payment-row {
+    flex-direction: column !important;
+    align-items: stretch;
+  }
+
+  .billing-payment-method,
+  .billing-payment-amount {
+    flex: none !important;
+    width: 100% !important;
+    max-width: 100%;
+  }
+
+  .billing-payment-row .stock-btn-delete {
+    align-self: flex-start;
+  }
+
+  .price-form-group input,
+  .price-form-group select {
+    min-width: 0;
+    box-sizing: border-box;
+  }
+}
+
 /* Billing QR scan – square box, blue scan line, 3 controls (flash, gallery, zoom) */
 .billing-qr-reader-wrap {
   width: 100%;

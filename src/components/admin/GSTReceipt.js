@@ -65,10 +65,18 @@ function formatDate(dateString) {
 function GSTReceipt({ bill, companyName, companyAddress, companyPhone, companyEmail, gstin, logoUrl, onClose, showPrintButton = true }) {
   const contentRef = useRef(null);
   
-  // High-fidelity print hook
+  // High-fidelity print hook (delay so mobile gets content before clone, avoid empty PDF)
   const handlePrint = useReactToPrint({
     contentRef,
     documentTitle: `Invoice_${bill?.billNumber || 'Receipt'}`,
+    pageStyle: `
+      @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; margin: 0; padding: 0; background: #fff; } }
+      .gst-receipt { visibility: visible !important; }
+    `,
+    onBeforeGetContent: () =>
+      new Promise((resolve) => {
+        requestAnimationFrame(() => setTimeout(resolve, 400));
+      }),
   });
 
   const name = companyName || SHOP_NAME;
@@ -86,7 +94,9 @@ function GSTReceipt({ bill, companyName, companyAddress, companyPhone, companyEm
   const paidAmount = parseFloat(bill?.paidAmount) || 0;
   const makingCharges = parseFloat(bill?.makingCharges) || 0;
 
-  const taxableAmount = finalAmount;
+  const hallmarkChargesPerItem = 100;
+  const hallmarkCharges = (items.length || 0) * hallmarkChargesPerItem;
+  const taxableAmount = finalAmount + hallmarkCharges;
   const gstRate = 0.015; // 1.5% each for CGST/SGST
   const cgstAmount = taxableAmount * gstRate;
   const sgstAmount = taxableAmount * gstRate;
@@ -222,10 +232,10 @@ function GSTReceipt({ bill, companyName, companyAddress, companyPhone, companyEm
                 <tr><td>Subtotal</td><td>{formatCurrency(totalAmount)}</td></tr>
                 <tr><td>Discount</td><td>-{formatCurrency(discountAmount)}</td></tr>
                 <tr><td>Making Charges</td><td>{formatCurrency(makingCharges)}</td></tr>
+                <tr><td>Hallmark Charges (₹100/item)</td><td>{formatCurrency(hallmarkCharges)}</td></tr>
                 <tr className="gst-receipt-summary-taxable"><td>Taxable Value</td><td>{formatCurrency(taxableAmount)}</td></tr>
                 <tr><td>CGST (1.5%)</td><td>{formatCurrency(cgstAmount)}</td></tr>
                 <tr><td>SGST (1.5%)</td><td>{formatCurrency(sgstAmount)}</td></tr>
-                <tr className="gst-receipt-summary-gst3"><td>GST (3%)</td><td>{formatCurrency(totalGst)}</td></tr>
                 <tr><td>Round Off</td><td>{formatCurrency(roundOff)}</td></tr>
                 <tr className="gst-receipt-summary-grand">
                   <td>Grand Total</td>

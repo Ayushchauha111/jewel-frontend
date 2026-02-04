@@ -509,6 +509,15 @@
   }
 }
 
+@media (max-width: 420px) {
+  .admin-dashboard > div[style*="margin"],
+  .price-management > div[style*="margin"],
+  .stock-management > div[style*="margin"] {
+    margin-left: max(0.5rem, env(safe-area-inset-left)) !important;
+    margin-right: max(0.5rem, env(safe-area-inset-right)) !important;
+  }
+}
+
 /* Dashboard wrapper & header */
 .dashboard-wrapper {
   position: relative;
