@@ -61,6 +61,8 @@ function BillingManagement() {
   const [pricesLoading, setPricesLoading] = useState(false);
   // Cache of calculated buy-back value (index -> price) when customer sells gold
   const [buyBackPrices, setBuyBackPrices] = useState({});
+  // Cache of calculated silver buy-back value (index -> price) when customer sells silver
+  const [silverBuyBackPrices, setSilverBuyBackPrices] = useState({});
   // Diamond rate per carat (from Rates) for Gold + Diamond item calculation
   const [diamondRatePerCarat, setDiamondRatePerCarat] = useState(null);
   // Default making charges per gram (₹/g) – used for making = rate × gm (incl. external items with weight)
@@ -349,6 +351,21 @@ function BillingManagement() {
       }
 
       const billingItems = formData.items.map((item, index) => {
+        if (item.isBuyBack && item.isSilverBuyBack) {
+          const price = getBuyBackUnitPrice(item, index);
+          const w = parseFloat(item.weightGrams);
+          if (!item.weightGrams || w <= 0 || price == null || price <= 0) return null;
+          const qty = parseInt(item.quantity || 1, 10);
+          return {
+            stock: null,
+            itemName: `Silver buy-back (${w}g)`,
+            weightGrams: w,
+            carat: null,
+            quantity: qty,
+            unitPrice: -price,
+            totalPrice: -(price * qty)
+          };
+        }
         if (item.isBuyBack) {
           const price = getBuyBackUnitPrice(item, index);
           const p = item.purity;
@@ -405,7 +422,7 @@ function BillingManagement() {
       }).filter(Boolean);
 
       if (billingItems.length === 0) {
-        setError('Add at least one item: from stock, external (sold from friend), or gold buy-back.');
+        setError('Add at least one item: from stock, external (sold from friend), gold buy-back, or silver buy-back.');
         setLoading(false);
         return;
       }
@@ -514,6 +531,7 @@ function BillingManagement() {
     setItemMakingCharges({});
     setItemGoldRatePerGram({});
     setBuyBackPrices({});
+    setSilverBuyBackPrices({});
     externalCodeRef.current = 1;
     setShowForm(false);
   };
@@ -534,7 +552,14 @@ function BillingManagement() {
   const addBuyBackItem = () => {
     setFormData({
       ...formData,
-      items: [...formData.items, { isBuyBack: true, weightGrams: '', purity: '', quantity: 1, buyBackRatePerGram: '' }]
+      items: [...formData.items, { isBuyBack: true, isSilverBuyBack: false, weightGrams: '', purity: '', quantity: 1, buyBackRatePerGram: '' }]
+    });
+  };
+
+  const addSilverBuyBackItem = () => {
+    setFormData({
+      ...formData,
+      items: [...formData.items, { isBuyBack: true, isSilverBuyBack: true, weightGrams: '', quantity: 1, buyBackRatePerGram: '' }]
     });
   };
 
@@ -736,7 +761,16 @@ function BillingManagement() {
     setBuyBackPrices(prev => {
       const next = {};
       newItems.forEach((item, i) => {
-        if (!item.isBuyBack) return;
+        if (!item.isBuyBack || item.isSilverBuyBack) return;
+        const oldIdx = formData.items.findIndex(x => x === item);
+        if (oldIdx >= 0 && prev[oldIdx] != null) next[i] = prev[oldIdx];
+      });
+      return next;
+    });
+    setSilverBuyBackPrices(prev => {
+      const next = {};
+      newItems.forEach((item, i) => {
+        if (!item.isBuyBack || !item.isSilverBuyBack) return;
         const oldIdx = formData.items.findIndex(x => x === item);
         if (oldIdx >= 0 && prev[oldIdx] != null) next[i] = prev[oldIdx];
       });
@@ -913,15 +947,40 @@ function BillingManagement() {
     }
   };
 
+  const fetchSilverBuyBackPrice = async (index, weightGrams) => {
+    if (!weightGrams || parseFloat(weightGrams) <= 0) return;
+    try {
+      const params = new URLSearchParams({ weightGrams: String(weightGrams) });
+      const response = await axios.get(`${API_URL}/stock/calculate-price-silver?${params.toString()}`, { headers: getAuthHeaders() });
+      // Buy-back uses silver value only (no making charges or GST)
+      const price = response.data?.silverValue ?? response.data?.calculatedPrice;
+      if (price != null) {
+        setSilverBuyBackPrices(prev => ({ ...prev, [index]: parseFloat(price) }));
+      }
+    } catch (err) {
+      if (err.response?.status === 400) {
+        setError(err.response?.data?.error || 'Set today\'s silver rate to calculate buy-back value.');
+        setTimeout(() => setError(null), 5000);
+      }
+      console.error('Error fetching silver buy-back price:', err);
+    }
+  };
+
   const handleBuyBackChange = (index, field, value) => {
     const newItems = [...formData.items];
     newItems[index] = { ...newItems[index], [field]: value };
     setFormData({ ...formData, items: newItems });
-    if (field === 'weightGrams' || field === 'purity') {
-      if (field !== 'buyBackRatePerGram') {
-        const w = field === 'weightGrams' ? value : newItems[index].weightGrams;
-        const p = field === 'purity' ? value : newItems[index].purity;
-        if (w && p) fetchBuyBackPrice(index, w, p);
+    if (newItems[index].isSilverBuyBack) {
+      if (field === 'weightGrams' && value && parseFloat(value) > 0) {
+        fetchSilverBuyBackPrice(index, value);
+      }
+    } else {
+      if (field === 'weightGrams' || field === 'purity') {
+        if (field !== 'buyBackRatePerGram') {
+          const w = field === 'weightGrams' ? value : newItems[index].weightGrams;
+          const p = field === 'purity' ? value : newItems[index].purity;
+          if (w && p) fetchBuyBackPrice(index, w, p);
+        }
       }
     }
   };
@@ -952,12 +1011,33 @@ function BillingManagement() {
     if (rateOverride != null && !isNaN(rateOverride) && rateOverride > 0 && weight > 0) {
       return rateOverride * weight;
     }
+    if (item.isSilverBuyBack) {
+      return silverBuyBackPrices[index] != null ? silverBuyBackPrices[index] : 0;
+    }
     return buyBackPrices[index] != null ? buyBackPrices[index] : 0;
   };
 
   const calculateBuyBackTotal = () => {
     return formData.items.reduce((sum, item, index) => {
       if (!item.isBuyBack) return sum;
+      const unitPrice = getBuyBackUnitPrice(item, index);
+      const qty = parseInt(item.quantity || 1, 10);
+      return sum + (unitPrice * qty);
+    }, 0);
+  };
+
+  const calculateGoldBuyBackTotal = () => {
+    return formData.items.reduce((sum, item, index) => {
+      if (!item.isBuyBack || item.isSilverBuyBack) return sum;
+      const unitPrice = getBuyBackUnitPrice(item, index);
+      const qty = parseInt(item.quantity || 1, 10);
+      return sum + (unitPrice * qty);
+    }, 0);
+  };
+
+  const calculateSilverBuyBackTotal = () => {
+    return formData.items.reduce((sum, item, index) => {
+      if (!item.isBuyBack || !item.isSilverBuyBack) return sum;
       const unitPrice = getBuyBackUnitPrice(item, index);
       const qty = parseInt(item.quantity || 1, 10);
       return sum + (unitPrice * qty);
@@ -1200,7 +1280,51 @@ function BillingManagement() {
                 <label>Items *</label>
                 {formData.items.map((item, index) => (
                   <div key={index} style={{ marginBottom: '1rem' }}>
-                    {item.isBuyBack ? (
+                    {item.isBuyBack && item.isSilverBuyBack ? (
+                      <div className="price-buyback-item">
+                        <span className="price-buyback-item-label">🥈 Customer selling silver (buy-back)</span>
+                        <div style={{ flex: '1 1 100px' }}>
+                          <label>Weight (g)</label>
+                          <input
+                            type="number"
+                            step="0.001"
+                            value={item.weightGrams || ''}
+                            onChange={(e) => handleBuyBackChange(index, 'weightGrams', e.target.value)}
+                            placeholder="e.g. 100"
+                            style={{ width: '100%', padding: '0.75rem', borderRadius: '8px' }}
+                          />
+                        </div>
+                        <div style={{ flex: '1 1 100px' }}>
+                          <label>Rate (₹/g) – optional</label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={item.buyBackRatePerGram ?? ''}
+                            onChange={(e) => handleBuyBackChange(index, 'buyBackRatePerGram', e.target.value)}
+                            placeholder="Override rate"
+                            style={{ width: '100%', padding: '0.75rem', borderRadius: '8px' }}
+                          />
+                        </div>
+                        <div style={{ flex: '0 0 70px' }}>
+                          <label>Qty</label>
+                          <input
+                            type="number"
+                            min="1"
+                            value={item.quantity || 1}
+                            onChange={(e) => handleBuyBackChange(index, 'quantity', e.target.value)}
+                            style={{ width: '100%', padding: '0.75rem', borderRadius: '8px' }}
+                          />
+                        </div>
+                        <div style={{ flex: '0 0 100px' }}>
+                          <label>Value</label>
+                          <div className="price-buyback-value">
+                            {getBuyBackUnitPrice(item, index) > 0 ? formatCurrency(getBuyBackUnitPrice(item, index) * parseInt(item.quantity || 1, 10)) : '—'}
+                          </div>
+                        </div>
+                        <button type="button" onClick={() => removeItem(index)} className="stock-btn-delete" style={{ padding: '0.75rem 1rem' }}>🗑️</button>
+                      </div>
+                    ) : item.isBuyBack ? (
                       <div className="price-buyback-item">
                         <span className="price-buyback-item-label">🪙 Customer selling gold (buy-back)</span>
                         <div style={{ flex: '1 1 100px' }}>
@@ -1476,6 +1600,7 @@ function BillingManagement() {
                   <button type="button" onClick={() => setShowQRAddModal(true)} className="price-action-btn secondary">📱 Add item using QR code</button>
                   <button type="button" onClick={addExternalItem} className="price-action-btn secondary">🤝 Sell item from friend (external)</button>
                   <button type="button" onClick={addBuyBackItem} className="price-action-btn secondary buyback">🪙 Customer selling gold (buy-back)</button>
+                  <button type="button" onClick={addSilverBuyBackItem} className="price-action-btn secondary buyback">🥈 Customer selling silver (buy-back)</button>
                 </div>
               </div>
 
@@ -1574,10 +1699,16 @@ function BillingManagement() {
                     </>
                   );
                 })()}
-                {calculateBuyBackTotal() > 0 && (
+                {calculateGoldBuyBackTotal() > 0 && (
                   <div className="price-bill-buyback">
                     <span>Gold buy-back:</span>
-                    <strong>-{formatCurrency(calculateBuyBackTotal())}</strong>
+                    <strong>-{formatCurrency(calculateGoldBuyBackTotal())}</strong>
+                  </div>
+                )}
+                {calculateSilverBuyBackTotal() > 0 && (
+                  <div className="price-bill-buyback">
+                    <span>Silver buy-back:</span>
+                    <strong>-{formatCurrency(calculateSilverBuyBackTotal())}</strong>
                   </div>
                 )}
                 <div>
