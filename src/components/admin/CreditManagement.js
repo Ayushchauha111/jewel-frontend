@@ -432,7 +432,7 @@ function CreditManagement() {
                       <th>Paid Amount</th>
                       <th>Remaining</th>
                       <th>Status</th>
-                      <th>Description</th>
+                      <th className="credit-description-header" style={{ minWidth: '120px' }}>Description</th>
                       <th>Date</th>
                       <th>Actions</th>
                     </tr>
@@ -450,7 +450,7 @@ function CreditManagement() {
                               {credit.status}
                             </span>
                           </td>
-                          <td>{credit.description || '-'}</td>
+                          <td className="credit-description-cell" style={{ minWidth: '120px', maxWidth: '280px', overflowWrap: 'break-word' }}>{credit.description || '-'}</td>
                           <td>{formatDate(credit.createdAt)}</td>
                           <td>
                             <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
@@ -563,6 +563,11 @@ function CreditManagement() {
                       <div className="admin-list-card-meta">
                         Udhari: {formatCurrency(credit.creditAmount)} · Paid: {formatCurrency(credit.paidAmount)} · Remaining: {formatCurrency(credit.remainingAmount)} · {formatDate(credit.createdAt)}
                       </div>
+                      {(credit.description || '').trim() && (
+                        <div className="admin-list-card-description" style={{ marginTop: '0.35rem', fontSize: '0.85rem', color: 'var(--adm-text-muted, #a89f8e)', maxWidth: '100%', overflowWrap: 'break-word' }}>
+                          {credit.description}
+                        </div>
+                      )}
                       <span className={`status-badge status-${credit.status?.toLowerCase()}`}>{credit.status}</span>
                     </div>
                     <div className="admin-list-card-actions">
