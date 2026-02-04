@@ -960,7 +960,7 @@
   }
 }
 
-/* Billing QR scan – square box, zoom & flash controls */
+/* Billing QR scan – square box, blue scan line, 3 controls (flash, gallery, zoom) */
 .billing-qr-reader-wrap {
   width: 100%;
   min-height: 280px;
@@ -971,6 +971,24 @@
   position: relative;
   border: 2px solid var(--adm-border-gold, rgba(201, 162, 39, 0.4));
   box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Blue line going up-down for scanning (overlay) */
+.billing-qr-scan-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(to bottom, transparent, #2196f3, transparent);
+  box-shadow: 0 0 8px rgba(33, 150, 243, 0.8);
+  pointer-events: none;
+  z-index: 10;
+  animation: billing-qr-scan-line 2s ease-in-out infinite;
+}
+
+@keyframes billing-qr-scan-line {
+  0%, 100% { top: 10%; }
+  50% { top: 90%; }
 }
 
 .billing-qr-reader {
@@ -986,12 +1004,48 @@
   pointer-events: none;
 }
 
+/* 3 symbols: Flash, Gallery, Zoom (like reference UI) */
 .billing-qr-controls {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 0.75rem 1rem;
-  padding: 0.75rem 0;
+  justify-content: center;
+  gap: 1rem;
+  padding: 0.75rem;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  margin-top: 0.5rem;
+}
+
+.billing-qr-control-btn {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 1.25rem;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
+}
+
+.billing-qr-control-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+.billing-qr-control-btn.on {
+  background: rgba(33, 150, 243, 0.25);
+  border-color: #2196f3;
+  color: #2196f3;
+}
+
+.billing-qr-control-btn.zoom {
+  font-weight: 700;
+  font-size: 0.95rem;
+  min-width: 48px;
 }
 
 .billing-qr-control-label {

@@ -83,6 +83,8 @@ function BillingManagement() {
   const [qrZoomSupported, setQrZoomSupported] = useState(false);
   const [qrTorchSupported, setQrTorchSupported] = useState(false);
   const qrScannerRef = useRef(null);
+  const qrGalleryInputRef = useRef(null);
+  const QR_ZOOM_OPTIONS = [1, 2, 5];
   const externalCodeRef = useRef(1);
 
   const isGoldItem = (s) => s && String(s.material || '').toLowerCase() === 'gold' && s.weightGrams && s.carat;
@@ -578,6 +580,14 @@ function BillingManagement() {
       setTimeout(() => setError(null), 3000);
       return false;
     }
+    const alreadyInBill = formData.items.some(
+      (item) => item.stockId != null && String(item.stockId) === String(found.id)
+    );
+    if (alreadyInBill) {
+      setError('Item already in bill');
+      setTimeout(() => setError(null), 3000);
+      return false;
+    }
     setFormData(prev => ({
       ...prev,
       items: [...prev.items, { stockId: String(found.id), quantity: 1, overrideRatePerGram: '' }]
@@ -673,6 +683,34 @@ function BillingManagement() {
       const next = !qrTorchOn;
       torchF.apply(next).then(() => setQrTorchOn(next)).catch(() => {});
     } catch (_) {}
+  };
+
+  const cycleQrZoom = () => {
+    const idx = QR_ZOOM_OPTIONS.indexOf(qrZoom);
+    const next = QR_ZOOM_OPTIONS[(idx + 1) % QR_ZOOM_OPTIONS.length];
+    setQrZoom(next);
+    applyQrZoom(next);
+  };
+
+  const scanQrFromGallery = (e) => {
+    const file = e.target?.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    const sc = qrScannerRef.current;
+    (sc ? sc.scanFile(file, false) : Promise.reject(new Error('Scanner not ready')))
+      .then((decodedText) => {
+        if (decodedText && addItemFromScannedData(decodedText)) {
+          setShowQRAddModal(false);
+          setQrAddInput('');
+          setQrScanning(false);
+          sc?.stop().catch(() => {});
+          qrScannerRef.current = null;
+        }
+      })
+      .catch(() => {
+        setError('No QR code found in image');
+        setTimeout(() => setError(null), 3000);
+      });
   };
 
   const removeItem = (index) => {
@@ -1437,32 +1475,45 @@ function BillingManagement() {
                           <p style={{ fontSize: '0.9rem', color: '#64748b', marginBottom: '0.75rem' }}>Point the camera at the article&apos;s QR code.</p>
                           <div className="billing-qr-reader-wrap">
                             <div id="billing-qr-reader" className="billing-qr-reader" />
+                            <div className="billing-qr-scan-line" aria-hidden="true" />
                           </div>
                           <div className="billing-qr-controls">
-                            {qrZoomSupported && (
-                              <div className="billing-qr-zoom">
-                                <span className="billing-qr-control-label">Zoom</span>
-                                {[1, 2, 5].map((factor) => (
-                                  <button
-                                    key={factor}
-                                    type="button"
-                                    className={`billing-qr-zoom-btn ${qrZoom === factor ? 'active' : ''}`}
-                                    onClick={() => { setQrZoom(factor); applyQrZoom(factor); }}
-                                  >
-                                    {factor}X
-                                  </button>
-                                ))}
-                              </div>
-                            )}
                             {qrTorchSupported && (
                               <button
                                 type="button"
-                                className={`billing-qr-flash-btn ${qrTorchOn ? 'on' : ''}`}
+                                className={`billing-qr-control-btn ${qrTorchOn ? 'on' : ''}`}
                                 onClick={toggleQrTorch}
                                 title={qrTorchOn ? 'Turn off flash' : 'Turn on flash'}
                                 aria-label={qrTorchOn ? 'Flash on' : 'Flash off'}
                               >
-                                {qrTorchOn ? '🔦 Flash ON' : '💡 Flash'}
+                                {qrTorchOn ? '🔦' : '💡'}
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              className="billing-qr-control-btn"
+                              onClick={() => qrGalleryInputRef.current?.click()}
+                              title="Scan from photo"
+                              aria-label="Scan from gallery"
+                            >
+                              🖼️
+                            </button>
+                            <input
+                              ref={qrGalleryInputRef}
+                              type="file"
+                              accept="image/*"
+                              style={{ display: 'none' }}
+                              onChange={scanQrFromGallery}
+                            />
+                            {qrZoomSupported && (
+                              <button
+                                type="button"
+                                className="billing-qr-control-btn zoom"
+                                onClick={cycleQrZoom}
+                                title="Zoom"
+                                aria-label={`Zoom ${qrZoom}x`}
+                              >
+                                {qrZoom}x
                               </button>
                             )}
                           </div>
