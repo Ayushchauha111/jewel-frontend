@@ -152,6 +152,15 @@
   background: rgba(179, 147, 89, 0.2);
 }
 
+.checkout-qty-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.checkout-qty-btn:disabled:hover {
+  background: rgba(179, 147, 89, 0.1);
+}
+
 .checkout-qty-value {
   min-width: 2rem;
   text-align: center;

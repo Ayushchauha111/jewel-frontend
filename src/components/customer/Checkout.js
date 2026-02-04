@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import AuthService from '../../service/auth.service';
@@ -39,6 +39,7 @@ function Checkout() {
     makingPerGram: FALLBACK_MAKING_PER_GRAM
   });
   const [categoryMakingConfigs, setCategoryMakingConfigs] = useState([]);
+  const [stockMaxQty, setStockMaxQty] = useState({}); // stock id -> max quantity available
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -81,6 +82,42 @@ function Checkout() {
     }).catch(() => {});
     return () => { cancelled = true; };
   }, []);
+
+  const cartIdsKey = useMemo(() => cart.map((i) => i.id).sort().join(','), [cart]);
+
+  // Fetch current stock quantity for each cart item so we can cap quantity at available stock
+  useEffect(() => {
+    if (!cart.length) {
+      setStockMaxQty({});
+      return;
+    }
+    let cancelled = false;
+    const ids = [...new Set(cart.map((i) => i.id))];
+    Promise.all(
+      ids.map((id) =>
+        axios.get(`${API_URL}/stock/${id}`).then((res) => ({ id, quantity: res.data?.quantity != null ? Math.max(0, parseInt(res.data.quantity, 10)) : 0 })).catch(() => ({ id, quantity: 0 }))
+      )
+    ).then((results) => {
+      if (cancelled) return;
+      const next = {};
+      results.forEach((r) => { next[r.id] = r.quantity; });
+      setStockMaxQty(next);
+      // Clamp cart: if any item has quantity > available stock, reduce and persist
+      const needsClamp = cart.some((i) => (i.quantity || 1) > (next[i.id] ?? 0));
+      if (needsClamp) {
+        const clamped = cart.map((i) => {
+          const maxQty = next[i.id] ?? 0;
+          const qty = i.quantity || 1;
+          if (maxQty <= 0) return null;
+          if (qty <= maxQty) return i;
+          return { ...i, quantity: maxQty };
+        }).filter(Boolean);
+        setCart(clamped);
+        localStorage.setItem('cart', JSON.stringify(clamped));
+      }
+    });
+    return () => { cancelled = true; };
+  }, [cartIdsKey]); // re-fetch when set of cart item ids changes
 
   const getMakingPerGramForItem = (item) => {
     const category = (item.category || '').trim();
@@ -157,9 +194,11 @@ function Checkout() {
   };
 
   const updateQuantity = (itemId, delta) => {
+    const maxQty = stockMaxQty[itemId] != null ? stockMaxQty[itemId] : 999;
     const next = cart.map((i) => {
       if (i.id !== itemId) return i;
-      const qty = Math.max(0, (i.quantity || 1) + delta);
+      const newQty = (i.quantity || 1) + delta;
+      const qty = Math.max(0, Math.min(maxQty, newQty));
       if (qty <= 0) return null;
       return { ...i, quantity: qty };
     }).filter(Boolean);
@@ -372,11 +411,11 @@ function Checkout() {
                       )}
                       <div className="checkout-item-controls">
                         <label className="checkout-qty-wrap">
-                          <span className="checkout-qty-label">Qty</span>
+                          <span className="checkout-qty-label">Qty{stockMaxQty[item.id] != null ? ` (max ${stockMaxQty[item.id]})` : ''}</span>
                           <span className="checkout-qty-btns">
                             <button type="button" className="checkout-qty-btn" onClick={() => updateQuantity(item.id, -1)} aria-label="Decrease quantity">−</button>
                             <span className="checkout-qty-value">{item.quantity || 1}</span>
-                            <button type="button" className="checkout-qty-btn" onClick={() => updateQuantity(item.id, 1)} aria-label="Increase quantity">+</button>
+                            <button type="button" className="checkout-qty-btn" onClick={() => updateQuantity(item.id, 1)} aria-label="Increase quantity" disabled={(item.quantity || 1) >= (stockMaxQty[item.id] ?? 999)}>+</button>
                           </span>
                         </label>
                         <label className="checkout-price-wrap">

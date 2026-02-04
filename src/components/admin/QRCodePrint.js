@@ -28,8 +28,41 @@ function QRCodePrint() {
     documentTitle: 'QR_Codes_Articles',
     pageStyle: `
       @page { size: A4; margin: 10mm; }
-      body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    `
+      body { -webkit-print-color-adjust: exact; print-color-adjust: exact; margin: 0; padding: 0; }
+      .qr-print-sheet { position: static !important; left: auto !important; visibility: visible !important; width: 100% !important; max-width: 100% !important; box-sizing: border-box !important; background: #fff; color: #000; }
+      .qr-print-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; padding: 10px; page-break-inside: auto; width: 100%; box-sizing: border-box; }
+      .qr-print-label { border: 1px solid #000; padding: 6px 4px; text-align: center; font-size: 10px; page-break-inside: avoid; break-inside: avoid; min-height: 0; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; background: #fff; }
+      .qr-print-qr { width: 48px; height: 48px; display: block; margin: 0 auto 4px; border: none; }
+      .qr-print-no-qr { width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; margin: 0 auto 4px; background: #f0f0f0; color: #666; font-size: 8px; }
+      .qr-print-code { font-weight: bold; font-size: 9px; margin-bottom: 2px; word-break: break-all; }
+      .qr-print-name { font-size: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+    `,
+    onBeforeGetContent: () => {
+      return new Promise((resolve) => {
+        const el = printRef.current;
+        if (!el) {
+          resolve();
+          return;
+        }
+        const imgs = el.querySelectorAll('img');
+        if (imgs.length === 0) {
+          setTimeout(resolve, 50);
+          return;
+        }
+        let done = 0;
+        const onDone = () => {
+          done += 1;
+          if (done >= imgs.length) setTimeout(resolve, 50);
+        };
+        imgs.forEach((img) => {
+          if (img.complete) onDone();
+          else {
+            img.onload = onDone;
+            img.onerror = onDone;
+          }
+        });
+      });
+    }
   });
 
   const handleLogout = () => {
