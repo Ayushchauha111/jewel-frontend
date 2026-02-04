@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { PhotoIcon, BoltIcon } from '@heroicons/react/24/outline';
+import { BoltIcon as BoltIconSolid } from '@heroicons/react/24/solid';
 import { Html5Qrcode } from 'html5-qrcode';
 import axios from 'axios';
 import { getAuthHeaders } from '../../utils/authHelper';
@@ -613,15 +615,16 @@ function BillingManagement() {
     const timer = setTimeout(() => {
       const el = document.getElementById('billing-qr-reader');
       if (cancelled || !el) return;
-      const scanner = new Html5Qrcode('billing-qr-reader');
+      const scanner = new Html5Qrcode('billing-qr-reader', { useBarCodeDetectorIfSupported: true });
       qrScannerRef.current = scanner;
       const scanConfig = {
-        fps: 20,
+        fps: 30,
         qrbox: (viewfinderWidth, viewfinderHeight) => {
-          const size = Math.min(viewfinderWidth, viewfinderHeight, 280);
-          return { width: Math.max(200, size), height: Math.max(200, size) };
+          const size = Math.min(viewfinderWidth, viewfinderHeight, 260);
+          return { width: Math.max(180, size), height: Math.max(180, size) };
         },
-        aspectRatio: 1
+        aspectRatio: 1,
+        disableFlip: false
       };
       scanner.start(
         { facingMode: 'environment' },
@@ -1486,7 +1489,7 @@ function BillingManagement() {
                                 title={qrTorchOn ? 'Turn off flash' : 'Turn on flash'}
                                 aria-label={qrTorchOn ? 'Flash on' : 'Flash off'}
                               >
-                                {qrTorchOn ? '🔦' : '💡'}
+                                {qrTorchOn ? <BoltIconSolid className="billing-qr-icon" /> : <BoltIcon className="billing-qr-icon" />}
                               </button>
                             )}
                             <button
@@ -1496,7 +1499,7 @@ function BillingManagement() {
                               title="Scan from photo"
                               aria-label="Scan from gallery"
                             >
-                              🖼️
+                              <PhotoIcon className="billing-qr-icon" />
                             </button>
                             <input
                               ref={qrGalleryInputRef}

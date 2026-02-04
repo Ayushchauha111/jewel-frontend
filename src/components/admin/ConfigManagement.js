@@ -199,31 +199,49 @@ function ConfigManagement() {
         <div className="price-table-container">
           <h3 className="price-table-title">Category + Material → Making (₹/g)</h3>
           {configs.length > 0 ? (
-            <div className="price-table-scroll">
-              <table className="price-table">
-                <thead>
-                  <tr>
-                    <th>Category</th>
-                    <th>Material</th>
-                    <th>Making (₹/g)</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {configs.map((row) => (
-                    <tr key={row.id}>
-                      <td style={{ fontWeight: '600' }}>{row.category}</td>
-                      <td>{row.material || '—'}</td>
-                      <td>{formatCurrency(row.makingChargesPerGram)}</td>
-                      <td>
-                        <button type="button" onClick={() => handleEdit(row)} className="stock-btn-edit" style={{ marginRight: '0.5rem' }}>✏️ Edit</button>
-                        <button type="button" onClick={() => handleDelete(row.id)} className="stock-btn-delete">🗑️ Delete</button>
-                      </td>
+            <>
+              <div className="price-table-scroll">
+                <table className="price-table">
+                  <thead>
+                    <tr>
+                      <th>Category</th>
+                      <th>Material</th>
+                      <th>Making (₹/g)</th>
+                      <th>Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {configs.map((row) => (
+                      <tr key={row.id}>
+                        <td style={{ fontWeight: '600' }}>{row.category}</td>
+                        <td>{row.material || '—'}</td>
+                        <td>{formatCurrency(row.makingChargesPerGram)}</td>
+                        <td>
+                          <button type="button" onClick={() => handleEdit(row)} className="stock-btn-edit" style={{ marginRight: '0.5rem' }}>✏️ Edit</button>
+                          <button type="button" onClick={() => handleDelete(row.id)} className="stock-btn-delete">🗑️ Delete</button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="admin-list-cards">
+                {configs.map((row) => (
+                  <div key={row.id} className="admin-list-card">
+                    <div className="admin-list-card-main">
+                      <div className="admin-list-card-title">
+                        {row.category}{row.material ? ` — ${row.material}` : ' (category default)'}
+                      </div>
+                      <div className="admin-list-card-meta">{formatCurrency(row.makingChargesPerGram)}</div>
+                    </div>
+                    <div className="admin-list-card-actions">
+                      <button type="button" onClick={() => handleEdit(row)} className="stock-btn-edit">✏️ Edit</button>
+                      <button type="button" onClick={() => handleDelete(row.id)} className="stock-btn-delete">🗑️ Delete</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
           ) : (
             <div className="price-empty-state">
               <div className="price-empty-state-icon">⚙️</div>

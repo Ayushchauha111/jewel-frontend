@@ -115,7 +115,10 @@ function CustomerManagement() {
       setTimeout(() => setSuccess(null), 3000);
     } catch (error) {
       console.error('Error deleting customer:', error);
-      setError('Failed to delete customer');
+      const msg = error.response?.status === 409
+        ? (error.response?.data?.message || 'Customer has existing bills and cannot be deleted.')
+        : (error.response?.data?.message || 'Failed to delete customer');
+      setError(msg);
       setTimeout(() => setError(null), 5000);
     }
   };

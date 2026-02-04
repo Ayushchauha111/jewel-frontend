@@ -12,10 +12,29 @@ function Login() {
   });
   const navigate = useNavigate();
 
+  const getOrCreateDeviceId = () => {
+    try {
+      let id = sessionStorage.getItem('adminDeviceId');
+      if (!id) {
+        id = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+          const r = (Math.random() * 16) | 0;
+          const v = c === 'x' ? r : (r & 0x3) | 0x8;
+          return v.toString(16);
+        });
+        sessionStorage.setItem('adminDeviceId', id);
+      }
+      return id;
+    } catch (_) {
+      return '';
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await axios.post(`${API_URL}/auth/signin`, formData);
+      const deviceId = getOrCreateDeviceId();
+      const headers = deviceId ? { 'X-Device-Id': deviceId } : {};
+      const response = await axios.post(`${API_URL}/auth/signin`, formData, { headers });
       localStorage.setItem('token', response.data.token);
       localStorage.setItem('user', JSON.stringify(response.data));
       navigate('/admin');

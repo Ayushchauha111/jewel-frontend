@@ -1,12 +1,28 @@
 import http from "../http-common-auth";
 
+function getAdminDeviceId() {
+  try {
+    let id = sessionStorage.getItem("adminDeviceId");
+    if (!id) {
+      id = "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+        const r = (Math.random() * 16) | 0;
+        const v = c === "x" ? r : (r & 0x3) | 0x8;
+        return v.toString(16);
+      });
+      sessionStorage.setItem("adminDeviceId", id);
+    }
+    return id;
+  } catch (_) {
+    return "";
+  }
+}
+
 class AuthService {
   login(username, password) {
+    const deviceId = getAdminDeviceId();
+    const config = deviceId ? { headers: { "X-Device-Id": deviceId } } : {};
     return http
-      .post("signin", {
-        username,
-        password
-      })
+      .post("signin", { username, password }, config)
       .then(response => {
         const data = response.data;
         // Backend returns token as 'token', but we also support 'accessToken' for compatibility

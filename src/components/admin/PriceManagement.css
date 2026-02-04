@@ -1048,6 +1048,12 @@
   min-width: 48px;
 }
 
+.billing-qr-icon {
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+}
+
 .billing-qr-control-label {
   font-size: 0.75rem;
   font-weight: 600;
