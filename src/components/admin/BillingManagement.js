@@ -92,8 +92,12 @@ function BillingManagement() {
   const [qrScanResultMessage, setQrScanResultMessage] = useState(null);
   const qrScannerRef = useRef(null);
   const qrGalleryInputRef = useRef(null);
+  const scanGunInputRef = useRef(null);
   const QR_ZOOM_OPTIONS = [1, 2, 5];
   const externalCodeRef = useRef(1);
+
+  const [newCustomerForm, setNewCustomerForm] = useState({ name: '', phone: '', email: '', address: '', visible: false });
+  const [creatingCustomer, setCreatingCustomer] = useState(false);
 
   const isGoldItem = (s) => s && String(s.material || '').toLowerCase() === 'gold' && s.weightGrams && s.carat;
   // Gold + Diamond / Silver + Diamond etc.: has metal weight + carat, can use rate for metal part when sellingPrice not set
@@ -301,6 +305,54 @@ function BillingManagement() {
     }
   };
 
+  const createCustomerAndSelect = async () => {
+    const name = (newCustomerForm.name || '').trim();
+    const phone = (newCustomerForm.phone || '').trim();
+    if (!name || !phone) {
+      setError('Name and phone are required for new customer.');
+      setTimeout(() => setError(null), 4000);
+      return;
+    }
+    setCreatingCustomer(true);
+    setError(null);
+    try {
+      const res = await axios.post(`${API_URL}/customers`, {
+        name,
+        phone,
+        email: (newCustomerForm.email || '').trim() || undefined,
+        address: (newCustomerForm.address || '').trim() || undefined
+      }, { headers: getAuthHeaders() });
+      const saved = res.data;
+      await fetchCustomers();
+      setFormData(prev => ({ ...prev, customerId: String(saved.id) }));
+      setNewCustomerForm({ name: '', phone: '', email: '', address: '', visible: false });
+      setSuccess('Customer added and selected.');
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err) {
+      setError(err?.response?.data?.error || err?.response?.data?.message || 'Failed to add customer.');
+      setTimeout(() => setError(null), 5000);
+    } finally {
+      setCreatingCustomer(false);
+    }
+  };
+
+  const handleScanGunKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      e.stopPropagation();
+      const el = e.target;
+      const v = (el?.value || '').trim();
+      if (v) {
+        const added = addItemFromScannedData(v);
+        if (el) el.value = '';
+        if (added) {
+          setSuccess('Item added from scan.');
+          setTimeout(() => setSuccess(null), 2000);
+        }
+      }
+    }
+  };
+
   const fetchStock = async () => {
     try {
       const response = await axios.get(`${API_URL}/stock?page=0&size=500`);
@@ -315,6 +367,16 @@ function BillingManagement() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (newCustomerForm.visible) {
+      setError('Please save the new customer first (click "Save & use") or Cancel.');
+      setTimeout(() => setError(null), 4000);
+      return;
+    }
+    if (!formData.customerId) {
+      setError('Please select a customer.');
+      setTimeout(() => setError(null), 4000);
+      return;
+    }
     setLoading(true);
     setError(null);
     setSuccess(null);
@@ -1318,13 +1380,65 @@ function BillingManagement() {
                   <select
                     value={formData.customerId}
                     onChange={(e) => setFormData({...formData, customerId: e.target.value})}
-                    required
+                    required={!newCustomerForm.visible}
+                    disabled={!!newCustomerForm.visible}
+                    style={newCustomerForm.visible ? { opacity: 0.8 } : {}}
                   >
                     <option value="">Select Customer</option>
                     {customers.map(c => (
                       <option key={c.id} value={c.id}>{c.name} - {c.phone}</option>
                     ))}
                   </select>
+                  {!newCustomerForm.visible ? (
+                    <button
+                      type="button"
+                      onClick={() => setNewCustomerForm(prev => ({ ...prev, visible: true }))}
+                      className="price-action-btn secondary"
+                      style={{ marginTop: '0.5rem', fontSize: '0.875rem' }}
+                    >
+                      ➕ Add new customer (not in list)
+                    </button>
+                  ) : (
+                    <div style={{ marginTop: '0.75rem', padding: '0.75rem', background: 'var(--adm-bg-elevated)', border: '1px solid var(--adm-border-gold)', borderRadius: '8px' }}>
+                      <p style={{ margin: '0 0 0.5rem', fontSize: '0.8rem', color: 'var(--adm-text-muted)' }}>New customer</p>
+                      <input
+                        type="text"
+                        placeholder="Name *"
+                        value={newCustomerForm.name}
+                        onChange={(e) => setNewCustomerForm(prev => ({ ...prev, name: e.target.value }))}
+                        style={{ width: '100%', marginBottom: '0.5rem', padding: '0.5rem', borderRadius: '6px', border: '1px solid var(--adm-border-gold)' }}
+                      />
+                      <input
+                        type="text"
+                        placeholder="Phone *"
+                        value={newCustomerForm.phone}
+                        onChange={(e) => setNewCustomerForm(prev => ({ ...prev, phone: e.target.value }))}
+                        style={{ width: '100%', marginBottom: '0.5rem', padding: '0.5rem', borderRadius: '6px', border: '1px solid var(--adm-border-gold)' }}
+                      />
+                      <input
+                        type="text"
+                        placeholder="Email (optional)"
+                        value={newCustomerForm.email}
+                        onChange={(e) => setNewCustomerForm(prev => ({ ...prev, email: e.target.value }))}
+                        style={{ width: '100%', marginBottom: '0.5rem', padding: '0.5rem', borderRadius: '6px', border: '1px solid var(--adm-border-gold)' }}
+                      />
+                      <input
+                        type="text"
+                        placeholder="Address (optional)"
+                        value={newCustomerForm.address}
+                        onChange={(e) => setNewCustomerForm(prev => ({ ...prev, address: e.target.value }))}
+                        style={{ width: '100%', marginBottom: '0.5rem', padding: '0.5rem', borderRadius: '6px', border: '1px solid var(--adm-border-gold)' }}
+                      />
+                      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                        <button type="button" onClick={createCustomerAndSelect} disabled={creatingCustomer} className="stock-btn-edit" style={{ fontSize: '0.875rem' }}>
+                          {creatingCustomer ? '⏳ Saving...' : '✓ Save & use'}
+                        </button>
+                        <button type="button" onClick={() => setNewCustomerForm({ name: '', phone: '', email: '', address: '', visible: false })} className="price-action-btn secondary" style={{ fontSize: '0.875rem' }}>
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <div className="price-form-group">
                   <label>Payment *</label>
@@ -1392,6 +1506,17 @@ function BillingManagement() {
 
               <div className="price-form-group">
                 <label>Items *</label>
+                <div style={{ marginBottom: '0.75rem' }}>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--adm-text-muted)', marginBottom: '0.25rem', display: 'block' }}>Scan with barcode/QR gun (focus here, then scan — item adds automatically)</label>
+                  <input
+                    ref={scanGunInputRef}
+                    type="text"
+                    placeholder="Click here, then scan with gun"
+                    onKeyDown={handleScanGunKeyDown}
+                    autoComplete="off"
+                    style={{ width: '100%', maxWidth: '100%', padding: '0.6rem 0.75rem', border: '2px solid var(--adm-border-gold)', borderRadius: '8px', background: 'var(--adm-bg-elevated)', color: 'var(--adm-text)', boxSizing: 'border-box', fontSize: '0.9rem' }}
+                  />
+                </div>
                 {formData.items.map((item, index) => (
                   <div key={index} style={{ marginBottom: '1rem' }}>
                     {item.isBuyBack && item.isSilverBuyBack ? (
