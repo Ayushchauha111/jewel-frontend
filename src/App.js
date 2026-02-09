@@ -19,6 +19,13 @@ import IncomeExpenseManagement from "./components/admin/IncomeExpenseManagement"
 import RateLimitManagement from "./components/admin/RateLimitManagement";
 import QRCodePrint from "./components/admin/QRCodePrint";
 import ReceiptPrintPage from "./components/admin/ReceiptPrintPage";
+import DaySessionManagement from "./components/admin/DaySessionManagement";
+import LowStockAlerts from "./components/admin/LowStockAlerts";
+import ReturnsManagement from "./components/admin/ReturnsManagement";
+import PromoCodeManagement from "./components/admin/PromoCodeManagement";
+import GiftVoucherManagement from "./components/admin/GiftVoucherManagement";
+import LayawayManagement from "./components/admin/LayawayManagement";
+import CustomerLedger from "./components/admin/CustomerLedger";
 
 // Customer Website Components
 import CustomerHome from "./components/customer/CustomerHome";
@@ -55,13 +62,20 @@ function App() {
           
           {/* Admin Routes */}
           <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/admin/day-session" element={<DaySessionManagement />} />
           <Route path="/admin/stock" element={<StockManagement />} />
+          <Route path="/admin/low-stock" element={<LowStockAlerts />} />
           <Route path="/admin/qr-print" element={<QRCodePrint />} />
           <Route path="/admin/print-receipt/:billId/:type" element={<ReceiptPrintPage />} />
           <Route path="/admin/billing" element={<BillingManagement />} />
+          <Route path="/admin/returns" element={<ReturnsManagement />} />
           <Route path="/admin/customers" element={<CustomerManagement />} />
+          <Route path="/admin/customers/:id/ledger" element={<CustomerLedger />} />
           <Route path="/admin/orders" element={<OrderManagement />} />
           <Route path="/admin/credits" element={<CreditManagement />} />
+          <Route path="/admin/layaway" element={<LayawayManagement />} />
+          <Route path="/admin/promo-codes" element={<PromoCodeManagement />} />
+          <Route path="/admin/gift-vouchers" element={<GiftVoucherManagement />} />
           <Route path="/admin/analytics" element={<AnalyticsDashboard />} />
           <Route path="/admin/income-expense" element={<IncomeExpenseManagement />} />
           <Route path="/admin/rates" element={<RatesManagement />} />

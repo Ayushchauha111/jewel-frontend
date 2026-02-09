@@ -291,6 +291,7 @@ function CustomerManagement() {
                         <td>{customer.whatsappNumber || '-'}</td>
                         <td>{customer.address || '-'}</td>
                         <td>
+                          <Link to={`/admin/customers/${customer.id}/ledger`} className="btn btn-sm btn-outline-primary me-1">Ledger</Link>
                           <button onClick={() => handleEdit(customer)} className="stock-btn-edit">
                             ✏️ Edit
                           </button>
@@ -312,6 +313,7 @@ function CustomerManagement() {
                       {customer.address ? <div className="admin-list-card-meta">{customer.address}</div> : null}
                     </div>
                     <div className="admin-list-card-actions">
+                      <Link to={`/admin/customers/${customer.id}/ledger`} className="btn btn-sm btn-outline-primary me-1">Ledger</Link>
                       <button onClick={() => handleEdit(customer)} className="stock-btn-edit">✏️ Edit</button>
                       <button onClick={() => handleDelete(customer.id)} className="stock-btn-delete">🗑️ Delete</button>
                     </div>
