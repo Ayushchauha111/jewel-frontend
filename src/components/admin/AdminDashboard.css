@@ -495,7 +495,8 @@
   }
   .admin-dashboard > div[style*="margin"],
   .price-management > div[style*="margin"],
-  .stock-management > div[style*="margin"] {
+  .stock-management > div[style*="margin"],
+  .customer-ledger-page .price-table-container {
     margin-left: 1rem !important;
     margin-right: 1rem !important;
   }
@@ -504,7 +505,8 @@
 @media (max-width: 480px) {
   .admin-dashboard > div[style*="margin"],
   .price-management > div[style*="margin"],
-  .stock-management > div[style*="margin"] {
+  .stock-management > div[style*="margin"],
+  .customer-ledger-page .price-table-container {
     margin-left: max(1rem, env(safe-area-inset-left)) !important;
     margin-right: max(1rem, env(safe-area-inset-right)) !important;
   }
@@ -513,7 +515,8 @@
 @media (max-width: 420px) {
   .admin-dashboard > div[style*="margin"],
   .price-management > div[style*="margin"],
-  .stock-management > div[style*="margin"] {
+  .stock-management > div[style*="margin"],
+  .customer-ledger-page .price-table-container {
     margin-left: max(0.5rem, env(safe-area-inset-left)) !important;
     margin-right: max(0.5rem, env(safe-area-inset-right)) !important;
   }

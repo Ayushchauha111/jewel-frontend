@@ -39,7 +39,7 @@ export default function CustomerLedger() {
 
   if (loading) {
     return (
-      <div className="admin-dashboard">
+      <div className="admin-dashboard customer-ledger-page">
         <AdminNav title="📒 Customer Ledger" onLogout={handleLogout} />
         <div className="price-management">
           <div className="price-header">
@@ -55,7 +55,7 @@ export default function CustomerLedger() {
 
   if (error || !ledger) {
     return (
-      <div className="admin-dashboard">
+      <div className="admin-dashboard customer-ledger-page">
         <AdminNav title="📒 Customer Ledger" onLogout={handleLogout} />
         <div className="price-management">
           <div className="price-header">
@@ -73,7 +73,7 @@ export default function CustomerLedger() {
   const { customer, bills, credits } = ledger;
 
   return (
-    <div className="admin-dashboard">
+    <div className="admin-dashboard customer-ledger-page">
       <AdminNav title="📒 Customer Ledger" onLogout={handleLogout} />
       <div className="price-management">
         <div className="price-header">

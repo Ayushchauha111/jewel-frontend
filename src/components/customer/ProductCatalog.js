@@ -211,6 +211,23 @@ function ProductCatalog() {
     return url.startsWith('http') ? url : `${window.location.protocol}//${window.location.hostname}:8000${url}`;
   };
 
+  const getProductImages = (product) => {
+    const urls = product.imageUrls && product.imageUrls.length > 0
+      ? product.imageUrls
+      : (product.imageUrl ? [product.imageUrl] : []);
+    return urls.map(getImageUrl).filter(Boolean);
+  };
+
+  const [cardImageIndex, setCardImageIndex] = useState({});
+  const setCardImage = (productId, index) => {
+    setCardImageIndex((prev) => ({ ...prev, [productId]: index }));
+  };
+
+  const [categorySearch, setCategorySearch] = useState('');
+  const filteredCategories = categorySearch.trim()
+    ? categories.filter((c) => c.toLowerCase().includes(categorySearch.trim().toLowerCase()))
+    : categories;
+
   const clearFilters = () => {
     setSearchParams({});
   };
@@ -234,30 +251,45 @@ function ProductCatalog() {
               )}
             </div>
 
-            <section className="catalog-filter-block">
+            <section className="catalog-filter-block catalog-filter-block--scroll">
               <h4>Category</h4>
-              <ul className="catalog-filter-list">
-                <li>
-                  <button
-                    type="button"
-                    className={!category ? 'catalog-filter-item catalog-filter-item--active' : 'catalog-filter-item'}
-                    onClick={() => applyFilter('category', '')}
-                  >
-                    All
-                  </button>
-                </li>
-                {categories.map((cat) => (
-                  <li key={cat}>
+              {categories.length > 8 && (
+                <input
+                  type="search"
+                  placeholder="Search categories…"
+                  value={categorySearch}
+                  onChange={(e) => setCategorySearch(e.target.value)}
+                  className="catalog-filter-search"
+                  aria-label="Search categories"
+                />
+              )}
+              <div className="catalog-filter-list-wrap">
+                <ul className="catalog-filter-list">
+                  <li>
                     <button
                       type="button"
-                      className={category === cat ? 'catalog-filter-item catalog-filter-item--active' : 'catalog-filter-item'}
-                      onClick={() => applyFilter('category', cat)}
+                      className={!category ? 'catalog-filter-item catalog-filter-item--active' : 'catalog-filter-item'}
+                      onClick={() => applyFilter('category', '')}
                     >
-                      {cat}
+                      All
                     </button>
                   </li>
-                ))}
-              </ul>
+                  {filteredCategories.map((cat) => (
+                    <li key={cat}>
+                      <button
+                        type="button"
+                        className={category === cat ? 'catalog-filter-item catalog-filter-item--active' : 'catalog-filter-item'}
+                        onClick={() => applyFilter('category', cat)}
+                      >
+                        {cat}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+                {filteredCategories.length === 0 && categorySearch.trim() && (
+                  <p className="catalog-filter-no-match">No category matches "{categorySearch.trim()}"</p>
+                )}
+              </div>
             </section>
 
             <section className="catalog-filter-block">
@@ -320,24 +352,65 @@ function ProductCatalog() {
           ) : (
             <div className="catalog-grid">
               {displayProducts.length > 0 ? (
-                displayProducts.map((product) => (
+                displayProducts.map((product) => {
+                  const images = getProductImages(product);
+                  const currentIndex = cardImageIndex[product.id] ?? 0;
+                  const safeIndex = images.length ? Math.min(currentIndex, images.length - 1) : 0;
+                  const showArrows = images.length > 1;
+                  return (
                   <div key={product.id} className="catalog-card">
-                    <div className="catalog-card-image-wrap">
-                      {product.imageUrl ? (
-                        <img
-                          src={getImageUrl(product.imageUrl)}
-                          alt={product.articleName}
-                          className="catalog-card-image"
-                          onError={(e) => {
-                            e.target.style.display = 'none';
-                            const ph = e.target.nextElementSibling;
-                            if (ph) ph.style.display = 'flex';
-                          }}
-                        />
+                    <div className="catalog-card-image-wrap catalog-card-carousel-wrap">
+                      {images.length > 0 ? (
+                        <>
+                          <img
+                            key={safeIndex}
+                            src={images[safeIndex]}
+                            alt={`${product.articleName} ${images.length > 1 ? `(${safeIndex + 1} of ${images.length})` : ''}`}
+                            className="catalog-card-image"
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                              const ph = e.target.nextElementSibling;
+                              if (ph) ph.style.display = 'flex';
+                            }}
+                          />
+                          {showArrows && (
+                            <>
+                              <button
+                                type="button"
+                                className="catalog-carousel-arrow catalog-carousel-arrow--prev"
+                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setCardImage(product.id, (safeIndex - 1 + images.length) % images.length); }}
+                                aria-label="Previous image"
+                              >
+                                ‹
+                              </button>
+                              <button
+                                type="button"
+                                className="catalog-carousel-arrow catalog-carousel-arrow--next"
+                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setCardImage(product.id, (safeIndex + 1) % images.length); }}
+                                aria-label="Next image"
+                              >
+                                ›
+                              </button>
+                              <div className="catalog-carousel-dots" aria-hidden>
+                                {images.map((_, i) => (
+                                  <span
+                                    key={i}
+                                    role="button"
+                                    tabIndex={0}
+                                    className={`catalog-carousel-dot ${i === safeIndex ? 'catalog-carousel-dot--active' : ''}`}
+                                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); setCardImage(product.id, i); }}
+                                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setCardImage(product.id, i); } }}
+                                    aria-label={`Image ${i + 1}`}
+                                  />
+                                ))}
+                              </div>
+                            </>
+                          )}
+                        </>
                       ) : null}
                       <div
                         className="catalog-card-placeholder"
-                        style={{ display: product.imageUrl ? 'none' : 'flex' }}
+                        style={{ display: images.length > 0 ? 'none' : 'flex' }}
                       >
                         <span>No Image</span>
                       </div>
@@ -376,7 +449,8 @@ function ProductCatalog() {
                       )}
                     </div>
                   </div>
-                ))
+                  );
+                })
               ) : (
                 <div className="catalog-empty">
                   <p>No products match your filters. Try adjusting or clear filters.</p>

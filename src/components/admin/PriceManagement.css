@@ -1005,6 +1005,20 @@
     display: block;
   }
 
+  /* Customer Ledger: keep tables visible on small screens, allow horizontal scroll */
+  .customer-ledger-page .price-table-scroll {
+    display: block !important;
+  }
+
+  .customer-ledger-page .admin-list-cards {
+    display: none !important;
+  }
+
+  .customer-ledger-page .price-table-container {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
   .price-table-scroll .price-table {
     font-size: 0.875rem;
     min-width: 600px;
