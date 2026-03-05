@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { BoltIcon, PhotoIcon } from '@heroicons/react/24/outline';
 import { BoltIcon as BoltIconSolid } from '@heroicons/react/24/solid';
 import { Html5Qrcode } from 'html5-qrcode';
@@ -32,6 +32,7 @@ const GOLD_PURITY_OPTIONS = [
 
 function BillingManagement() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [bills, setBills] = useState([]);
   const [filteredBills, setFilteredBills] = useState([]);
   const [customers, setCustomers] = useState([]);
@@ -79,6 +80,11 @@ function BillingManagement() {
   const [loadingBill, setLoadingBill] = useState(false);
   const [showGstReceipt, setShowGstReceipt] = useState(false);
   const [showNormalReceipt, setShowNormalReceipt] = useState(false);
+  const [showEditBill, setShowEditBill] = useState(false);
+  const [editBillForm, setEditBillForm] = useState({ payments: [{ method: 'CASH', amount: '' }], notes: '' });
+  const [showEditHistory, setShowEditHistory] = useState(false);
+  const [editHistory, setEditHistory] = useState([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
   const [showQRAddModal, setShowQRAddModal] = useState(false);
   const [qrAddInput, setQrAddInput] = useState('');
   const [qrScanning, setQrScanning] = useState(false);
@@ -127,9 +133,18 @@ function BillingManagement() {
     fetchStock();
   }, [currentPage, pageSize, searchQuery]);
 
+  // Open bill when navigating from Billing History with openBillId
+  useEffect(() => {
+    const openBillId = location.state?.openBillId;
+    if (openBillId) {
+      openBillDetail(openBillId);
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.state?.openBillId]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Fetch diamond rate for Gold + Diamond item calculation
   useEffect(() => {
-    if (!showForm) return;
+    if (!showForm && !showEditBill) return;
     let cancelled = false;
     axios.get(`${API_URL}/rates/rate?metal=DIAMOND`, { headers: getAuthHeaders() })
       .then((res) => {
@@ -137,11 +152,11 @@ function BillingManagement() {
       })
       .catch(() => {});
     return () => { cancelled = true; };
-  }, [showForm]);
+  }, [showForm, showEditBill]);
 
   // Fetch default making charges per gram (₹/g) from Admin → Rates (same source as /admin/rates)
   useEffect(() => {
-    if (!showForm) return;
+    if (!showForm && !showEditBill) return;
     let cancelled = false;
     axios.get(`${API_URL}/rates/today`, { headers: getAuthHeaders() })
       .then((res) => {
@@ -157,7 +172,7 @@ function BillingManagement() {
       })
       .catch(() => {});
     return () => { cancelled = true; };
-  }, [showForm]);
+  }, [showForm, showEditBill]);
 
   // Pre-fetch calculated prices for Gold, Silver, and Gold+Diamond (metal part) when Create Bill form is opened
   useEffect(() => {
@@ -553,6 +568,260 @@ function BillingManagement() {
       console.error('Error sending email:', error);
       setError('Failed to send email');
       setTimeout(() => setError(null), 5000);
+    }
+  };
+
+  const openEditBill = () => {
+    if (!selectedBill) return;
+    let payments = [{ method: 'CASH', amount: '' }];
+    if (selectedBill.paymentBreakdown) {
+      try {
+        const arr = JSON.parse(selectedBill.paymentBreakdown);
+        if (Array.isArray(arr) && arr.length > 0) {
+          payments = arr.map(p => ({ method: p.method || 'CASH', amount: p.amount != null ? String(p.amount) : '' }));
+        }
+      } catch (_) {}
+    } else if (selectedBill.paidAmount != null && parseFloat(selectedBill.paidAmount) > 0) {
+      payments = [{ method: selectedBill.paymentMethod || 'CASH', amount: String(selectedBill.paidAmount) }];
+    }
+    setEditBillForm({
+      payments,
+      notes: selectedBill.notes || '',
+      discountAmount: selectedBill.discountAmount != null ? String(selectedBill.discountAmount) : '0',
+      makingCharges: selectedBill.makingCharges != null ? String(selectedBill.makingCharges) : '0',
+      itemIdsToRemove: [],
+      itemsToAdd: [],
+      newItemOverrideRate: '',
+      newItemMakingPerGram: '',
+      newItemHallmark: false
+    });
+    setShowEditBill(true);
+  };
+
+  const removeEditBillItem = (itemId) => {
+    setEditBillForm(prev => ({
+      ...prev,
+      itemIdsToRemove: [...(prev.itemIdsToRemove || []), itemId]
+    }));
+  };
+
+  const undoRemoveEditBillItem = (itemId) => {
+    setEditBillForm(prev => ({
+      ...prev,
+      itemIdsToRemove: (prev.itemIdsToRemove || []).filter(id => id !== itemId)
+    }));
+  };
+
+  const addEditBillItem = async (stockIdOverride) => {
+    const stockId = stockIdOverride ?? editBillForm.newItemStockId;
+    const qty = parseInt(editBillForm.newItemQty, 10) || 1;
+    const overrideRate = editBillForm.newItemOverrideRate;
+    const makingPerGram = editBillForm.newItemMakingPerGram;
+    const hallmark = !!editBillForm.newItemHallmark;
+    if (!stockId || !stock) return;
+    const s = stock.find(x => x.id === parseInt(stockId, 10));
+    if (!s) return;
+    const available = s.quantity != null ? parseInt(s.quantity, 10) : 0;
+    if (qty > available) {
+      setError(`Only ${available} available for ${s.articleName}`);
+      setTimeout(() => setError(null), 4000);
+      return;
+    }
+    try {
+      let unitPrice = 0;
+      let totalPrice = 0;
+      let diamondAmount = null;
+      let makingForItem = 0;
+      const w = parseFloat(s.weightGrams);
+      const isSilver = String(s.material || '').toLowerCase().includes('silver') && !String(s.material || '').toLowerCase().includes('gold');
+      const isGoldMetal = s.weightGrams && s.carat && String(s.material || '').toLowerCase().includes('gold');
+      const hasWeight = w > 0 && (isGoldMetal || isSilver);
+      const defMaking = defaultMakingPerGram ?? FALLBACK_MAKING_PER_GRAM;
+      const effMaking = (makingPerGram !== '' && makingPerGram != null && !isNaN(parseFloat(makingPerGram))) ? parseFloat(makingPerGram) : (s.makingChargesPerGram != null && s.makingChargesPerGram > 0 ? parseFloat(s.makingChargesPerGram) : defMaking);
+
+      if (isSilver && w > 0) {
+        const useOverride = overrideRate !== '' && overrideRate != null && !isNaN(parseFloat(overrideRate));
+        if (useOverride) {
+          const rate = parseFloat(overrideRate);
+          unitPrice = Math.round(rate * w * 100) / 100;
+          makingForItem = Math.round(effMaking * w * qty * 100) / 100;
+        } else {
+          const params = new URLSearchParams({ weightGrams: String(w) });
+          if (effMaking > 0) params.set('makingChargesPerGram', String(effMaking));
+          if (s.category) params.set('category', s.category);
+          const res = await axios.get(`${API_URL}/stock/calculate-price-silver?${params.toString()}`, { headers: getAuthHeaders() });
+          const silverVal = res.data?.silverValue ?? res.data?.goldValue ?? (parseFloat(res.data?.calculatedPrice) - (parseFloat(res.data?.makingCharges) || 0));
+          unitPrice = parseFloat(silverVal) || 0;
+          makingForItem = (parseFloat(res.data?.makingCharges) || 0) * qty;
+        }
+        totalPrice = Math.round(unitPrice * qty * 100) / 100;
+      } else if (isGoldMetal && w > 0) {
+        const diamondVal = getDiamondValue(s);
+        const useOverride = overrideRate !== '' && overrideRate != null && !isNaN(parseFloat(overrideRate));
+        if (useOverride) {
+          const rate = parseFloat(overrideRate);
+          const metalPart = rate * w;
+          unitPrice = Math.round((metalPart + diamondVal) * 100) / 100;
+          makingForItem = Math.round(effMaking * w * qty * 100) / 100;
+        } else {
+          const params = new URLSearchParams({ weightGrams: String(w), carat: String(s.carat) });
+          if (effMaking > 0) params.set('makingChargesPerGram', String(effMaking));
+          if (s.category) params.set('category', s.category);
+          const res = await axios.get(`${API_URL}/stock/calculate-price?${params.toString()}`, { headers: getAuthHeaders() });
+          const goldVal = parseFloat(res.data?.goldValue) || 0;
+          unitPrice = Math.round((goldVal + diamondVal) * 100) / 100;
+          makingForItem = (parseFloat(res.data?.makingCharges) || 0) * qty;
+        }
+        totalPrice = Math.round(unitPrice * qty * 100) / 100;
+        const diamondCt = s.diamondCarat != null ? parseFloat(s.diamondCarat) * qty : 0;
+        if (diamondCt > 0) {
+          const rateRes = await axios.get(`${API_URL}/rates/rate?metal=DIAMOND`, { headers: getAuthHeaders() });
+          const diamondRate = parseFloat(rateRes.data?.ratePerCarat) || 0;
+          diamondAmount = Math.round(diamondCt * diamondRate * 100) / 100;
+        }
+      } else {
+        unitPrice = parseFloat(s.sellingPrice) || parseFloat(s.unitPrice) || 0;
+        totalPrice = Math.round(unitPrice * qty * 100) / 100;
+        if (totalPrice <= 0) {
+          setError(`Could not get price for ${s.articleName}. Set selling price or rates.`);
+          setTimeout(() => setError(null), 4000);
+          return;
+        }
+      }
+      if (hallmark) totalPrice = Math.round((totalPrice + 100 * qty) * 100) / 100;
+      const newItem = {
+        stock: { id: parseInt(stockId, 10) },
+        itemName: s.articleName,
+        articleCode: s.articleCode,
+        weightGrams: w,
+        carat: s.carat,
+        diamondCarat: s.diamondCarat,
+        diamondAmount: diamondAmount,
+        quantity: qty,
+        unitPrice: unitPrice,
+        totalPrice,
+        hallmark,
+        makingChargesForItem: hasWeight ? makingForItem : 0
+      };
+      setEditBillForm(prev => ({
+        ...prev,
+        itemsToAdd: [...(prev.itemsToAdd || []), newItem],
+        newItemStockId: '',
+        newItemQty: '1',
+        newItemOverrideRate: '',
+        newItemMakingPerGram: '',
+        newItemHallmark: false
+      }));
+    } catch (err) {
+      setError(err?.response?.data?.error || 'Failed to calculate price');
+      setTimeout(() => setError(null), 4000);
+    }
+  };
+
+  const removeEditBillNewItem = (idx) => {
+    setEditBillForm(prev => ({
+      ...prev,
+      itemsToAdd: (prev.itemsToAdd || []).filter((_, i) => i !== idx)
+    }));
+  };
+
+  const openEditHistory = async () => {
+    if (!selectedBill?.id) return;
+    setLoadingHistory(true);
+    setShowEditHistory(true);
+    setEditHistory([]);
+    try {
+      const res = await axios.get(`${API_URL}/billing/${selectedBill.id}/edit-history`, { headers: getAuthHeaders() });
+      setEditHistory(res.data || []);
+    } catch (err) {
+      setError('Failed to load edit history');
+      setTimeout(() => setError(null), 4000);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
+  const updateEditPaymentRow = (idx, field, value) => {
+    setEditBillForm(prev => {
+      const next = { ...prev, payments: [...(prev.payments || [])] };
+      if (!next.payments[idx]) next.payments[idx] = { method: 'CASH', amount: '' };
+      next.payments[idx] = { ...next.payments[idx], [field]: value };
+      return next;
+    });
+  };
+
+  const addEditPaymentRow = () => {
+    setEditBillForm(prev => ({
+      ...prev,
+      payments: [...(prev.payments || []), { method: 'CASH', amount: '' }]
+    }));
+  };
+
+  const removeEditPaymentRow = (idx) => {
+    setEditBillForm(prev => ({
+      ...prev,
+      payments: (prev.payments || []).filter((_, i) => i !== idx)
+    }));
+  };
+
+  const handleUpdateBill = async (e) => {
+    e.preventDefault();
+    if (!selectedBill?.id) return;
+    const toRemove = editBillForm.itemIdsToRemove || [];
+    const totalItems = (selectedBill.items || []).length;
+    if (toRemove.length >= totalItems) {
+      setError('Cannot remove all items. At least one item must remain.');
+      setTimeout(() => setError(null), 4000);
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const payRows = (editBillForm.payments || []).filter(p => p.amount !== '' && p.amount != null && !isNaN(parseFloat(p.amount)) && parseFloat(p.amount) > 0);
+      const totalPaid = payRows.reduce((s, p) => s + parseFloat(p.amount), 0);
+      const primaryMethod = payRows.length === 1 ? payRows[0].method : (payRows.length > 1 ? 'MIXED' : 'CASH');
+      const extraMakingFromNewItems = (editBillForm.itemsToAdd || []).reduce((sum, it) => sum + (it.makingChargesForItem || 0), 0);
+      const totalMaking = (parseFloat(editBillForm.makingCharges) || 0) + extraMakingFromNewItems;
+      const payload = {
+        paidAmount: Math.round(totalPaid * 100) / 100,
+        paymentMethod: primaryMethod,
+        notes: (editBillForm.notes || '').trim() || null,
+        discountAmount: parseFloat(editBillForm.discountAmount) || 0,
+        makingCharges: totalMaking
+      };
+      if (payRows.length > 0) {
+        payload.paymentBreakdown = JSON.stringify(payRows.map(p => ({ method: p.method, amount: parseFloat(p.amount) })));
+      }
+      if (editBillForm.itemIdsToRemove?.length > 0) {
+        payload.itemIdsToRemove = editBillForm.itemIdsToRemove;
+      }
+      if (editBillForm.itemsToAdd?.length > 0) {
+        payload.itemsToAdd = editBillForm.itemsToAdd.map(it => ({
+          stock: it.stock,
+          itemName: it.itemName,
+          articleCode: it.articleCode,
+          weightGrams: it.weightGrams,
+          carat: it.carat,
+          diamondCarat: it.diamondCarat,
+          diamondAmount: it.diamondAmount,
+          quantity: it.quantity,
+          unitPrice: it.unitPrice,
+          totalPrice: it.totalPrice,
+          hallmark: !!it.hallmark
+        }));
+      }
+      const res = await axios.put(`${API_URL}/billing/${selectedBill.id}`, payload, { headers: getAuthHeaders() });
+      setSuccess('Bill updated successfully!');
+      setShowEditBill(false);
+      setSelectedBill(res.data);
+      fetchBills();
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err) {
+      setError(err?.response?.data?.message || 'Failed to update bill');
+      setTimeout(() => setError(null), 5000);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -1369,9 +1638,14 @@ function BillingManagement() {
 
         {showForm && (
           <div className="price-form-card">
-            <div className="price-form-header">
-              <span style={{ fontSize: '2rem' }}>✨</span>
-              <h3>Create New Bill</h3>
+            <div className="price-form-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span style={{ fontSize: '2rem' }}>✨</span>
+                <h3>Create New Bill</h3>
+              </div>
+              <button type="button" onClick={() => navigate('/admin/billing-history')} className="price-action-btn secondary" style={{ fontSize: '0.875rem' }}>
+                📜 Billing History
+              </button>
             </div>
             <form onSubmit={handleSubmit}>
               <div className="price-form-grid">
@@ -2356,6 +2630,8 @@ function BillingManagement() {
                         </div>
                       )}
                       <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                        <button type="button" onClick={openEditBill} className="stock-btn-edit">✏️ Edit Bill</button>
+                        <button type="button" onClick={openEditHistory} className="stock-btn-edit">📜 View Edit History</button>
                         <button type="button" onClick={() => setShowNormalReceipt(true)} className="stock-btn-edit">🧾 Print Normal Receipt</button>
                         <a href={`${window.location.origin}/admin/print-receipt/${selectedBill.id}/normal`} target="_blank" rel="noopener noreferrer" className="stock-btn-edit" style={{ textDecoration: 'none', color: 'inherit' }}>📱 Open Normal in new tab</a>
                         <button type="button" onClick={() => setShowGstReceipt(true)} className="stock-btn-edit">📄 Print GST Receipt</button>
@@ -2370,6 +2646,351 @@ function BillingManagement() {
                     </div>
                   </div>
                 ) : null}
+              </div>
+            </div>
+          )}
+
+      {showEditHistory && selectedBill && (
+            <div
+              className="stock-modal-overlay"
+              style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', zIndex: 10003, overflow: 'auto', padding: '1rem' }}
+              onClick={() => setShowEditHistory(false)}
+            >
+              <div
+                className="stock-modal-content price-form-card"
+                style={{ maxWidth: '800px', width: '95%', margin: '0 auto' }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="price-form-header">
+                  <h3>📜 Edit History – Bill #{selectedBill.billNumber}</h3>
+                  <button type="button" className="receipt-modal-close" onClick={() => setShowEditHistory(false)} aria-label="Close">✕</button>
+                </div>
+                <div style={{ padding: '1rem' }}>
+                  <p style={{ margin: '0 0 1rem', fontSize: '0.9rem', color: 'var(--adm-text-muted)' }}>
+                    Previous versions of this bill before each edit. Oldest edits at the bottom.
+                  </p>
+                  {loadingHistory ? (
+                    <div style={{ padding: '2rem', textAlign: 'center' }}>⏳ Loading history...</div>
+                  ) : editHistory.length === 0 ? (
+                    <div className="price-empty-state" style={{ padding: '2rem' }}>
+                      <div className="price-empty-state-icon">📜</div>
+                      <h4>No edit history yet</h4>
+                      <p>This bill has not been edited. History is saved each time you edit the bill.</p>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                      {editHistory.map((entry, idx) => {
+                        let snapshot = null;
+                        try {
+                          snapshot = typeof entry.snapshotData === 'string' ? JSON.parse(entry.snapshotData) : entry.snapshotData;
+                        } catch (_) {}
+                        return (
+                          <details key={entry.id} style={{ border: '1px solid var(--adm-border-gold)', borderRadius: '8px', overflow: 'hidden', background: 'var(--adm-bg-elevated)' }}>
+                            <summary style={{ padding: '0.75rem 1rem', cursor: 'pointer', fontWeight: 600, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <span>Before edit #{editHistory.length - idx}</span>
+                              <span style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--adm-text-muted)' }}>{formatDate(entry.createdAt)}</span>
+                            </summary>
+                            <div style={{ padding: '1rem', borderTop: '1px solid var(--adm-border-gold)', fontSize: '0.9rem' }}>
+                              {snapshot ? (
+                                <>
+                                  <div style={{ marginBottom: '0.75rem' }}>
+                                    <strong>Customer:</strong> {snapshot.customer?.name || '-'} {snapshot.customer?.phone && `(${snapshot.customer.phone})`}
+                                  </div>
+                                  <div style={{ marginBottom: '0.75rem', display: 'flex', flexWrap: 'wrap', gap: '1rem' }}>
+                                    <span><strong>Total:</strong> {formatCurrency(snapshot.finalAmount)}</span>
+                                    <span><strong>Discount:</strong> -{formatCurrency(snapshot.discountAmount || 0)}</span>
+                                    <span><strong>Making:</strong> {formatCurrency(snapshot.makingCharges || 0)}</span>
+                                    <span><strong>Paid:</strong> {formatCurrency(snapshot.paidAmount || 0)}</span>
+                                    <span><strong>Payment:</strong> {snapshot.paymentMethod || '-'} · {snapshot.paymentStatus || '-'}</span>
+                                  </div>
+                                  {(snapshot.items || []).length > 0 && (
+                                    <table className="price-table" style={{ fontSize: '0.8rem', marginTop: '0.5rem' }}>
+                                      <thead>
+                                        <tr>
+                                          <th>Item</th>
+                                          <th>Qty</th>
+                                          <th>Total</th>
+                                        </tr>
+                                      </thead>
+                                      <tbody>
+                                        {(snapshot.items || []).map((item, i) => (
+                                          <tr key={i}>
+                                            <td>{item.itemName || '-'} {item.articleCode && `(${item.articleCode})`}</td>
+                                            <td>{item.quantity ?? 1}</td>
+                                            <td>{formatCurrency(item.totalPrice)}</td>
+                                          </tr>
+                                        ))}
+                                      </tbody>
+                                    </table>
+                                  )}
+                                  {snapshot.notes && (
+                                    <div style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: 'var(--adm-text-muted)' }}>
+                                      <strong>Notes:</strong> {snapshot.notes}
+                                    </div>
+                                  )}
+                                </>
+                              ) : (
+                                <pre style={{ margin: 0, fontSize: '0.75rem', overflow: 'auto', maxHeight: '200px' }}>{entry.snapshotData}</pre>
+                              )}
+                            </div>
+                          </details>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+      {showEditBill && selectedBill && (
+            <div
+              className="stock-modal-overlay"
+              style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', zIndex: 10002, overflow: 'auto', padding: '1rem' }}
+              onClick={() => setShowEditBill(false)}
+            >
+              <div
+                className="stock-modal-content price-form-card"
+                style={{ maxWidth: '720px', width: '95%', margin: '0 auto' }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="price-form-header">
+                  <h3>✏️ Edit Bill #{selectedBill.billNumber}</h3>
+                  <button type="button" className="receipt-modal-close" onClick={() => setShowEditBill(false)} aria-label="Close">✕</button>
+                </div>
+                <form onSubmit={handleUpdateBill} style={{ padding: '1rem' }}>
+                  <div className="price-form-group">
+                    <label>Items</label>
+                    <p style={{ margin: '0 0 0.5rem', fontSize: '0.8rem', color: 'var(--adm-text-muted)' }}>
+                      Click 🗑️ to remove an item from this bill. Stock will be restored for removed items.
+                    </p>
+                    {(selectedBill.items || []).filter(item => item.id).map((item) => {
+                      const isMarkedRemove = (editBillForm.itemIdsToRemove || []).includes(item.id);
+                      const w = parseFloat(item.weightGrams) || parseFloat(item.stock?.weightGrams) || 0;
+                      const ratePerGram = w > 0 && item.unitPrice != null ? parseFloat(item.unitPrice) / w : null;
+                      return (
+                        <div
+                          key={item.id}
+                          className="billing-item-row"
+                          style={{
+                            display: 'flex',
+                            gap: '1rem',
+                            alignItems: 'flex-start',
+                            flexWrap: 'wrap',
+                            padding: '0.75rem',
+                            marginBottom: '0.5rem',
+                            background: isMarkedRemove ? 'rgba(231, 76, 60, 0.12)' : 'var(--adm-bg-elevated)',
+                            border: `1px solid ${isMarkedRemove ? 'rgba(231, 76, 60, 0.4)' : 'var(--adm-border-gold)'}`,
+                            borderRadius: '8px'
+                          }}
+                        >
+                          <div style={{ flex: '2 1 180px', minWidth: 0 }}>
+                            <div style={{ fontWeight: 600, marginBottom: '0.25rem' }}>{item.itemName || '-'}</div>
+                            <div style={{ fontSize: '0.8rem', color: 'var(--adm-text-muted)' }}>
+                              {item.articleCode || (item.stock?.articleCode) || '—'} · Qty: {item.quantity ?? 1}
+                              {item.carat != null && ` · ${item.carat}K`}
+                              {ratePerGram != null && ` · ${formatCurrency(ratePerGram)}/g`}
+                            </div>
+                          </div>
+                          <div style={{ flex: '0 1 90px', textAlign: 'right', fontWeight: 600 }}>
+                            {formatCurrency(item.totalPrice)}
+                          </div>
+                          <div style={{ flexShrink: 0 }}>
+                            {isMarkedRemove ? (
+                              <button type="button" onClick={() => undoRemoveEditBillItem(item.id)} className="stock-btn-edit" style={{ fontSize: '0.75rem', padding: '0.5rem 0.75rem' }}>
+                                ↩ Undo
+                              </button>
+                            ) : (
+                              <button type="button" onClick={() => removeEditBillItem(item.id)} className="stock-btn-delete" style={{ padding: '0.5rem 0.75rem' }} title="Remove item">🗑️</button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {(editBillForm.itemIdsToRemove || []).length > 0 && (
+                      <div style={{ marginTop: '0.5rem', padding: '0.5rem', background: 'rgba(255, 243, 205, 0.4)', borderRadius: '8px', fontSize: '0.85rem', color: '#856404' }}>
+                        {(editBillForm.itemIdsToRemove || []).length} item(s) marked for removal
+                      </div>
+                    )}
+                    <div style={{ marginTop: '0.75rem', padding: '0.75rem', background: 'var(--adm-bg-elevated)', border: '1px solid var(--adm-border-gold)', borderRadius: '8px' }}>
+                      <div style={{ fontWeight: 600, marginBottom: '0.5rem' }}>+ Add new item</div>
+                      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
+                        <div style={{ flex: '1 1 200px', minWidth: 0 }}>
+                          <label style={{ fontSize: '0.75rem', color: 'var(--adm-text-muted)', display: 'block', marginBottom: '0.25rem' }}>Select item</label>
+                          <select
+                            value={editBillForm.newItemStockId || ''}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setEditBillForm(prev => ({ ...prev, newItemStockId: val }));
+                              if (val) addEditBillItem(val);
+                            }}
+                            style={{ width: '100%', padding: '0.5rem 0.75rem', borderRadius: '8px', border: '1px solid var(--adm-border-gold)', background: 'var(--adm-bg-elevated)', color: 'var(--adm-text)' }}
+                          >
+                            <option value="">Select item from stock</option>
+                            {(stock || []).filter(s => s.status === 'AVAILABLE').map(s => (
+                              <option key={s.id} value={s.id}>
+                                {s.articleCode || `#${s.id}`} · {s.articleName} · {s.weightGrams}g · Qty: {s.quantity ?? 0}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div style={{ flex: '0 1 70px' }}>
+                          <label style={{ fontSize: '0.75rem', color: 'var(--adm-text-muted)', display: 'block', marginBottom: '0.25rem' }}>Qty</label>
+                          <input
+                            type="number"
+                            min="1"
+                            value={editBillForm.newItemQty ?? '1'}
+                            onChange={(e) => setEditBillForm(prev => ({ ...prev, newItemQty: e.target.value }))}
+                            style={{ width: '100%', padding: '0.5rem 0.75rem', borderRadius: '8px', border: '1px solid var(--adm-border-gold)', background: 'var(--adm-bg-elevated)', color: 'var(--adm-text)' }}
+                          />
+                        </div>
+                        {(() => {
+                          const sid = editBillForm.newItemStockId;
+                          const sel = stock?.find(x => x.id === parseInt(sid, 10));
+                          const hasWeight = sel?.weightGrams != null && parseFloat(sel.weightGrams) > 0 && (isGoldMetalItem(sel) || isSilverMetalItem(sel));
+                          const makingPlaceholder = (sel?.makingChargesPerGram != null && sel.makingChargesPerGram > 0) ? String(sel.makingChargesPerGram) : (defaultMakingPerGram != null ? String(defaultMakingPerGram) : 'e.g. 1150');
+                          return (
+                            <>
+                              {hasWeight && (
+                                <>
+                                  <div style={{ flex: '0 1 100px' }}>
+                                    <label style={{ fontSize: '0.75rem', color: 'var(--adm-text-muted)', display: 'block', marginBottom: '0.25rem' }}>Rate (₹/g) – optional</label>
+                                    <input
+                                      type="number"
+                                      placeholder="e.g. 20000"
+                                      value={editBillForm.newItemOverrideRate ?? ''}
+                                      onChange={(e) => setEditBillForm(prev => ({ ...prev, newItemOverrideRate: e.target.value }))}
+                                      min={0}
+                                      step={1}
+                                      style={{ width: '100%', padding: '0.5rem 0.75rem', borderRadius: '8px', border: '1px solid var(--adm-border-gold)', background: 'var(--adm-bg-elevated)', color: 'var(--adm-text)' }}
+                                    />
+                                  </div>
+                                  <div style={{ flex: '0 1 100px' }}>
+                                    <label style={{ fontSize: '0.75rem', color: 'var(--adm-text-muted)', display: 'block', marginBottom: '0.25rem' }}>Making (₹/g) – optional</label>
+                                    <input
+                                      type="number"
+                                      placeholder={makingPlaceholder}
+                                      value={editBillForm.newItemMakingPerGram ?? ''}
+                                      onChange={(e) => setEditBillForm(prev => ({ ...prev, newItemMakingPerGram: e.target.value }))}
+                                      min={0}
+                                      step="0.01"
+                                      style={{ width: '100%', padding: '0.5rem 0.75rem', borderRadius: '8px', border: '1px solid var(--adm-border-gold)', background: 'var(--adm-bg-elevated)', color: 'var(--adm-text)' }}
+                                    />
+                                  </div>
+                                </>
+                              )}
+                              {sid && (
+                                <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', paddingBottom: '0.25rem' }}>
+                                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', cursor: 'pointer' }}>
+                                    <input
+                                      type="checkbox"
+                                      checked={!!editBillForm.newItemHallmark}
+                                      onChange={(e) => setEditBillForm(prev => ({ ...prev, newItemHallmark: e.target.checked }))}
+                                      style={{ width: '1rem', height: '1rem' }}
+                                    />
+                                    <span>Hallmark (₹100/item)</span>
+                                  </label>
+                                </div>
+                              )}
+                            </>
+                          );
+                        })()}
+                      </div>
+                    </div>
+                    {(editBillForm.itemsToAdd || []).length > 0 && (
+                      <div style={{ marginTop: '0.5rem' }}>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--adm-text-muted)', marginBottom: '0.25rem' }}>New items to add:</div>
+                        {(editBillForm.itemsToAdd || []).map((item, idx) => (
+                          <div key={idx} className="billing-item-row" style={{ display: 'flex', gap: '1rem', alignItems: 'center', padding: '0.5rem', marginBottom: '0.25rem', background: 'rgba(34, 197, 94, 0.12)', border: '1px solid rgba(34, 197, 94, 0.4)', borderRadius: '8px' }}>
+                            <span style={{ flex: 1 }}>{item.itemName || '-'} · Qty: {item.quantity} · {formatCurrency(item.totalPrice)}</span>
+                            <button type="button" onClick={() => removeEditBillNewItem(idx)} className="stock-btn-delete" style={{ padding: '0.35rem 0.5rem', fontSize: '0.75rem' }}>🗑️</button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                    <div className="price-form-group" style={{ flex: '1 1 140px' }}>
+                      <label>Discount Amount (₹)</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={editBillForm.discountAmount ?? '0'}
+                        onChange={(e) => setEditBillForm(prev => ({ ...prev, discountAmount: e.target.value }))}
+                        style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--adm-border-gold)', background: 'var(--adm-bg-elevated)', color: 'var(--adm-text)' }}
+                      />
+                    </div>
+                    <div className="price-form-group" style={{ flex: '1 1 140px' }}>
+                      <label>Making Charges (₹)</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={editBillForm.makingCharges ?? '0'}
+                        onChange={(e) => setEditBillForm(prev => ({ ...prev, makingCharges: e.target.value }))}
+                        style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--adm-border-gold)', background: 'var(--adm-bg-elevated)', color: 'var(--adm-text)' }}
+                      />
+                    </div>
+                  </div>
+                  <div className="price-form-group">
+                    <label>Payment</label>
+                    <p style={{ margin: '0 0 0.5rem', fontSize: '0.8rem', color: 'var(--adm-text-muted)' }}>
+                      Update payment breakdown. Total due: ₹{(parseFloat(selectedBill.finalAmount) || 0).toFixed(2)}
+                    </p>
+                    {(editBillForm.payments || [{ method: 'CASH', amount: '' }]).map((row, idx) => (
+                      <div key={idx} className="billing-payment-row" style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-end', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
+                        <div className="billing-payment-method" style={{ flex: '1 1 120px', minWidth: 0 }}>
+                          <select
+                            value={row.method || 'CASH'}
+                            onChange={(e) => updateEditPaymentRow(idx, 'method', e.target.value)}
+                            style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--adm-border-gold)', background: 'var(--adm-bg-elevated)', color: 'var(--adm-text)' }}
+                          >
+                            <option value="CASH">Cash</option>
+                            <option value="CARD">Card</option>
+                            <option value="UPI">UPI</option>
+                            <option value="BANK_TRANSFER">Bank Transfer</option>
+                            <option value="CREDIT">Udhari</option>
+                          </select>
+                        </div>
+                        <div className="billing-payment-amount" style={{ flex: '1 1 100px', minWidth: 0 }}>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={row.amount ?? ''}
+                            onChange={(e) => updateEditPaymentRow(idx, 'amount', e.target.value)}
+                            placeholder="Amount (₹)"
+                            className="billing-payment-amount-input"
+                            style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--adm-border-gold)', background: 'var(--adm-bg-elevated)', color: 'var(--adm-text)' }}
+                          />
+                        </div>
+                        {(editBillForm.payments || []).length > 1 && (
+                          <button type="button" onClick={() => removeEditPaymentRow(idx)} className="stock-btn-delete" style={{ padding: '0.75rem' }} title="Remove">🗑️</button>
+                        )}
+                      </div>
+                    ))}
+                    <button type="button" onClick={addEditPaymentRow} className="price-action-btn secondary" style={{ marginTop: '0.5rem', fontSize: '0.875rem' }}>
+                      + Add payment row
+                    </button>
+                  </div>
+                  <div className="price-form-group">
+                    <label>Notes</label>
+                    <textarea
+                      value={editBillForm.notes || ''}
+                      onChange={(e) => setEditBillForm(prev => ({ ...prev, notes: e.target.value }))}
+                      rows="3"
+                      placeholder="Additional notes..."
+                      style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--adm-border-gold)', background: 'var(--adm-bg-elevated)', color: 'var(--adm-text)' }}
+                    />
+                  </div>
+                  <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
+                    <button type="submit" className="price-action-btn" disabled={loading}>
+                      {loading ? '⏳ Saving...' : '💾 Save Changes'}
+                    </button>
+                    <button type="button" onClick={() => setShowEditBill(false)} className="price-action-btn secondary">Cancel</button>
+                  </div>
+                </form>
               </div>
             </div>
           )}

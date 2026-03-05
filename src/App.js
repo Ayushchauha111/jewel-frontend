@@ -9,6 +9,7 @@ import "./App.css";
 import AdminDashboard from "./components/admin/AdminDashboard";
 import StockManagement from "./components/admin/StockManagement";
 import BillingManagement from "./components/admin/BillingManagement";
+import BillingHistory from "./components/admin/BillingHistory";
 import CustomerManagement from "./components/admin/CustomerManagement";
 import OrderManagement from "./components/admin/OrderManagement";
 import CreditManagement from "./components/admin/CreditManagement";
@@ -68,6 +69,7 @@ function App() {
           <Route path="/admin/qr-print" element={<QRCodePrint />} />
           <Route path="/admin/print-receipt/:billId/:type" element={<ReceiptPrintPage />} />
           <Route path="/admin/billing" element={<BillingManagement />} />
+          <Route path="/admin/billing-history" element={<BillingHistory />} />
           <Route path="/admin/returns" element={<ReturnsManagement />} />
           <Route path="/admin/customers" element={<CustomerManagement />} />
           <Route path="/admin/customers/:id/ledger" element={<CustomerLedger />} />
