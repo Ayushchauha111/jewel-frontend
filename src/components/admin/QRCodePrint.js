@@ -27,15 +27,17 @@ function QRCodePrint() {
     contentRef: printRef,
     documentTitle: 'QR_Codes_Articles',
     pageStyle: `
-      @page { size: A4; margin: 10mm; }
+      @page { size: A4; margin: 0; }
       body { -webkit-print-color-adjust: exact; print-color-adjust: exact; margin: 0; padding: 0; }
-      .qr-print-sheet { position: static !important; left: auto !important; visibility: visible !important; width: 100% !important; max-width: 100% !important; box-sizing: border-box !important; background: #fff; color: #000; }
-      .qr-print-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; padding: 10px; page-break-inside: auto; width: 100%; box-sizing: border-box; }
-      .qr-print-label { border: 1px solid #000; padding: 8px 6px; text-align: center; font-size: 10px; page-break-inside: avoid; break-inside: avoid; min-height: 0; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; background: #fff; }
-      .qr-print-qr { width: 24mm !important; height: 24mm !important; min-width: 24mm !important; min-height: 24mm !important; display: block; margin: 0 auto 6px; border: none; object-fit: contain; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges; }
-      .qr-print-no-qr { width: 24mm !important; height: 24mm !important; display: flex; align-items: center; justify-content: center; margin: 0 auto 6px; background: #f0f0f0; color: #666; font-size: 8px; }
-      .qr-print-code { font-weight: bold; font-size: 9px; margin-bottom: 2px; word-break: break-all; }
-      .qr-print-name { font-size: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+      .qr-print-sheet { position: static !important; left: auto !important; visibility: visible !important; width: 100% !important; box-sizing: border-box !important; background: #fff; color: #000; }
+      .qr-print-grid { display: flex; flex-wrap: wrap; padding: 0; width: 100%; box-sizing: border-box; }
+      .qr-print-label { width: calc(25% - 2px); height: 11.1mm; border: 0.5px solid #ccc; margin: 0.5mm 1px; padding: 0.3mm 1mm; font-size: 6px; page-break-inside: avoid; break-inside: avoid; display: flex; flex-direction: row; align-items: center; justify-content: space-between; background: #fff; box-sizing: border-box; overflow: visible; }
+      .qr-print-info { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; overflow: hidden; padding-right: 1mm; }
+      .qr-print-qr { width: 9mm !important; height: 9mm !important; min-width: 9mm !important; min-height: 9mm !important; display: block; border: none; object-fit: contain; flex-shrink: 0; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges; }
+      .qr-print-no-qr { width: 9mm !important; height: 9mm !important; min-width: 9mm; display: flex; align-items: center; justify-content: center; background: #f0f0f0; color: #999; font-size: 4px; flex-shrink: 0; }
+      .qr-print-code { font-weight: bold; font-size: 6px; line-height: 1.2; margin-bottom: 0.2mm; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .qr-print-name { font-size: 5px; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; color: #333; }
+      .qr-print-details { font-size: 4.5px; line-height: 1.1; color: #555; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
     `,
     onBeforeGetContent: () => {
       return new Promise((resolve) => {
@@ -455,11 +457,16 @@ function QRCodePrint() {
           )}
         </div>
 
-        {/* Printable QR sheet – small labels for sticking on articles (hidden on screen) */}
+        {/* Printable QR sheet – A4-84 label layout (info left, QR right) */}
         <div ref={printRef} className="qr-print-sheet">
           <div className="qr-print-grid">
             {selectedStock.map(item => (
               <div key={item.id} className="qr-print-label">
+                <div className="qr-print-info">
+                  <div className="qr-print-code">{item.articleCode || item.id}</div>
+                  <div className="qr-print-name">{item.articleName}</div>
+                  <div className="qr-print-details">{item.weightGrams ? `${item.weightGrams}g` : ''}{item.weightGrams && item.carat ? ' · ' : ''}{item.carat ? `${item.carat}K` : ''}</div>
+                </div>
                 {item.qrCode ? (
                   <img
                     src={getQRCodeImageUrl(item)}
@@ -469,8 +476,6 @@ function QRCodePrint() {
                 ) : (
                   <div className="qr-print-no-qr">No QR</div>
                 )}
-                <div className="qr-print-code">{item.articleCode || item.id}</div>
-                <div className="qr-print-name">{item.articleName}</div>
               </div>
             ))}
           </div>
