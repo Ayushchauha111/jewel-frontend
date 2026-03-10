@@ -35,9 +35,8 @@ function QRCodePrint() {
       .qr-print-info { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; overflow: hidden; padding-right: 1mm; }
       .qr-print-qr { width: 9mm !important; height: 9mm !important; min-width: 9mm !important; min-height: 9mm !important; display: block; border: none; object-fit: contain; flex-shrink: 0; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges; }
       .qr-print-no-qr { width: 9mm !important; height: 9mm !important; min-width: 9mm; display: flex; align-items: center; justify-content: center; background: #f0f0f0; color: #999; font-size: 4px; flex-shrink: 0; }
-      .qr-print-code { font-weight: bold; font-size: 6px; line-height: 1.2; margin-bottom: 0.2mm; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-      .qr-print-name { font-size: 5px; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; color: #333; }
-      .qr-print-details { font-size: 4.5px; line-height: 1.1; color: #555; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+      .qr-print-shop { font-weight: bold; font-size: 5.5px; line-height: 1.2; margin-bottom: 0.2mm; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #000; }
+      .qr-print-detail { font-size: 4.5px; line-height: 1.15; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; color: #333; }
     `,
     onBeforeGetContent: () => {
       return new Promise((resolve) => {
@@ -463,9 +462,11 @@ function QRCodePrint() {
             {selectedStock.map(item => (
               <div key={item.id} className="qr-print-label">
                 <div className="qr-print-info">
-                  <div className="qr-print-code">{item.articleCode || item.id}</div>
-                  <div className="qr-print-name">{item.articleName}</div>
-                  <div className="qr-print-details">{item.weightGrams ? `${item.weightGrams}g` : ''}{item.weightGrams && item.carat ? ' · ' : ''}{item.carat ? `${item.carat}K` : ''}</div>
+                  <div className="qr-print-shop">GangaJewellers</div>
+                  <div className="qr-print-detail">SKU Code - {item.articleCode || item.id}</div>
+                  <div className="qr-print-detail">SKU Name - {item.articleName}</div>
+                  <div className="qr-print-detail">Gross. WT - {item.weightGrams ? `${item.weightGrams}g` : '-'}</div>
+                  <div className="qr-print-detail">Karat - {item.carat ? `${item.carat}K` : '-'}</div>
                 </div>
                 {item.qrCode ? (
                   <img

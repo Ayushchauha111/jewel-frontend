@@ -95,32 +95,23 @@
   flex-shrink: 0;
 }
 
-.qr-print-code {
+.qr-print-shop {
   font-weight: bold;
-  font-size: 6px;
+  font-size: 5.5px;
   line-height: 1.2;
   margin-bottom: 0.2mm;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  color: #000;
 }
 
-.qr-print-name {
-  font-size: 5px;
-  line-height: 1.2;
+.qr-print-detail {
+  font-size: 4.5px;
+  line-height: 1.15;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   max-width: 100%;
   color: #333;
-}
-
-.qr-print-details {
-  font-size: 4.5px;
-  line-height: 1.1;
-  color: #555;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 100%;
 }
