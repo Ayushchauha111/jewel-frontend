@@ -11,6 +11,9 @@ import './QRCodePrint.css';
 
 const API_URL = '/api';
 
+const isMobileBrowser = () => /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+  || (navigator.maxTouchPoints > 1 && /Macintosh/i.test(navigator.userAgent));
+
 function QRCodePrint() {
   const navigate = useNavigate();
   const printRef = useRef(null);
@@ -120,13 +123,70 @@ function QRCodePrint() {
     setSelectedItems(newSelected);
   };
 
+  const buildQRPrintHTML = (items) => {
+    const labels = items.map(item => {
+      const qrImg = item.qrCode
+        ? `<img src="data:image/png;base64,${item.qrCode}" style="width:9mm;height:9mm;min-width:9mm;min-height:9mm;display:block;border:none;object-fit:contain;flex-shrink:0;image-rendering:-webkit-optimize-contrast;image-rendering:crisp-edges;" />`
+        : `<div style="width:9mm;height:9mm;min-width:9mm;display:flex;align-items:center;justify-content:center;background:#f0f0f0;color:#999;font-size:4px;flex-shrink:0;">No QR</div>`;
+      return `<div style="width:calc(25% - 2px);height:11.1mm;border:0.5px solid #ccc;margin:0.5mm 1px;padding:0.3mm 1mm;font-size:6px;page-break-inside:avoid;break-inside:avoid;display:flex;flex-direction:row;align-items:center;justify-content:space-between;background:#fff;box-sizing:border-box;overflow:visible;">
+        <div style="flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;overflow:hidden;padding-right:1mm;">
+          <div style="font-weight:bold;font-size:5.5px;line-height:1.2;margin-bottom:0.2mm;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#000;">GangaJewellers</div>
+          <div style="font-size:4.5px;line-height:1.15;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#333;">SKU Code - ${item.articleCode || item.id}</div>
+          <div style="font-size:4.5px;line-height:1.15;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#333;">SKU Name - ${item.articleName}</div>
+          <div style="font-size:4.5px;line-height:1.15;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#333;">Gross. WT - ${item.weightGrams ? item.weightGrams + 'g' : '-'}</div>
+          <div style="font-size:4.5px;line-height:1.15;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#333;">Karat - ${item.carat ? item.carat + 'K' : '-'}</div>
+        </div>${qrImg}</div>`;
+    }).join('');
+
+    return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>QR Codes - Print</title>
+<style>
+  @page { size: A4; margin: 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .toolbar { padding: 12px 16px; background: #fff; border-bottom: 1px solid #e2e8f0; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .toolbar button { padding: 10px 20px; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; }
+  .btn-print { background: linear-gradient(135deg, #667eea, #764ba2); color: #fff; }
+  .btn-close { background: #f1f5f9; color: #475569; }
+  .toolbar p { color: #64748b; font-size: 13px; margin-left: auto; }
+  .sheet { width: 210mm; min-height: 297mm; margin: 10px auto; background: #fff; padding: 0; box-shadow: 0 2px 12px rgba(0,0,0,0.1); }
+  .grid { display: flex; flex-wrap: wrap; padding: 0; width: 100%; }
+  @media print { .toolbar { display: none !important; } .sheet { margin: 0; box-shadow: none; } body { background: #fff; } }
+  @media (max-width: 600px) { .sheet { width: 100%; min-height: auto; } }
+</style></head><body>
+<div class="toolbar">
+  <button class="btn-print" onclick="window.print()">🖨️ Print</button>
+  <button class="btn-close" onclick="window.close()">✕ Close</button>
+  <p>${items.length} label(s) · Tap Print, then use your browser's Print or Share → Print</p>
+</div>
+<div class="sheet"><div class="grid">${labels}</div></div>
+</body></html>`;
+  };
+
+  const openQRPrintInNewTab = () => {
+    const items = selectedStock;
+    if (items.length === 0) return;
+    const html = buildQRPrintHTML(items);
+    const win = window.open('', '_blank');
+    if (!win) {
+      setError('Pop-up blocked. Please allow pop-ups for this site and try again.');
+      setTimeout(() => setError(null), 5000);
+      return;
+    }
+    win.document.write(html);
+    win.document.close();
+  };
+
   const onPrintClick = () => {
     if (selectedItems.size === 0) {
       setError('Please select at least one item to print');
       setTimeout(() => setError(null), 3000);
       return;
     }
-    handlePrint();
+    if (isMobileBrowser()) {
+      openQRPrintInNewTab();
+    } else {
+      handlePrint();
+    }
   };
 
   const getQRCodeImageUrl = (item) => {
@@ -293,6 +353,15 @@ function QRCodePrint() {
               style={{ fontSize: '0.875rem', padding: '0.75rem 1.5rem'}}
             >
               🖨️ Print Selected ({selectedItems.size})
+            </button>
+            <button
+              onClick={openQRPrintInNewTab}
+              className="price-action-btn secondary"
+              disabled={selectedItems.size === 0}
+              style={{ fontSize: '0.875rem', padding: '0.75rem 1.5rem' }}
+              title="Opens print-ready page in a new tab — use this if printing doesn't work directly"
+            >
+              📱 Open in new tab
             </button>
           </div>
         </div>

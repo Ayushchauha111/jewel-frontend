@@ -1,6 +1,9 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { useReactToPrint } from 'react-to-print';
 import './NormalReceipt.css';
+
+const isMobileBrowser = () => /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+  || (navigator.maxTouchPoints > 1 && /Macintosh/i.test(navigator.userAgent));
 
 
 // --- Helpers ---
@@ -27,8 +30,9 @@ function formatDate(dateString) {
 // --- Component ---
 function NormalReceipt({ bill, onClose, showPrintButton = true }) {
   const contentRef = useRef(null);
+  const [mobileHint, setMobileHint] = useState(false);
 
-  const handlePrint = useReactToPrint({
+  const handleReactToPrint = useReactToPrint({
     contentRef,
     documentTitle: `Rough_Estimate_${bill?.billNumber || 'Order'}`,
     pageStyle: `
@@ -40,6 +44,17 @@ function NormalReceipt({ bill, onClose, showPrintButton = true }) {
         requestAnimationFrame(() => setTimeout(resolve, 400));
       }),
   });
+
+  const handlePrint = () => {
+    if (isMobileBrowser()) {
+      try { window.print(); } catch (_) {
+        setMobileHint(true);
+        setTimeout(() => setMobileHint(false), 6000);
+      }
+    } else {
+      handleReactToPrint();
+    }
+  };
 
   const items = bill?.items || [];
   const customer = bill?.customer || {};
@@ -57,6 +72,11 @@ function NormalReceipt({ bill, onClose, showPrintButton = true }) {
           <button type="button" className="normal-receipt-close-btn" onClick={onClose}>
             Close
           </button>
+        )}
+        {mobileHint && (
+          <p style={{ width: '100%', margin: '0.5rem 0 0', padding: '0.6rem 0.8rem', background: '#fffbeb', border: '1px solid #fcd34d', borderRadius: '8px', color: '#92400e', fontSize: '0.82rem' }}>
+            Tip: On mobile, use your browser&apos;s <strong>Share → Print</strong> or open this receipt in a new tab to print/save as PDF.
+          </p>
         )}
       </div>
 
