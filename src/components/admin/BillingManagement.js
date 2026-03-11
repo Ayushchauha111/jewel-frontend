@@ -17,6 +17,32 @@ const API_URL = '/api';
 // Fallback making charges per gram (₹/g) when Rates (admin/rates) not loaded
 const FALLBACK_MAKING_PER_GRAM = 1150;
 
+const PRODUCT_ARTICLE_NAMES = [
+  'Ring', 'Necklace', 'Earrings', 'Bracelet', 'Bangle', 'Chain', 'Pendant',
+  'Anklet', 'Nose Pin', 'Toe Ring', 'Mangalsutra', 'Kamarband', 'Tikka',
+  'Hairpin', 'Brooch', 'Cufflinks', 'Watch', 'Locket', 'Choker', 'Armlet'
+];
+const PRODUCT_MATERIAL_OPTIONS = ['Gold', 'Silver', 'Diamond', 'Gold + Diamond', 'Silver + Diamond', 'Platinum + Diamond', 'Gemstone', 'Other'];
+const PRODUCT_GOLD_CARAT_PURITY = {
+  10: { purity: 41.7, hallmark: 417 }, 12: { purity: 50, hallmark: 500 },
+  14: { purity: 58.3, hallmark: 583 }, 15: { purity: 62.5, hallmark: 625 },
+  18: { purity: 75, hallmark: 750 }, 20: { purity: 83.3, hallmark: 833 },
+  21: { purity: 87.5, hallmark: 875 }, 22: { purity: 91.6, hallmark: 916 },
+  24: { purity: 99.9, hallmark: 999 }
+};
+const PRODUCT_GOLD_CARAT_OPTIONS = Object.keys(PRODUCT_GOLD_CARAT_PURITY).map(Number).sort((a, b) => a - b);
+const prodIsDiamondOnly = (m) => String(m || '').toLowerCase() === 'diamond';
+const prodIsDiamondWithMetal = (m) => { const s = String(m || '').toLowerCase(); return s === 'gold + diamond' || s === 'silver + diamond' || s === 'platinum + diamond'; };
+const prodIsDiamondRelated = (m) => prodIsDiamondOnly(m) || prodIsDiamondWithMetal(m);
+const prodIsGold = (m) => String(m || '').toLowerCase() === 'gold';
+const prodIsGoldType = (m) => m === 'Gold' || m === 'Gold + Diamond';
+
+const EMPTY_PRODUCT_FORM = {
+  articleName: '', category: '', material: 'Gold', weightGrams: '', carat: '',
+  diamondCarat: '', purityPercentage: '', quantity: 1, size: '', description: '',
+  makingChargesPerGram: '', sellingPrice: '', showCustomArticleName: false, showCustomCategory: false
+};
+
 // Standard gold purity (%) for buy-back (customer selling gold). API uses carat: carat = (purity/100)*24
 const GOLD_PURITY_OPTIONS = [
   { purity: 41.7, label: '41.7% (10K)' },
@@ -104,6 +130,17 @@ function BillingManagement() {
 
   const [newCustomerForm, setNewCustomerForm] = useState({ name: '', phone: '', email: '', address: '', visible: false });
   const [creatingCustomer, setCreatingCustomer] = useState(false);
+
+  const [showAddProductModal, setShowAddProductModal] = useState(false);
+  const [newProductForm, setNewProductForm] = useState({ ...EMPTY_PRODUCT_FORM });
+  const [savingProduct, setSavingProduct] = useState(false);
+  const [productCategories, setProductCategories] = useState([]);
+  const [productArticleNames, setProductArticleNames] = useState([]);
+  const [productPhotoFiles, setProductPhotoFiles] = useState([]);
+  const [productSingleImage, setProductSingleImage] = useState(null);
+  const [productSinglePreview, setProductSinglePreview] = useState(null);
+  const PRODUCT_MIN_PHOTOS = 3;
+  const PRODUCT_MAX_PHOTOS = 5;
 
   const isGoldItem = (s) => s && String(s.material || '').toLowerCase() === 'gold' && s.weightGrams && s.carat;
   // Gold + Diamond / Silver + Diamond etc.: has metal weight + carat, can use rate for metal part when sellingPrice not set
@@ -931,6 +968,128 @@ function BillingManagement() {
     const newItems = [...formData.items];
     newItems[index] = { ...newItems[index], [field]: value };
     setFormData({ ...formData, items: newItems });
+  };
+
+  const handleProductPhotosSelect = (e) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length < PRODUCT_MIN_PHOTOS || files.length > PRODUCT_MAX_PHOTOS) {
+      setError(`Please select between ${PRODUCT_MIN_PHOTOS} and ${PRODUCT_MAX_PHOTOS} photos (selected: ${files.length}).`);
+      setTimeout(() => setError(null), 5000);
+      e.target.value = '';
+      return;
+    }
+    setProductPhotoFiles(files);
+    setError(null);
+    e.target.value = '';
+  };
+
+  const removeProductPhoto = (index) => {
+    setProductPhotoFiles(prev => {
+      const next = prev.filter((_, i) => i !== index);
+      if (next.length > 0 && next.length < PRODUCT_MIN_PHOTOS) {
+        setError(`Product must have between ${PRODUCT_MIN_PHOTOS} and ${PRODUCT_MAX_PHOTOS} photos.`);
+        setTimeout(() => setError(null), 4000);
+      }
+      return next;
+    });
+  };
+
+  const handleProductSingleImage = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setProductSingleImage(file);
+      const reader = new FileReader();
+      reader.onloadend = () => setProductSinglePreview(reader.result);
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const productPhotoPreviews = productPhotoFiles.map(f => ({ url: URL.createObjectURL(f) }));
+
+  const openAddProductModal = async () => {
+    setNewProductForm({ ...EMPTY_PRODUCT_FORM });
+    setProductPhotoFiles([]);
+    setProductSingleImage(null);
+    setProductSinglePreview(null);
+    setShowAddProductModal(true);
+    try {
+      const [catRes, nameRes] = await Promise.all([
+        axios.get(`${API_URL}/stock/categories`),
+        axios.get(`${API_URL}/stock/article-names`, { headers: getAuthHeaders() })
+      ]);
+      setProductCategories(catRes.data || []);
+      setProductArticleNames(nameRes.data || []);
+    } catch (_) { /* non-critical */ }
+  };
+
+  const handleSaveProduct = async () => {
+    const f = newProductForm;
+    if (!f.articleName.trim()) { setError('Product: Article name is required.'); setTimeout(() => setError(null), 4000); return; }
+    if (!f.weightGrams || parseFloat(f.weightGrams) <= 0) { setError('Product: Weight is required.'); setTimeout(() => setError(null), 4000); return; }
+    if (!prodIsDiamondOnly(f.material) && (!f.carat || parseFloat(f.carat) <= 0)) { setError('Product: Carat is required.'); setTimeout(() => setError(null), 4000); return; }
+    setSavingProduct(true);
+    try {
+      let imageUrl = null;
+      let imageUrls = null;
+
+      if (productPhotoFiles.length >= PRODUCT_MIN_PHOTOS && productPhotoFiles.length <= PRODUCT_MAX_PHOTOS) {
+        const uploadForm = new FormData();
+        productPhotoFiles.forEach(file => uploadForm.append('files', file));
+        const uploadRes = await axios.post(`${API_URL}/stock/upload-images`, uploadForm, {
+          headers: { ...getAuthHeaders(), 'Content-Type': 'multipart/form-data' }
+        });
+        imageUrls = uploadRes.data.imageUrls || [];
+        imageUrl = imageUrls[0] || null;
+      } else if (productSingleImage) {
+        const uploadForm = new FormData();
+        uploadForm.append('file', productSingleImage);
+        const uploadRes = await axios.post(`${API_URL}/stock/upload-image`, uploadForm, {
+          headers: { ...getAuthHeaders(), 'Content-Type': 'multipart/form-data' }
+        });
+        imageUrl = uploadRes.data.imageUrl;
+      }
+
+      const safeFloat = (v) => { if (!v || v === '') return null; const p = parseFloat(v); return isNaN(p) ? null : p; };
+      const data = {
+        articleName: f.articleName.trim(),
+        category: f.category.trim() || null,
+        material: f.material || 'Gold',
+        imageUrl: imageUrl || null,
+        imageUrls: imageUrls || null,
+        weightGrams: safeFloat(f.weightGrams),
+        carat: prodIsDiamondOnly(f.material) ? null : safeFloat(f.carat),
+        diamondCarat: prodIsDiamondOnly(f.material) ? safeFloat(f.carat) : (prodIsDiamondWithMetal(f.material) ? safeFloat(f.diamondCarat) : null),
+        purityPercentage: safeFloat(f.purityPercentage),
+        quantity: f.quantity ? parseInt(f.quantity) : 1,
+        size: (f.category && (f.category.toLowerCase() === 'ring' || f.category.toLowerCase() === 'rings')) ? (f.size?.trim() || null) : null,
+        description: f.description?.trim() || null,
+        makingChargesPerGram: safeFloat(f.makingChargesPerGram) || null,
+        sellingPrice: safeFloat(f.sellingPrice)
+      };
+      const res = await axios.post(`${API_URL}/stock`, data, { headers: getAuthHeaders() });
+      const created = res.data;
+      await fetchStock();
+      setFormData(prev => ({
+        ...prev,
+        items: [...prev.items, { stockId: String(created.id), quantity: 1, overrideRatePerGram: '', makingChargesPerGram: '', hallmark: false }]
+      }));
+      if ((isGoldMetalItem(created) || isSilverMetalItem(created))) {
+        fetchCalculatedPriceForStock(created);
+      }
+      setShowAddProductModal(false);
+      setNewProductForm({ ...EMPTY_PRODUCT_FORM });
+      setProductPhotoFiles([]);
+      setProductSingleImage(null);
+      setProductSinglePreview(null);
+      setSuccess(`Product "${created.articleName}" added to stock and bill.`);
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err) {
+      const msg = err.response?.data?.message || err.response?.data?.error || err.message || 'Failed to create product';
+      setError(msg);
+      setTimeout(() => setError(null), 5000);
+    } finally {
+      setSavingProduct(false);
+    }
   };
 
   // Normalize decoded value from camera (decodedText, decodedResult) or manual input (string or object)
@@ -2170,6 +2329,7 @@ function BillingManagement() {
                   <button type="button" onClick={addExternalItem} className="price-action-btn secondary">🤝 Sell item from friend (external)</button>
                   <button type="button" onClick={addBuyBackItem} className="price-action-btn secondary buyback">🪙 Customer selling gold (buy-back)</button>
                   <button type="button" onClick={addSilverBuyBackItem} className="price-action-btn secondary buyback">🥈 Customer selling silver (buy-back)</button>
+                  <button type="button" onClick={openAddProductModal} className="price-action-btn secondary" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: '#fff', border: 'none' }}>📦 Add new product to stock</button>
                 </div>
               </div>
 
@@ -2994,6 +3154,205 @@ function BillingManagement() {
               </div>
             </div>
           )}
+
+      {showAddProductModal && (
+        <div className="stock-modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', zIndex: 10002, overflow: 'auto', padding: '1rem' }}
+          onClick={() => { setShowAddProductModal(false); setNewProductForm({ ...EMPTY_PRODUCT_FORM }); setProductPhotoFiles([]); setProductSingleImage(null); setProductSinglePreview(null); }}>
+          <div style={{ position: 'relative', maxWidth: '560px', width: '100%', margin: '2rem auto', background: '#fff', borderRadius: '12px', boxShadow: '0 8px 32px rgba(0,0,0,0.2)', overflow: 'hidden' }}
+            onClick={(e) => e.stopPropagation()}>
+            <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#1e293b' }}>📦 Add New Product to Stock</h3>
+              <button type="button" onClick={() => { setShowAddProductModal(false); setNewProductForm({ ...EMPTY_PRODUCT_FORM }); setProductPhotoFiles([]); setProductSingleImage(null); setProductSinglePreview(null); }} style={{ background: 'none', border: 'none', fontSize: '1.25rem', cursor: 'pointer', color: '#64748b', padding: '0.25rem' }} aria-label="Close">✕</button>
+            </div>
+            <div style={{ padding: '1.5rem', maxHeight: '70vh', overflowY: 'auto' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', color: '#475569', marginBottom: '0.35rem' }}>Material / Type *</label>
+                  <select value={newProductForm.material} onChange={(e) => {
+                    const material = e.target.value;
+                    setNewProductForm(prev => ({ ...prev, material, ...(prodIsDiamondOnly(material) ? { purityPercentage: '' } : {}) }));
+                  }} style={{ width: '100%', padding: '0.65rem', border: '2px solid #e2e8f0', borderRadius: '8px', fontSize: '0.9rem' }}>
+                    {PRODUCT_MATERIAL_OPTIONS.map(m => <option key={m} value={m}>{m}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', color: '#475569', marginBottom: '0.35rem' }}>Article Name *</label>
+                  {!newProductForm.showCustomArticleName ? (
+                    <select value={newProductForm.articleName} onChange={(e) => {
+                      if (e.target.value === '__CUSTOM__') setNewProductForm(prev => ({ ...prev, articleName: '', showCustomArticleName: true }));
+                      else setNewProductForm(prev => ({ ...prev, articleName: e.target.value }));
+                    }} style={{ width: '100%', padding: '0.65rem', border: '2px solid #e2e8f0', borderRadius: '8px', fontSize: '0.9rem' }}>
+                      <option value="">Select</option>
+                      {[...new Set([...PRODUCT_ARTICLE_NAMES, ...productArticleNames])].map(n => <option key={n} value={n}>{n}</option>)}
+                      <option value="__CUSTOM__">+ Custom name</option>
+                    </select>
+                  ) : (
+                    <div style={{ display: 'flex', gap: '0.35rem' }}>
+                      <input type="text" value={newProductForm.articleName} onChange={(e) => setNewProductForm(prev => ({ ...prev, articleName: e.target.value }))}
+                        placeholder="Custom name" style={{ flex: 1, padding: '0.65rem', border: '2px solid #e2e8f0', borderRadius: '8px', fontSize: '0.9rem' }} />
+                      <button type="button" onClick={() => setNewProductForm(prev => ({ ...prev, articleName: '', showCustomArticleName: false }))}
+                        style={{ padding: '0.5rem 0.75rem', border: '2px solid #e2e8f0', borderRadius: '8px', background: '#f8fafc', cursor: 'pointer' }}>✕</button>
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', color: '#475569', marginBottom: '0.35rem' }}>Category</label>
+                  {!newProductForm.showCustomCategory ? (
+                    <select value={newProductForm.category} onChange={(e) => {
+                      if (e.target.value === '__CUSTOM__') setNewProductForm(prev => ({ ...prev, category: '', showCustomCategory: true }));
+                      else setNewProductForm(prev => ({ ...prev, category: e.target.value }));
+                    }} style={{ width: '100%', padding: '0.65rem', border: '2px solid #e2e8f0', borderRadius: '8px', fontSize: '0.9rem' }}>
+                      <option value="">Select</option>
+                      {[...new Set([...PRODUCT_ARTICLE_NAMES, ...productCategories])].map(c => <option key={c} value={c}>{c}</option>)}
+                      <option value="__CUSTOM__">+ Custom category</option>
+                    </select>
+                  ) : (
+                    <div style={{ display: 'flex', gap: '0.35rem' }}>
+                      <input type="text" value={newProductForm.category} onChange={(e) => setNewProductForm(prev => ({ ...prev, category: e.target.value }))}
+                        placeholder="Custom category" style={{ flex: 1, padding: '0.65rem', border: '2px solid #e2e8f0', borderRadius: '8px', fontSize: '0.9rem' }} />
+                      <button type="button" onClick={() => setNewProductForm(prev => ({ ...prev, category: '', showCustomCategory: false }))}
+                        style={{ padding: '0.5rem 0.75rem', border: '2px solid #e2e8f0', borderRadius: '8px', background: '#f8fafc', cursor: 'pointer' }}>✕</button>
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', color: '#475569', marginBottom: '0.35rem' }}>
+                    {prodIsDiamondOnly(newProductForm.material) ? 'Weight (g) – metal *' : prodIsDiamondWithMetal(newProductForm.material) ? 'Metal weight (g) *' : 'Weight (grams) *'}
+                  </label>
+                  <input type="number" step="0.001" value={newProductForm.weightGrams}
+                    onChange={(e) => setNewProductForm(prev => ({ ...prev, weightGrams: e.target.value }))}
+                    placeholder="e.g. 5.250" style={{ width: '100%', padding: '0.65rem', border: '2px solid #e2e8f0', borderRadius: '8px', fontSize: '0.9rem' }} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', color: '#475569', marginBottom: '0.35rem' }}>
+                    {prodIsDiamondOnly(newProductForm.material) ? 'Diamond Carat *' : prodIsGoldType(newProductForm.material) ? 'Gold Carat *' : 'Carat *'}
+                  </label>
+                  {prodIsGoldType(newProductForm.material) ? (
+                    <>
+                      <select value={PRODUCT_GOLD_CARAT_OPTIONS.includes(Number(newProductForm.carat)) ? newProductForm.carat : '__OTHER__'}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          if (v === '__OTHER__') { setNewProductForm(prev => ({ ...prev, carat: prev.carat || '' })); return; }
+                          const info = v ? PRODUCT_GOLD_CARAT_PURITY[Number(v)] : null;
+                          setNewProductForm(prev => ({ ...prev, carat: v, purityPercentage: info ? String(info.purity) : '' }));
+                        }} style={{ width: '100%', padding: '0.65rem', border: '2px solid #e2e8f0', borderRadius: '8px', fontSize: '0.9rem' }}>
+                        <option value="">Select Carat</option>
+                        {PRODUCT_GOLD_CARAT_OPTIONS.map(c => <option key={c} value={c}>{c}K ({PRODUCT_GOLD_CARAT_PURITY[c].purity}%)</option>)}
+                        <option value="__OTHER__">Other</option>
+                      </select>
+                      {!PRODUCT_GOLD_CARAT_OPTIONS.includes(Number(newProductForm.carat)) && (
+                        <input type="number" step="0.01" min="0" max="24" value={newProductForm.carat}
+                          onChange={(e) => { const c = e.target.value; const p = c ? (Number(c) / 24 * 100) : ''; setNewProductForm(prev => ({ ...prev, carat: c, purityPercentage: p ? String(Math.round(p * 10) / 10) : '' })); }}
+                          placeholder="e.g. 16.95" style={{ width: '100%', padding: '0.65rem', border: '2px solid #e2e8f0', borderRadius: '8px', fontSize: '0.9rem', marginTop: '0.4rem' }} />
+                      )}
+                    </>
+                  ) : (
+                    <input type="number" step="0.01" value={newProductForm.carat}
+                      onChange={(e) => setNewProductForm(prev => ({ ...prev, carat: e.target.value }))}
+                      placeholder={prodIsDiamondOnly(newProductForm.material) ? 'e.g. 0.5' : 'e.g. 22.00'}
+                      style={{ width: '100%', padding: '0.65rem', border: '2px solid #e2e8f0', borderRadius: '8px', fontSize: '0.9rem' }} />
+                  )}
+                </div>
+                {prodIsDiamondWithMetal(newProductForm.material) && (
+                  <div>
+                    <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', color: '#475569', marginBottom: '0.35rem' }}>Diamond Carat *</label>
+                    <input type="number" step="0.01" min="0" value={newProductForm.diamondCarat}
+                      onChange={(e) => setNewProductForm(prev => ({ ...prev, diamondCarat: e.target.value }))}
+                      placeholder="e.g. 0.5" style={{ width: '100%', padding: '0.65rem', border: '2px solid #e2e8f0', borderRadius: '8px', fontSize: '0.9rem' }} />
+                  </div>
+                )}
+                <div>
+                  <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', color: '#475569', marginBottom: '0.35rem' }}>Quantity</label>
+                  <input type="number" min="1" value={newProductForm.quantity}
+                    onChange={(e) => setNewProductForm(prev => ({ ...prev, quantity: e.target.value }))}
+                    style={{ width: '100%', padding: '0.65rem', border: '2px solid #e2e8f0', borderRadius: '8px', fontSize: '0.9rem' }} />
+                </div>
+                {(newProductForm.category?.toLowerCase() === 'ring' || newProductForm.category?.toLowerCase() === 'rings') && (
+                  <div>
+                    <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', color: '#475569', marginBottom: '0.35rem' }}>Ring Size</label>
+                    <input type="text" value={newProductForm.size}
+                      onChange={(e) => setNewProductForm(prev => ({ ...prev, size: e.target.value }))}
+                      placeholder="e.g. 7, 7.5" style={{ width: '100%', padding: '0.65rem', border: '2px solid #e2e8f0', borderRadius: '8px', fontSize: '0.9rem' }} />
+                  </div>
+                )}
+                {prodIsGoldType(newProductForm.material) && (
+                  <div>
+                    <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', color: '#475569', marginBottom: '0.35rem' }}>Making charges/gram (₹)</label>
+                    <input type="number" step="1" min="0" value={newProductForm.makingChargesPerGram}
+                      onChange={(e) => setNewProductForm(prev => ({ ...prev, makingChargesPerGram: e.target.value }))}
+                      placeholder="e.g. 1150 (blank = default)" style={{ width: '100%', padding: '0.65rem', border: '2px solid #e2e8f0', borderRadius: '8px', fontSize: '0.9rem' }} />
+                  </div>
+                )}
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', color: '#475569', marginBottom: '0.35rem' }}>
+                    Selling Price (₹) {prodIsDiamondRelated(newProductForm.material) && <span style={{ fontWeight: 400, color: '#94a3b8', fontSize: '0.8rem' }}>– fixed price</span>}
+                  </label>
+                  <input type="number" step="0.01" min="0" value={newProductForm.sellingPrice}
+                    onChange={(e) => setNewProductForm(prev => ({ ...prev, sellingPrice: e.target.value }))}
+                    placeholder={prodIsDiamondRelated(newProductForm.material) ? 'e.g. 25000 (fixed)' : 'e.g. 45000 (blank = auto from gold rate)'}
+                    style={{ width: '100%', padding: '0.65rem', border: '2px solid #e2e8f0', borderRadius: '8px', fontSize: '0.9rem' }} />
+                </div>
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', color: '#475569', marginBottom: '0.35rem' }}>Product Photos (3–5)</label>
+                  <p style={{ fontSize: '0.78rem', color: '#94a3b8', margin: '0 0 0.5rem' }}>Upload 3 to 5 images. First image becomes the main thumbnail.</p>
+                  <input type="file" accept="image/*" multiple onChange={handleProductPhotosSelect}
+                    style={{ display: 'none' }} id="billing-product-photos-upload" />
+                  <label htmlFor="billing-product-photos-upload" style={{ display: 'inline-block', padding: '0.5rem 1rem', background: '#f1f5f9', border: '2px solid #e2e8f0', borderRadius: '8px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 500, color: '#475569' }}>
+                    📷 Select 3–5 photos
+                  </label>
+                  {productPhotoFiles.length > 0 && (
+                    <>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.75rem' }}>
+                        {productPhotoPreviews.map((p, idx) => (
+                          <div key={idx} style={{ position: 'relative' }}>
+                            <img src={p.url} alt={`Preview ${idx + 1}`} style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 6, border: '1px solid #e2e8f0' }} />
+                            <button type="button" onClick={() => removeProductPhoto(idx)}
+                              style={{ position: 'absolute', top: -6, right: -6, width: 20, height: 20, padding: 0, fontSize: 11, borderRadius: '50%', background: '#ef4444', color: '#fff', border: 'none', cursor: 'pointer', lineHeight: '20px', textAlign: 'center' }}>×</button>
+                          </div>
+                        ))}
+                      </div>
+                      <p style={{ fontSize: '0.78rem', color: productPhotoFiles.length >= PRODUCT_MIN_PHOTOS ? '#22c55e' : '#f59e0b', marginTop: '0.35rem', marginBottom: 0 }}>
+                        {productPhotoFiles.length} photo(s) selected{productPhotoFiles.length < PRODUCT_MIN_PHOTOS ? `. Add ${PRODUCT_MIN_PHOTOS - productPhotoFiles.length} more.` : ' ✓'}
+                      </p>
+                    </>
+                  )}
+                  {productPhotoFiles.length === 0 && (
+                    <div style={{ marginTop: '0.75rem' }}>
+                      <p style={{ fontSize: '0.78rem', color: '#94a3b8', margin: '0 0 0.35rem' }}>Or upload a single image:</p>
+                      <input type="file" accept="image/*" onChange={handleProductSingleImage}
+                        style={{ display: 'none' }} id="billing-product-single-upload" />
+                      <label htmlFor="billing-product-single-upload" style={{ display: 'inline-block', padding: '0.4rem 0.75rem', background: '#f8fafc', border: '2px solid #e2e8f0', borderRadius: '8px', cursor: 'pointer', fontSize: '0.82rem', color: '#64748b' }}>
+                        📷 One image
+                      </label>
+                      {productSinglePreview && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}>
+                          <img src={productSinglePreview} alt="Preview" style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 6, border: '1px solid #e2e8f0' }} />
+                          <button type="button" onClick={() => { setProductSingleImage(null); setProductSinglePreview(null); }}
+                            style={{ padding: '0.3rem 0.6rem', background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '0.8rem' }}>Remove</button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', color: '#475569', marginBottom: '0.35rem' }}>Description</label>
+                  <textarea value={newProductForm.description} onChange={(e) => setNewProductForm(prev => ({ ...prev, description: e.target.value }))}
+                    rows="2" placeholder="Optional details..."
+                    style={{ width: '100%', padding: '0.65rem', border: '2px solid #e2e8f0', borderRadius: '8px', fontSize: '0.9rem', resize: 'vertical' }} />
+                </div>
+              </div>
+            </div>
+            <div style={{ padding: '1rem 1.5rem', borderTop: '1px solid #e2e8f0', display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+              <button type="button" onClick={() => { setShowAddProductModal(false); setNewProductForm({ ...EMPTY_PRODUCT_FORM }); setProductPhotoFiles([]); setProductSingleImage(null); setProductSinglePreview(null); }}
+                className="price-action-btn secondary" style={{ minWidth: '5rem' }}>Cancel</button>
+              <button type="button" onClick={handleSaveProduct} disabled={savingProduct}
+                className="price-action-btn" style={{ minWidth: '10rem', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: '#fff', border: 'none', opacity: savingProduct ? 0.7 : 1 }}>
+                {savingProduct ? '⏳ Saving...' : '📦 Save & Add to Bill'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showNormalReceipt && selectedBill && (
             <div
