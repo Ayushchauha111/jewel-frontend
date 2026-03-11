@@ -82,14 +82,22 @@ function GSTReceipt({ bill, companyName, companyAddress, companyPhone, companyEm
       }),
   });
 
+  const isStandalonePage = window.location.pathname.includes('/print-receipt/');
+
   const handlePrint = () => {
-    if (isMobileBrowser()) {
-      try { window.print(); } catch (_) {
-        setMobileHint(true);
-        setTimeout(() => setMobileHint(false), 6000);
-      }
-    } else {
+    if (!isMobileBrowser()) {
       handleReactToPrint();
+      return;
+    }
+    if (isStandalonePage) {
+      window.print();
+      return;
+    }
+    if (bill?.id) {
+      window.open(`${window.location.origin}/admin/print-receipt/${bill.id}/gst`, '_blank');
+    } else {
+      setMobileHint(true);
+      setTimeout(() => setMobileHint(false), 6000);
     }
   };
 

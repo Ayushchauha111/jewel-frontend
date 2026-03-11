@@ -10,7 +10,12 @@
   color: #000;
 }
 
+/* Hide the selection UI when printing (mobile uses window.print on this page) */
 @media print {
+  .qr-screen-only {
+    display: none !important;
+  }
+
   .qr-print-sheet {
     position: static !important;
     left: auto !important;

@@ -166,14 +166,16 @@ function QRCodePrint() {
     const items = selectedStock;
     if (items.length === 0) return;
     const html = buildQRPrintHTML(items);
-    const win = window.open('', '_blank');
-    if (!win) {
-      setError('Pop-up blocked. Please allow pop-ups for this site and try again.');
-      setTimeout(() => setError(null), 5000);
-      return;
-    }
-    win.document.write(html);
-    win.document.close();
+    const blob = new Blob([html], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.target = '_blank';
+    a.rel = 'noopener';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
   };
 
   const onPrintClick = () => {
@@ -183,7 +185,7 @@ function QRCodePrint() {
       return;
     }
     if (isMobileBrowser()) {
-      openQRPrintInNewTab();
+      window.print();
     } else {
       handlePrint();
     }
@@ -255,6 +257,7 @@ function QRCodePrint() {
 
   return (
     <div className="admin-dashboard">
+      <div className="qr-screen-only">
       <AdminNav title="📱 QR Print" onLogout={handleLogout} />
 
       <div className="price-management">
@@ -524,31 +527,32 @@ function QRCodePrint() {
             </div>
           )}
         </div>
+      </div>
+      </div>
 
-        {/* Printable QR sheet – A4-84 label layout (info left, QR right) */}
-        <div ref={printRef} className="qr-print-sheet">
-          <div className="qr-print-grid">
-            {selectedStock.map(item => (
-              <div key={item.id} className="qr-print-label">
-                <div className="qr-print-info">
-                  <div className="qr-print-shop">GangaJewellers</div>
-                  <div className="qr-print-detail">SKU Code - {item.articleCode || item.id}</div>
-                  <div className="qr-print-detail">SKU Name - {item.articleName}</div>
-                  <div className="qr-print-detail">Gross. WT - {item.weightGrams ? `${item.weightGrams}g` : '-'}</div>
-                  <div className="qr-print-detail">Karat - {item.carat ? `${item.carat}K` : '-'}</div>
-                </div>
-                {item.qrCode ? (
-                  <img
-                    src={getQRCodeImageUrl(item)}
-                    alt=""
-                    className="qr-print-qr"
-                  />
-                ) : (
-                  <div className="qr-print-no-qr">No QR</div>
-                )}
+      {/* Printable QR sheet – hidden on screen, visible when printing */}
+      <div ref={printRef} className="qr-print-sheet">
+        <div className="qr-print-grid">
+          {selectedStock.map(item => (
+            <div key={item.id} className="qr-print-label">
+              <div className="qr-print-info">
+                <div className="qr-print-shop">GangaJewellers</div>
+                <div className="qr-print-detail">SKU Code - {item.articleCode || item.id}</div>
+                <div className="qr-print-detail">SKU Name - {item.articleName}</div>
+                <div className="qr-print-detail">Gross. WT - {item.weightGrams ? `${item.weightGrams}g` : '-'}</div>
+                <div className="qr-print-detail">Karat - {item.carat ? `${item.carat}K` : '-'}</div>
               </div>
-            ))}
-          </div>
+              {item.qrCode ? (
+                <img
+                  src={getQRCodeImageUrl(item)}
+                  alt=""
+                  className="qr-print-qr"
+                />
+              ) : (
+                <div className="qr-print-no-qr">No QR</div>
+              )}
+            </div>
+          ))}
         </div>
       </div>
     </div>
