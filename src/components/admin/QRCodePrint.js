@@ -487,6 +487,7 @@ function QRCodePrint() {
                   <option value={10}>10 per page</option>
                   <option value={20}>20 per page</option>
                   <option value={50}>50 per page</option>
+                  <option value={84}>84 per page</option>
                 </select>
                 <button
                   type="button"
