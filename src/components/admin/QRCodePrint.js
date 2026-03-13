@@ -133,7 +133,8 @@ function QRCodePrint() {
           <div style="font-weight:bold;font-size:5.5px;line-height:1.2;margin-bottom:0.2mm;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#000;">GangaJewellers</div>
           <div style="font-size:4.5px;line-height:1.15;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#333;">SKU Code - ${item.articleCode || item.id}</div>
           <div style="font-size:4.5px;line-height:1.15;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#333;">SKU Name - ${item.articleName}</div>
-          <div style="font-size:4.5px;line-height:1.15;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#333;">Gross. WT - ${item.weightGrams ? item.weightGrams + 'g' : '-'}</div>
+          <div style="font-size:4.5px;line-height:1.15;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#333;">Gross. WT - ${item.grossWeightGrams ? item.grossWeightGrams + 'g' : (item.weightGrams ? item.weightGrams + 'g' : '-')}</div>
+          <div style="font-size:4.5px;line-height:1.15;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#333;">Net. WT - ${item.weightGrams ? item.weightGrams + 'g' : '-'}</div>
           <div style="font-size:4.5px;line-height:1.15;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#333;">Karat - ${item.carat ? item.carat + 'K' : '-'}</div>
         </div>${qrImg}</div>`;
     }).join('');
@@ -380,7 +381,8 @@ function QRCodePrint() {
                       <th style={{ width: '50px' }}>Select</th>
                       <th>Article Code</th>
                       <th>Article Name</th>
-                      <th>Weight (g)</th>
+                      <th>Net Wt (g)</th>
+                      <th>Gross Wt (g)</th>
                       <th>Carat</th>
                       <th>Purity %</th>
                       <th>Price</th>
@@ -407,6 +409,7 @@ function QRCodePrint() {
                         <td style={{ fontWeight: 'bold', color: '#667eea' }}>{item.articleCode || 'N/A'}</td>
                         <td style={{ fontWeight: '600' }}>{item.articleName}</td>
                         <td>{item.weightGrams || 'N/A'}</td>
+                        <td>{item.grossWeightGrams || '-'}</td>
                         <td>{item.carat || 'N/A'}</td>
                         <td>{item.purityPercentage ? `${item.purityPercentage}%` : '-'}</td>
                         <td style={{ fontWeight: 'bold' }}>{formatCurrency(item.sellingPrice)}</td>
@@ -446,7 +449,7 @@ function QRCodePrint() {
                         <input type="checkbox" checked={selectedItems.has(item.id)} onChange={() => toggleSelection(item.id)} style={{ width: '20px', height: '20px', accentColor: '#667eea' }} />
                         <span className="admin-list-card-title" style={{ color: '#667eea' }}>{item.articleCode || 'N/A'}</span>
                       </label>
-                      <div className="admin-list-card-meta">{item.articleName} · {item.weightGrams || 'N/A'}g · {item.purityPercentage ? `${item.purityPercentage}%` : '-'} · {formatCurrency(item.sellingPrice)}</div>
+                      <div className="admin-list-card-meta">{item.articleName} · Net: {item.weightGrams || 'N/A'}g{item.grossWeightGrams ? ` · Gross: ${item.grossWeightGrams}g` : ''} · {item.purityPercentage ? `${item.purityPercentage}%` : '-'} · {formatCurrency(item.sellingPrice)}</div>
                       <span className={`status-badge status-${item.status?.toLowerCase()}`}>{item.status}</span>
                     </div>
                     <div className="admin-list-card-actions">
@@ -540,7 +543,8 @@ function QRCodePrint() {
                 <div className="qr-print-shop">GangaJewellers</div>
                 <div className="qr-print-detail">SKU Code - {item.articleCode || item.id}</div>
                 <div className="qr-print-detail">SKU Name - {item.articleName}</div>
-                <div className="qr-print-detail">Gross. WT - {item.weightGrams ? `${item.weightGrams}g` : '-'}</div>
+                <div className="qr-print-detail">Gross. WT - {item.grossWeightGrams ? `${item.grossWeightGrams}g` : (item.weightGrams ? `${item.weightGrams}g` : '-')}</div>
+                <div className="qr-print-detail">Net. WT - {item.weightGrams ? `${item.weightGrams}g` : '-'}</div>
                 <div className="qr-print-detail">Karat - {item.carat ? `${item.carat}K` : '-'}</div>
               </div>
               {item.qrCode ? (

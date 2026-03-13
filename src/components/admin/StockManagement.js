@@ -89,6 +89,7 @@ function StockManagement() {
     category: '',
     material: 'Gold',
     weightGrams: '',
+    grossWeightGrams: '',
     carat: '',
     diamondCarat: '',
     purityPercentage: '',
@@ -276,6 +277,7 @@ function StockManagement() {
         imageUrl: imageUrl || null,
         imageUrls: imageUrls || null,
         weightGrams: safeParseFloat(formData.weightGrams),
+        grossWeightGrams: safeParseFloat(formData.grossWeightGrams),
         carat: isDiamondOnly(formData.material) ? null : safeParseFloat(formData.carat),
         diamondCarat: isDiamondOnly(formData.material) ? safeParseFloat(formData.carat) : (isDiamondWithMetal(formData.material) ? safeParseFloat(formData.diamondCarat) : null),
         purityPercentage: safeParseFloat(formData.purityPercentage),
@@ -320,6 +322,7 @@ function StockManagement() {
       category: item.category || '',
       material: item.material || 'Gold',
       weightGrams: item.weightGrams ? String(item.weightGrams) : '',
+      grossWeightGrams: item.grossWeightGrams ? String(item.grossWeightGrams) : '',
       carat: (item.carat != null && item.carat !== '') ? String(item.carat) : (isDiamondOnly(item.material) && item.diamondCarat != null ? String(item.diamondCarat) : ''),
       diamondCarat: item.diamondCarat != null ? String(item.diamondCarat) : '',
       purityPercentage: item.purityPercentage ? String(item.purityPercentage) : '',
@@ -412,6 +415,7 @@ function StockManagement() {
       category: '',
       material: 'Gold',
       weightGrams: '',
+      grossWeightGrams: '',
       carat: '',
       diamondCarat: '',
       purityPercentage: '',
@@ -752,7 +756,7 @@ function StockManagement() {
                 </div>
                 <div className="stock-form-group">
                   <label>
-                    {isDiamondOnly(formData.material) ? 'Weight (g) – setting/metal *' : isDiamondWithMetal(formData.material) ? 'Metal weight (g) *' : 'Weight (grams) *'}
+                    {isDiamondOnly(formData.material) ? 'Net Weight (g) – setting/metal *' : isDiamondWithMetal(formData.material) ? 'Net Metal Weight (g) *' : 'Net Weight (grams) *'}
                   </label>
                   <input
                     type="number"
@@ -760,7 +764,17 @@ function StockManagement() {
                     value={formData.weightGrams}
                     onChange={(e) => setFormData({...formData, weightGrams: e.target.value})}
                     required
-                    placeholder={isDiamondOnly(formData.material) ? 'e.g. 2.5 (metal weight)' : isDiamondWithMetal(formData.material) ? 'e.g. 3.5 (gold/silver/pt weight)' : 'e.g., 5.250'}
+                    placeholder={isDiamondOnly(formData.material) ? 'e.g. 2.5 (metal weight)' : isDiamondWithMetal(formData.material) ? 'e.g. 3.5 (gold/silver/pt weight)' : 'e.g., 5.250 (gold only)'}
+                  />
+                </div>
+                <div className="stock-form-group">
+                  <label>Gross Weight (grams) <span style={{ fontWeight: 400, color: '#6c757d', fontSize: '0.85rem' }}>– total incl. beads/moti</span></label>
+                  <input
+                    type="number"
+                    step="0.001"
+                    value={formData.grossWeightGrams}
+                    onChange={(e) => setFormData({...formData, grossWeightGrams: e.target.value})}
+                    placeholder="e.g., 8.500 (leave blank if same as net)"
                   />
                 </div>
                 <div className="stock-form-group">
@@ -1038,7 +1052,8 @@ function StockManagement() {
                       <th>Material</th>
                       <th>Size</th>
                       <th>Code</th>
-                      <th>Weight (g)</th>
+                      <th>Net Wt (g)</th>
+                      <th>Gross Wt (g)</th>
                       <th>Carat</th>
                       <th>Diamond Ct</th>
                       <th>Purity %</th>
@@ -1073,6 +1088,7 @@ function StockManagement() {
                         <td>{item.size || '–'}</td>
                         <td>{item.articleCode || '-'}</td>
                         <td>{item.weightGrams || '-'}</td>
+                        <td>{item.grossWeightGrams || '-'}</td>
                         <td>{item.carat ?? '-'}</td>
                         <td>{item.diamondCarat != null ? String(item.diamondCarat) : '-'}</td>
                         <td>{item.purityPercentage ? `${item.purityPercentage}%` : '-'}</td>
@@ -1116,7 +1132,7 @@ function StockManagement() {
                           {item.size ? ` · Size ${item.size}` : ''} · {item.articleCode || '-'}
                         </div>
                         <div className="stock-card-specs">
-                          Wt: {item.weightGrams ?? '-'}g · Carat: {item.carat ?? '-'} · Qty: {item.quantity || 1}
+                          Net: {item.weightGrams ?? '-'}g{item.grossWeightGrams ? ` · Gross: ${item.grossWeightGrams}g` : ''} · Carat: {item.carat ?? '-'} · Qty: {item.quantity || 1}
                         </div>
                         <span className={`status-badge status-${item.status?.toLowerCase()}`}>{item.status}</span>
                       </div>
