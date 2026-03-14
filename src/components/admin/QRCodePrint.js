@@ -34,8 +34,8 @@ function QRCodePrint() {
       body { -webkit-print-color-adjust: exact; print-color-adjust: exact; margin: 0; padding: 0; }
       .qr-print-sheet { position: static !important; left: auto !important; visibility: visible !important; width: 100% !important; box-sizing: border-box !important; background: #fff; color: #000; }
       .qr-print-grid { display: flex; flex-wrap: wrap; padding: 0; width: 100%; box-sizing: border-box; }
-      .qr-print-label { width: calc(25% - 2px); height: 11.1mm; border: 0.5px solid #ccc; margin: 0.5mm 1px; padding: 0.3mm 1mm; font-size: 6px; page-break-inside: avoid; break-inside: avoid; display: flex; flex-direction: row; align-items: center; justify-content: space-between; background: #fff; box-sizing: border-box; overflow: visible; }
-      .qr-print-info { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; overflow: hidden; padding-right: 1mm; }
+      .qr-print-label { width: calc(25% - 2px); height: 11.1mm; border: 0.5px solid #ccc; margin: 0.5mm 1px; padding: 0.3mm 1mm; font-size: 6px; page-break-inside: avoid; break-inside: avoid; display: flex; flex-direction: row; align-items: center; justify-content: flex-start; background: #fff; box-sizing: border-box; overflow: visible; }
+      .qr-print-info { flex: 0 1 auto; min-width: 0; display: flex; flex-direction: column; justify-content: center; overflow: hidden; padding-right: 1mm; }
       .qr-print-qr { width: 9mm !important; height: 9mm !important; min-width: 9mm !important; min-height: 9mm !important; display: block; border: none; object-fit: contain; flex-shrink: 0; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges; }
       .qr-print-no-qr { width: 9mm !important; height: 9mm !important; min-width: 9mm; display: flex; align-items: center; justify-content: center; background: #f0f0f0; color: #999; font-size: 4px; flex-shrink: 0; }
       .qr-print-shop { font-weight: bold; font-size: 5.5px; line-height: 1.2; margin-bottom: 0.2mm; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #000; }
@@ -128,8 +128,8 @@ function QRCodePrint() {
       const qrImg = item.qrCode
         ? `<img src="data:image/png;base64,${item.qrCode}" style="width:9mm;height:9mm;min-width:9mm;min-height:9mm;display:block;border:none;object-fit:contain;flex-shrink:0;image-rendering:-webkit-optimize-contrast;image-rendering:crisp-edges;" />`
         : `<div style="width:9mm;height:9mm;min-width:9mm;display:flex;align-items:center;justify-content:center;background:#f0f0f0;color:#999;font-size:4px;flex-shrink:0;">No QR</div>`;
-      return `<div style="width:calc(25% - 2px);height:11.1mm;border:0.5px solid #ccc;margin:0.5mm 1px;padding:0.3mm 1mm;font-size:6px;page-break-inside:avoid;break-inside:avoid;display:flex;flex-direction:row;align-items:center;justify-content:space-between;background:#fff;box-sizing:border-box;overflow:visible;">
-        <div style="flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;overflow:hidden;padding-right:1mm;">
+      return `<div style="width:calc(25% - 2px);height:11.1mm;border:0.5px solid #ccc;margin:0.5mm 1px;padding:0.3mm 1mm;font-size:6px;page-break-inside:avoid;break-inside:avoid;display:flex;flex-direction:row;align-items:center;justify-content:flex-start;background:#fff;box-sizing:border-box;overflow:visible;">
+        <div style="flex:0 1 auto;min-width:0;display:flex;flex-direction:column;justify-content:center;overflow:hidden;padding-right:1mm;">
           <div style="font-weight:bold;font-size:5.5px;line-height:1.2;margin-bottom:0.2mm;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#000;">GangaJewellers</div>
           <div style="font-size:4.5px;line-height:1.15;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#333;">SKU Code - ${item.articleCode || item.id}</div>
           <div style="font-size:4.5px;line-height:1.15;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#333;">SKU Name - ${item.articleName}</div>
