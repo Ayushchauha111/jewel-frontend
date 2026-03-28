@@ -630,7 +630,9 @@ function BillingManagement() {
       itemsToAdd: [],
       newItemOverrideRate: '',
       newItemMakingPerGram: '',
-      newItemHallmark: false
+      newItemHallmark: false,
+      editingItemId: null,
+      editingItemData: null
     });
     setShowEditBill(true);
   };
@@ -646,6 +648,66 @@ function BillingManagement() {
     setEditBillForm(prev => ({
       ...prev,
       itemIdsToRemove: (prev.itemIdsToRemove || []).filter(id => id !== itemId)
+    }));
+  };
+
+  const startEditItem = (item) => {
+    const w = parseFloat(item.weightGrams) || parseFloat(item.stock?.weightGrams) || 0;
+    setEditBillForm(prev => ({
+      ...prev,
+      editingItemId: item.id,
+      editingItemData: {
+        quantity: item.quantity ?? 1,
+        unitPrice: item.unitPrice != null ? String(item.unitPrice) : '',
+        totalPrice: item.totalPrice != null ? String(item.totalPrice) : '',
+        hallmark: !!item.hallmark,
+        weightGrams: w,
+        carat: item.carat,
+        diamondCarat: item.diamondCarat,
+        diamondAmount: item.diamondAmount != null ? String(item.diamondAmount) : '',
+        itemName: item.itemName || '',
+        articleCode: item.articleCode || (item.stock?.articleCode) || '',
+        stockId: item.stock?.id || null
+      }
+    }));
+  };
+
+  const cancelEditItem = () => {
+    setEditBillForm(prev => ({ ...prev, editingItemId: null, editingItemData: null }));
+  };
+
+  const saveEditItem = (originalItem) => {
+    const ed = editBillForm.editingItemData;
+    if (!ed) return;
+    const qty = parseInt(ed.quantity, 10) || 1;
+    const unitPrice = parseFloat(ed.unitPrice) || 0;
+    const totalPrice = parseFloat(ed.totalPrice) || 0;
+    if (totalPrice <= 0) {
+      setError('Total price must be greater than 0');
+      setTimeout(() => setError(null), 3000);
+      return;
+    }
+    const modifiedItem = {
+      stock: ed.stockId ? { id: ed.stockId } : null,
+      itemName: ed.itemName,
+      articleCode: ed.articleCode,
+      weightGrams: ed.weightGrams,
+      carat: ed.carat,
+      diamondCarat: ed.diamondCarat,
+      diamondAmount: ed.diamondAmount ? parseFloat(ed.diamondAmount) : null,
+      quantity: qty,
+      unitPrice: unitPrice,
+      totalPrice: totalPrice,
+      hallmark: !!ed.hallmark,
+      makingChargesForItem: 0,
+      _editedFromId: originalItem.id
+    };
+    setEditBillForm(prev => ({
+      ...prev,
+      itemIdsToRemove: [...(prev.itemIdsToRemove || []), originalItem.id],
+      itemsToAdd: [...(prev.itemsToAdd || []), modifiedItem],
+      editingItemId: null,
+      editingItemData: null
     }));
   };
 
@@ -805,8 +867,11 @@ function BillingManagement() {
     e.preventDefault();
     if (!selectedBill?.id) return;
     const toRemove = editBillForm.itemIdsToRemove || [];
+    const toAdd = editBillForm.itemsToAdd || [];
     const totalItems = (selectedBill.items || []).length;
-    if (toRemove.length >= totalItems) {
+    const editedItemIds = new Set(toAdd.filter(it => it._editedFromId).map(it => it._editedFromId));
+    const pureRemoveCount = toRemove.filter(id => !editedItemIds.has(id)).length;
+    if (pureRemoveCount >= totalItems && toAdd.length <= editedItemIds.size) {
       setError('Cannot remove all items. At least one item must remain.');
       setTimeout(() => setError(null), 4000);
       return;
@@ -2922,12 +2987,93 @@ function BillingManagement() {
                   <div className="price-form-group">
                     <label>Items</label>
                     <p style={{ margin: '0 0 0.5rem', fontSize: '0.8rem', color: 'var(--adm-text-muted)' }}>
-                      Click 🗑️ to remove an item from this bill. Stock will be restored for removed items.
+                      Click ✏️ to edit or 🗑️ to remove an item. Stock will be restored for removed items.
                     </p>
-                    {(selectedBill.items || []).filter(item => item.id).map((item) => {
+                    {(selectedBill.items || []).filter(item => {
+                      if (!item.id) return false;
+                      const editedIds = new Set((editBillForm.itemsToAdd || []).filter(it => it._editedFromId).map(it => it._editedFromId));
+                      return !editedIds.has(item.id);
+                    }).map((item) => {
                       const isMarkedRemove = (editBillForm.itemIdsToRemove || []).includes(item.id);
+                      const isEditing = editBillForm.editingItemId === item.id;
                       const w = parseFloat(item.weightGrams) || parseFloat(item.stock?.weightGrams) || 0;
                       const ratePerGram = w > 0 && item.unitPrice != null ? parseFloat(item.unitPrice) / w : null;
+                      if (isEditing && editBillForm.editingItemData) {
+                        const ed = editBillForm.editingItemData;
+                        return (
+                          <div
+                            key={item.id}
+                            className="billing-item-row"
+                            style={{
+                              padding: '0.75rem',
+                              marginBottom: '0.5rem',
+                              background: 'rgba(102, 126, 234, 0.10)',
+                              border: '1px solid rgba(102, 126, 234, 0.5)',
+                              borderRadius: '8px'
+                            }}
+                          >
+                            <div style={{ fontWeight: 600, marginBottom: '0.5rem' }}>{ed.itemName || '-'} <span style={{ fontSize: '0.8rem', fontWeight: 400, color: 'var(--adm-text-muted)' }}>{ed.articleCode || ''}{ed.carat != null ? ` · ${ed.carat}K` : ''}{ed.weightGrams ? ` · ${ed.weightGrams}g` : ''}</span></div>
+                            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
+                              <div style={{ flex: '0 1 70px' }}>
+                                <label style={{ fontSize: '0.7rem', color: 'var(--adm-text-muted)', display: 'block', marginBottom: '0.2rem' }}>Qty</label>
+                                <input
+                                  type="number"
+                                  min="1"
+                                  value={ed.quantity}
+                                  onChange={(e) => {
+                                    const q = parseInt(e.target.value, 10) || 1;
+                                    const up = parseFloat(ed.unitPrice) || 0;
+                                    setEditBillForm(prev => ({ ...prev, editingItemData: { ...prev.editingItemData, quantity: q, totalPrice: String(Math.round(up * q * 100) / 100) } }));
+                                  }}
+                                  style={{ width: '100%', padding: '0.5rem', borderRadius: '8px', border: '1px solid var(--adm-border-gold)', background: 'var(--adm-bg-elevated)', color: 'var(--adm-text)' }}
+                                />
+                              </div>
+                              <div style={{ flex: '1 1 120px' }}>
+                                <label style={{ fontSize: '0.7rem', color: 'var(--adm-text-muted)', display: 'block', marginBottom: '0.2rem' }}>Unit Price (₹)</label>
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  min="0"
+                                  value={ed.unitPrice}
+                                  onChange={(e) => {
+                                    const up = e.target.value;
+                                    const q = parseInt(ed.quantity, 10) || 1;
+                                    const tp = up ? String(Math.round(parseFloat(up) * q * 100) / 100) : '';
+                                    setEditBillForm(prev => ({ ...prev, editingItemData: { ...prev.editingItemData, unitPrice: up, totalPrice: tp } }));
+                                  }}
+                                  style={{ width: '100%', padding: '0.5rem', borderRadius: '8px', border: '1px solid var(--adm-border-gold)', background: 'var(--adm-bg-elevated)', color: 'var(--adm-text)' }}
+                                />
+                              </div>
+                              <div style={{ flex: '1 1 120px' }}>
+                                <label style={{ fontSize: '0.7rem', color: 'var(--adm-text-muted)', display: 'block', marginBottom: '0.2rem' }}>Total Price (₹)</label>
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  min="0"
+                                  value={ed.totalPrice}
+                                  onChange={(e) => setEditBillForm(prev => ({ ...prev, editingItemData: { ...prev.editingItemData, totalPrice: e.target.value } }))}
+                                  style={{ width: '100%', padding: '0.5rem', borderRadius: '8px', border: '1px solid var(--adm-border-gold)', background: 'var(--adm-bg-elevated)', color: 'var(--adm-text)' }}
+                                />
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', paddingBottom: '0.25rem' }}>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.8rem', cursor: 'pointer' }}>
+                                  <input
+                                    type="checkbox"
+                                    checked={!!ed.hallmark}
+                                    onChange={(e) => setEditBillForm(prev => ({ ...prev, editingItemData: { ...prev.editingItemData, hallmark: e.target.checked } }))}
+                                    style={{ width: '1rem', height: '1rem' }}
+                                  />
+                                  Hallmark
+                                </label>
+                              </div>
+                            </div>
+                            <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem', justifyContent: 'flex-end' }}>
+                              <button type="button" onClick={() => saveEditItem(item)} className="stock-btn-edit" style={{ fontSize: '0.8rem', padding: '0.4rem 0.75rem' }}>✓ Save</button>
+                              <button type="button" onClick={cancelEditItem} className="stock-btn-delete" style={{ fontSize: '0.8rem', padding: '0.4rem 0.75rem' }}>✕ Cancel</button>
+                            </div>
+                          </div>
+                        );
+                      }
                       return (
                         <div
                           key={item.id}
@@ -2955,23 +3101,30 @@ function BillingManagement() {
                           <div style={{ flex: '0 1 90px', textAlign: 'right', fontWeight: 600 }}>
                             {formatCurrency(item.totalPrice)}
                           </div>
-                          <div style={{ flexShrink: 0 }}>
+                          <div style={{ flexShrink: 0, display: 'flex', gap: '0.25rem' }}>
                             {isMarkedRemove ? (
                               <button type="button" onClick={() => undoRemoveEditBillItem(item.id)} className="stock-btn-edit" style={{ fontSize: '0.75rem', padding: '0.5rem 0.75rem' }}>
                                 ↩ Undo
                               </button>
                             ) : (
-                              <button type="button" onClick={() => removeEditBillItem(item.id)} className="stock-btn-delete" style={{ padding: '0.5rem 0.75rem' }} title="Remove item">🗑️</button>
+                              <>
+                                <button type="button" onClick={() => startEditItem(item)} className="stock-btn-edit" style={{ padding: '0.5rem 0.75rem' }} title="Edit item">✏️</button>
+                                <button type="button" onClick={() => removeEditBillItem(item.id)} className="stock-btn-delete" style={{ padding: '0.5rem 0.75rem' }} title="Remove item">🗑️</button>
+                              </>
                             )}
                           </div>
                         </div>
                       );
                     })}
-                    {(editBillForm.itemIdsToRemove || []).length > 0 && (
-                      <div style={{ marginTop: '0.5rem', padding: '0.5rem', background: 'rgba(255, 243, 205, 0.4)', borderRadius: '8px', fontSize: '0.85rem', color: '#856404' }}>
-                        {(editBillForm.itemIdsToRemove || []).length} item(s) marked for removal
-                      </div>
-                    )}
+                    {(() => {
+                      const editedIds = new Set((editBillForm.itemsToAdd || []).filter(it => it._editedFromId).map(it => it._editedFromId));
+                      const pureRemoves = (editBillForm.itemIdsToRemove || []).filter(id => !editedIds.has(id));
+                      return pureRemoves.length > 0 ? (
+                        <div style={{ marginTop: '0.5rem', padding: '0.5rem', background: 'rgba(255, 243, 205, 0.4)', borderRadius: '8px', fontSize: '0.85rem', color: '#856404' }}>
+                          {pureRemoves.length} item(s) marked for removal
+                        </div>
+                      ) : null;
+                    })()}
                     <div style={{ marginTop: '0.75rem', padding: '0.75rem', background: 'var(--adm-bg-elevated)', border: '1px solid var(--adm-border-gold)', borderRadius: '8px' }}>
                       <div style={{ fontWeight: 600, marginBottom: '0.5rem' }}>+ Add new item</div>
                       <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
@@ -3059,13 +3212,33 @@ function BillingManagement() {
                     </div>
                     {(editBillForm.itemsToAdd || []).length > 0 && (
                       <div style={{ marginTop: '0.5rem' }}>
-                        <div style={{ fontSize: '0.8rem', color: 'var(--adm-text-muted)', marginBottom: '0.25rem' }}>New items to add:</div>
-                        {(editBillForm.itemsToAdd || []).map((item, idx) => (
-                          <div key={idx} className="billing-item-row" style={{ display: 'flex', gap: '1rem', alignItems: 'center', padding: '0.5rem', marginBottom: '0.25rem', background: 'rgba(34, 197, 94, 0.12)', border: '1px solid rgba(34, 197, 94, 0.4)', borderRadius: '8px' }}>
-                            <span style={{ flex: 1 }}>{item.itemName || '-'} · Qty: {item.quantity} · {formatCurrency(item.totalPrice)}</span>
-                            <button type="button" onClick={() => removeEditBillNewItem(idx)} className="stock-btn-delete" style={{ padding: '0.35rem 0.5rem', fontSize: '0.75rem' }}>🗑️</button>
-                          </div>
-                        ))}
+                        <div style={{ fontSize: '0.8rem', color: 'var(--adm-text-muted)', marginBottom: '0.25rem' }}>
+                          {(editBillForm.itemsToAdd || []).some(it => it._editedFromId) ? 'Modified & new items:' : 'New items to add:'}
+                        </div>
+                        {(editBillForm.itemsToAdd || []).map((item, idx) => {
+                          const isEdited = !!item._editedFromId;
+                          return (
+                            <div key={idx} className="billing-item-row" style={{ display: 'flex', gap: '1rem', alignItems: 'center', padding: '0.5rem', marginBottom: '0.25rem', background: isEdited ? 'rgba(102, 126, 234, 0.12)' : 'rgba(34, 197, 94, 0.12)', border: `1px solid ${isEdited ? 'rgba(102, 126, 234, 0.4)' : 'rgba(34, 197, 94, 0.4)'}`, borderRadius: '8px' }}>
+                              <span style={{ flex: 1 }}>
+                                {isEdited && <span style={{ fontSize: '0.7rem', background: 'rgba(102,126,234,0.2)', padding: '0.1rem 0.35rem', borderRadius: '4px', marginRight: '0.4rem' }}>edited</span>}
+                                {item.itemName || '-'} · Qty: {item.quantity} · {formatCurrency(item.totalPrice)}
+                              </span>
+                              <button type="button" onClick={() => {
+                                if (isEdited) {
+                                  setEditBillForm(prev => ({
+                                    ...prev,
+                                    itemsToAdd: (prev.itemsToAdd || []).filter((_, i) => i !== idx),
+                                    itemIdsToRemove: (prev.itemIdsToRemove || []).filter(id => id !== item._editedFromId)
+                                  }));
+                                } else {
+                                  removeEditBillNewItem(idx);
+                                }
+                              }} className="stock-btn-delete" style={{ padding: '0.35rem 0.5rem', fontSize: '0.75rem' }} title={isEdited ? 'Undo edit (restore original)' : 'Remove'}>
+                                {isEdited ? '↩' : '🗑️'}
+                              </button>
+                            </div>
+                          );
+                        })}
                       </div>
                     )}
                   </div>
